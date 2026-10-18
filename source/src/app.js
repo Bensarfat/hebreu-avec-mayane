@@ -43,7 +43,8 @@ var HPApp = (function () {
     HPB.ready().then(function () { return HPB.getTeacher(); }).then(function (t) {
       return t ? HPB.listStudents().then(function (l) {
         var known = {}; DEMO.students.forEach(function (d) { known[d[0]] = d[1]; });
-        return Promise.all(l.filter(function (x) { return x.demo && !x.pw && known[x.login]; }).map(function (x) { x.pw = known[x.login]; return HPB.saveStudent(x); }));
+        return l.filter(function (x) { return x.demo && !x.pw && known[x.login]; })
+          .reduce(function (p, x) { return p.then(function () { x.pw = known[x.login]; return HPB.saveStudent(x); }); }, Promise.resolve());
       }) : seedDemo();
     }).then(route);
     window.addEventListener('hashchange', route);
@@ -493,7 +494,8 @@ var HPApp = (function () {
     files = Array.prototype.slice.call(files || []);
     if (!files.length) return;
     if (!targets.length) { toast('Choisissez d\'abord au moins un élève'); return; }
-    Promise.all(files.map(function (f) { return HPB.addDoc(f, targets); })).then(function () {
+    /* un par un : chaque ajout relit la liste, des ajouts simultanés s'écraseraient */
+    files.reduce(function (p, f) { return p.then(function () { return HPB.addDoc(f, targets); }); }, Promise.resolve()).then(function () {
       toast(files.length + ' document' + (files.length > 1 ? 's' : '') + ' déposé' + (files.length > 1 ? 's' : ''));
       return loadAll();
     }).then(renderTeacher);

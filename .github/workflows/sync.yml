@@ -1,0 +1,55 @@
+# Reprend automatiquement les évolutions du site de Benjamin (github.com/Bensarfat/hebreu)
+# dans le site de Mayane : toutes les heures, et à la demande (onglet Actions > « Synchroniser » > Run workflow).
+# Seules les fonctions et le design sont repris ; les contenus des élèves restent ceux de Mayane.
+name: Synchroniser avec le site de Benjamin
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Récupérer le site de Benjamin
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/Bensarfat/hebreu/main/index.html" -o /tmp/benjamin.html
+          test -s /tmp/benjamin.html
+          if cmp -s /tmp/benjamin.html source/src/original.html; then
+            echo "Aucun changement sur le site de Benjamin."
+            echo "CHANGED=0" >> "$GITHUB_ENV"
+          else
+            cp /tmp/benjamin.html source/src/original.html
+            echo "CHANGED=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Reconstruire le site de Mayane
+        if: env.CHANGED == '1'
+        working-directory: source
+        run: |
+          node src/build_templates.js
+          node build.js
+
+      - name: Publier
+        if: env.CHANGED == '1'
+        run: |
+          git config user.name "Benjamin Sarfati"
+          git config user.email "contact@docteursarfati.com"
+          git add index.html source/src/original.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Synchronisation automatique avec le site de Benjamin"
+          git push

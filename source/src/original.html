@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0058)file:///Users/benjaminsarfati/Downloads/quiz_hebreu_2.html -->
 <html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1684,7 +1683,7 @@
     .container > .tabs { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
     .container > .tabs .tab { flex: none; }
   }
-  /* sur telephone ou tablette tactile, pas de clavier : on cache les lettres A / O / P */
+  /* sur telephone ou tablette tactile, pas de clavier : on cache les touches Espace / A / O / P */
   @media (hover: none), (max-width: 700px) {
     .flash-key { display: none; }
   }
@@ -7951,6 +7950,7 @@ refreshGlobalStatsDisplay();
   }
   /* verdict : 'known' (A), 'again' (P, a revoir), 'soft' (O, rate mais non essentiel) */
   function record(e, verdict) {
+    var __hpWas = window.HPG ? HPG.before(e) : false;
     var store, k;
     if (e && e.conj) {
       if (!storage.conj || typeof storage.conj !== 'object') storage.conj = {};
@@ -7965,6 +7965,7 @@ refreshGlobalStatsDisplay();
     if (verdict === 'known') s.known++;
     else if (verdict === 'soft') s.soft++;
     else s.again++;
+    if (window.HPG) HPG.onFlash(e, verdict, __hpWas);
     saveData();
   }
 
@@ -8008,7 +8009,7 @@ refreshGlobalStatsDisplay();
             '<button class="btn" data-ans="soft">Non essentiel <span class="flash-key">O</span></button>' +
             '<button class="btn" data-ans="again">&Agrave; revoir <span class="flash-key">P</span></button>' +
           '</div>'
-        : '<div class="flash-acts"><button class="btn primary" data-flip="1">Retourner</button></div>');
+        : '<div class="flash-acts"><button class="btn primary" data-flip="1">Retourner <span class="flash-key">Espace</span></button></div>');
   }
 
   function cardHtml(e, face, showBack) {
@@ -8029,7 +8030,7 @@ refreshGlobalStatsDisplay();
             '<button class="btn" data-ans="soft">Non essentiel <span class="flash-key">O</span></button>' +
             '<button class="btn" data-ans="again">&Agrave; revoir <span class="flash-key">P</span></button>' +
           '</div>'
-        : '<div class="flash-acts"><button class="btn primary" data-flip="1">Retourner</button></div>');
+        : '<div class="flash-acts"><button class="btn primary" data-flip="1">Retourner <span class="flash-key">Espace</span></button></div>');
   }
 
   function draw() {
@@ -8634,7 +8635,730 @@ window.addEventListener('beforeprint', function(){
 })();
 
 </script>
+<!-- HP:BEGIN — progression : XP, niveaux, séries, badges, statistiques (repris par le site de Mayane) -->
+<script>
+/* =====================================================================
+   HP — noyau de progression partagé (espace élève, back-office, site perso)
+   XP, niveaux, séries de jours, badges, résumé pour la prof, graphiques.
+   Aucune dépendance. Les couleurs viennent des jetons de la charte.
+   ===================================================================== */
+var HP = (function () {
+  'use strict';
 
+  /* ---------- barème XP ---------- */
+  var XP = {
+    quizOk: 10, quizKo: 3,
+    flashKnown: 8, flashAgain: 3, flashSoft: 2,
+    conjKnown: 12, conjAgain: 4, conjSoft: 2,
+    mastered: 15,      // chaque nouveau mot maîtrisé
+    goal: 25,          // objectif du jour atteint
+    combo: 20          // toutes les 10 bonnes réponses d'affilée
+  };
 
+  /* ---------- niveaux : une lettre de l'alphabet par niveau ---------- */
+  var LETTERS = 'אבגדהוזחטיכלמנסעפצקרשת';
+  var TIERS = [
+    { from: 1,  fr: 'Débutant',    he: 'מַתְחִיל' },
+    { from: 4,  fr: 'Apprenti',    he: 'תַּלְמִיד' },
+    { from: 7,  fr: 'Explorateur', he: 'חוֹקֵר' },
+    { from: 10, fr: 'Confirmé',    he: 'מְנֻסֶּה' },
+    { from: 13, fr: 'Avancé',      he: 'מִתְקַדֵּם' },
+    { from: 16, fr: 'Expert',      he: 'מֻמְחֶה' },
+    { from: 19, fr: 'Maître',      he: 'רַב' },
+    { from: 22, fr: 'Sage',        he: 'חָכָם' }
+  ];
+  function stepFor(level) { return 150 + 100 * (level - 1); }
+  function levelInfo(xp) {
+    xp = Math.max(0, xp || 0);
+    var level = 1, floor = 0;
+    while (xp >= floor + stepFor(level)) { floor += stepFor(level); level++; }
+    var step = stepFor(level), tier = TIERS[0];
+    TIERS.forEach(function (t) { if (level >= t.from) tier = t; });
+    return {
+      level: level,
+      letter: LETTERS.charAt(Math.min(level, LETTERS.length) - 1),
+      title: tier.fr, titleHe: tier.he,
+      into: xp - floor, step: step, toNext: floor + step - xp,
+      pct: Math.round(100 * (xp - floor) / step)
+    };
+  }
 
+  /* ---------- dates ---------- */
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function dayKey(d) { d = d || new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parseDay(k) { var p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function shortDate(d) { return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
+
+  function emptyDay() {
+    return { xp: 0, qOk: 0, qKo: 0, fK: 0, fA: 0, fS: 0, cK: 0, cA: 0, cS: 0, goal: 0 };
+  }
+  function dayGood(d) { return (d.qOk || 0) + (d.fK || 0) + (d.cK || 0); }
+  function dayBad(d) { return (d.qKo || 0) + (d.fA || 0) + (d.fS || 0) + (d.cA || 0) + (d.cS || 0); }
+  function dayActive(d) { return d && dayGood(d) + dayBad(d) > 0; }
+
+  function streaks(days) {
+    var today = new Date(), cur = 0, best = 0, run = 0;
+    var d = new Date(today);
+    if (!dayActive(days[dayKey(d)])) d = addDays(d, -1);   // aujourd'hui pas encore joué : la série tient
+    while (dayActive(days[dayKey(d)])) { cur++; d = addDays(d, -1); }
+    var keys = Object.keys(days).filter(function (k) { return dayActive(days[k]); }).sort();
+    var prev = null;
+    keys.forEach(function (k) {
+      var dt = parseDay(k);
+      run = (prev && Math.round((dt - prev) / 864e5) === 1) ? run + 1 : 1;
+      if (run > best) best = run;
+      prev = dt;
+    });
+    return { cur: cur, best: Math.max(best, cur) };
+  }
+
+  /* ---------- maîtrise (quiz OU flashcards) ---------- */
+  function quizMastered(s) {
+    if (!s) return false;
+    if (s.correct >= 3 && s.wrong === 0) return true;
+    return s.seen >= 4 && s.correct / s.seen >= 0.8;
+  }
+  function flashMastered(s) {
+    if (!s) return false;
+    if (s.known >= 2 && !s.again && !s.soft) return true;
+    return s.seen >= 4 && s.known / s.seen >= 0.8;
+  }
+  function wordMastered(storage, k) {
+    return quizMastered(storage.wordStats && storage.wordStats[k]) ||
+           flashMastered(storage.flash && storage.flash[k]);
+  }
+
+  function totalsFrom(storage, VOCAB) {
+    var t = { qOk: 0, qKo: 0, fK: 0, fA: 0, fS: 0, cK: 0, cA: 0, cS: 0, mastered: 0 };
+    var k, s;
+    for (k in (storage.wordStats || {})) { s = storage.wordStats[k]; t.qOk += s.correct || 0; t.qKo += s.wrong || 0; }
+    for (k in (storage.flash || {})) { s = storage.flash[k]; t.fK += s.known || 0; t.fA += s.again || 0; t.fS += s.soft || 0; }
+    for (k in (storage.conj || {})) { s = storage.conj[k]; t.cK += s.known || 0; t.cA += s.again || 0; t.cS += s.soft || 0; }
+    var seen = {};
+    Object.keys(VOCAB || {}).forEach(function (th) {
+      VOCAB[th].forEach(function (e) {
+        var key = e[0] + '|' + e[1];
+        if (seen[key]) return; seen[key] = 1;
+        if (wordMastered(storage, key)) t.mastered++;
+      });
+    });
+    return t;
+  }
+
+  function themeMastery(storage, VOCAB) {
+    return Object.keys(VOCAB || {}).map(function (th) {
+      var n = 0, m = 0, seen = 0, vu = {};
+      VOCAB[th].forEach(function (e) {
+        var key = e[0] + '|' + e[1];
+        if (vu[key]) return; vu[key] = 1; n++;
+        var q = storage.wordStats && storage.wordStats[key], f = storage.flash && storage.flash[key];
+        if ((q && q.seen) || (f && f.seen)) seen++;
+        if (wordMastered(storage, key)) m++;
+      });
+      return { theme: th, n: n, m: m, seen: seen, pct: n ? Math.round(100 * m / n) : 0 };
+    });
+  }
+
+  function weakWords(storage, max) {
+    var map = {};
+    function add(k, bad, seen) {
+      var p = k.split('|');
+      var o = map[k] || (map[k] = { he: p[0], fr: p[1] || '', bad: 0, seen: 0 });
+      o.bad += bad; o.seen += seen;
+    }
+    var k, s;
+    for (k in (storage.wordStats || {})) { s = storage.wordStats[k]; if (s.wrong) add(k, s.wrong, s.seen || 0); }
+    for (k in (storage.flash || {})) { s = storage.flash[k]; if (s.again) add(k, s.again, s.seen || 0); }
+    return Object.keys(map).map(function (x) { return map[x]; })
+      .sort(function (a, b) { return b.bad - a.bad || (b.bad / (b.seen || 1)) - (a.bad / (a.seen || 1)); })
+      .slice(0, max || 15);
+  }
+
+  /* ---------- badges ---------- */
+  var BADGES = [
+    { id: 'first',   icon: '🌱', name: 'Premier pas',         desc: 'Répondre à sa première carte',             test: function (c) { return c.answers >= 1; } },
+    { id: 'streak3', icon: '🔥', name: 'Ça chauffe',          desc: '3 jours de révision d\'affilée',            test: function (c) { return c.best >= 3; } },
+    { id: 'streak7', icon: '🔥', name: 'Une semaine pile',    desc: '7 jours d\'affilée',                        test: function (c) { return c.best >= 7; } },
+    { id: 'streak30',icon: '🌋', name: 'Inarrêtable',         desc: '30 jours d\'affilée',                       test: function (c) { return c.best >= 30; } },
+    { id: 'goal7',   icon: '🎯', name: 'Régulier',            desc: 'Objectif du jour atteint 7 fois',           test: function (c) { return c.goalDays >= 7; } },
+    { id: 'day200',  icon: '💪', name: 'Grosse journée',      desc: '200 XP en une journée',                     test: function (c) { return c.maxDay >= 200; } },
+    { id: 'xp1000',  icon: '⭐', name: '1 000 XP',            desc: 'Cumuler 1 000 XP',                          test: function (c) { return c.xp >= 1000; } },
+    { id: 'xp5000',  icon: '🌟', name: '5 000 XP',            desc: 'Cumuler 5 000 XP',                          test: function (c) { return c.xp >= 5000; } },
+    { id: 'cards100',icon: '🃏', name: 'Cent cartes',         desc: '100 flashcards retournées',                 test: function (c) { return c.cards >= 100; } },
+    { id: 'cards1k', icon: '🗂️', name: 'Mille cartes',        desc: '1 000 flashcards retournées',               test: function (c) { return c.cards >= 1000; } },
+    { id: 'mast50',  icon: '📗', name: '50 mots acquis',      desc: '50 mots maîtrisés',                         test: function (c) { return c.mastered >= 50; } },
+    { id: 'mast200', icon: '📚', name: '200 mots acquis',     desc: '200 mots maîtrisés',                        test: function (c) { return c.mastered >= 200; } },
+    { id: 'theme',   icon: '🏆', name: 'Thème bouclé',        desc: 'Maîtriser tous les mots d\'un thème',      test: function (c) { return c.themesDone >= 1; } },
+    { id: 'conj50',  icon: '🧩', name: 'Conjugueur',          desc: '50 conjugaisons réussies',                  test: function (c) { return c.conj >= 50; } },
+    { id: 'combo20', icon: '⚡', name: 'Sans faute',          desc: '20 bonnes réponses d\'affilée',             test: function (c) { return c.combo >= 20; } },
+    { id: 'early',   icon: '🌅', name: 'Lève-tôt',            desc: 'Réviser avant 8 h',                         test: function (c) { return c.early; } },
+    { id: 'night',   icon: '🌙', name: 'Oiseau de nuit',      desc: 'Réviser après 22 h',                        test: function (c) { return c.night; } }
+  ];
+
+  function badgeContext(P, totals, themes) {
+    var st = streaks(P.days || {}), goalDays = 0, maxDay = 0;
+    Object.keys(P.days || {}).forEach(function (k) {
+      var d = P.days[k]; if (d.goal) goalDays++; if (d.xp > maxDay) maxDay = d.xp;
+    });
+    return {
+      xp: P.xp || 0, best: st.best, cur: st.cur, goalDays: goalDays, maxDay: maxDay,
+      answers: totals.qOk + totals.qKo + totals.fK + totals.fA + totals.fS + totals.cK + totals.cA + totals.cS,
+      cards: totals.fK + totals.fA + totals.fS + totals.cK + totals.cA + totals.cS,
+      mastered: totals.mastered, conj: totals.cK,
+      themesDone: (themes || []).filter(function (t) { return t.n >= 5 && t.m === t.n; }).length,
+      combo: P.bestCombo || 0, early: !!P.early, night: !!P.night
+    };
+  }
+
+  /* ---------- résumé envoyé à la prof ---------- */
+  function summarize(storage, P, VOCAB) {
+    var totals = totalsFrom(storage, VOCAB), themes = themeMastery(storage, VOCAB);
+    var st = streaks(P.days || {}), keep = {}, cut = dayKey(addDays(new Date(), -180));
+    Object.keys(P.days || {}).forEach(function (k) { if (k >= cut) keep[k] = P.days[k]; });
+    var last = Object.keys(keep).filter(function (k) { return dayActive(keep[k]); }).sort().pop() || null;
+    return {
+      updatedAt: new Date().toISOString(), xp: P.xp || 0, level: levelInfo(P.xp).level,
+      streak: st.cur, best: st.best, lastActive: last, goal: P.goal || 60,
+      days: keep, totals: totals, themes: themes, weak: weakWords(storage, 15),
+      badges: P.badges || {}, bestCombo: P.bestCombo || 0
+    };
+  }
+
+  /* ---------- agrégats ---------- */
+  function rangeSum(days, from, n) {
+    var s = emptyDay();
+    for (var i = 0; i < n; i++) {
+      var d = days[dayKey(addDays(from, i))];
+      if (d) for (var k in s) s[k] += d[k] || 0;
+    }
+    return s;
+  }
+  function rate(d) { var g = dayGood(d), b = dayBad(d); return g + b ? Math.round(100 * g / (g + b)) : null; }
+  function weekly(days, weeks) {
+    var out = [], today = new Date();
+    var monday = addDays(today, -((today.getDay() + 6) % 7));
+    for (var w = weeks - 1; w >= 0; w--) {
+      var start = addDays(monday, -7 * w), s = rangeSum(days, start, 7);
+      out.push({ start: start, sum: s, rate: rate(s), xp: s.xp, answers: dayGood(s) + dayBad(s) });
+    }
+    return out;
+  }
+
+  /* ---------- rendu ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmt(n) { return (n || 0).toLocaleString('fr-FR'); }
+
+  function levelCard(P, opts) {
+    opts = opts || {};
+    var L = levelInfo(P.xp), st = streaks(P.days || {}), today = (P.days || {})[dayKey()] || emptyDay();
+    var goal = P.goal || 60, gp = Math.min(100, Math.round(100 * today.xp / goal));
+    var R = 34, C = 2 * Math.PI * R;
+    return '<div class="hp-level">' +
+      '<div class="hp-medal" aria-hidden="true"><span>' + L.letter + '</span></div>' +
+      '<div class="hp-level-main">' +
+        '<div class="hp-level-top"><strong>Niveau ' + L.level + '</strong>' +
+        '<span class="hp-tier">' + L.title + ' · <span class="hp-he">' + L.titleHe + '</span></span></div>' +
+        '<div class="hp-xpbar"><i style="width:' + L.pct + '%"></i></div>' +
+        '<div class="hp-level-sub">' + fmt(P.xp) + ' XP au total · encore <b>' + fmt(L.toNext) + ' XP</b> pour le niveau ' + (L.level + 1) + '</div>' +
+      '</div>' +
+      '<div class="hp-mini">' +
+        '<div class="hp-ring" title="Objectif du jour">' +
+          '<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="' + R + '" class="hp-ring-bg"/>' +
+          (gp ? '<circle cx="40" cy="40" r="' + R + '" class="hp-ring-fg" stroke-dasharray="' + (C * gp / 100).toFixed(1) + ' ' + C.toFixed(1) + '"/>' : '') + '</svg>' +
+          '<div class="hp-ring-txt"><b>' + today.xp + '</b><span>/ ' + goal + ' XP</span></div>' +
+        '</div>' +
+        '<div class="hp-streak"><span class="hp-flame">' + (st.cur ? '🔥' : '·') + '</span><b>' + st.cur + '</b><span>jour' + (st.cur > 1 ? 's' : '') + ' d\'affilée</span><em>record ' + st.best + '</em></div>' +
+      '</div>' +
+      (opts.goalPicker ? '<div class="hp-goalpick">Objectif du jour : ' + [30, 60, 100, 150].map(function (g) {
+        return '<button type="button" data-goal="' + g + '" class="' + (g === goal ? 'on' : '') + '">' + g + ' XP</button>';
+      }).join('') + '</div>' : '') +
+    '</div>';
+  }
+
+  function heatmap(days, weeks) {
+    weeks = weeks || 17;
+    var today = new Date();
+    var end = addDays(today, 6 - ((today.getDay() + 6) % 7));        // dimanche de cette semaine
+    var start = addDays(end, -(weeks * 7) + 1);
+    var max = 1;
+    Object.keys(days || {}).forEach(function (k) { if (days[k].xp > max) max = days[k].xp; });
+    var cols = '', months = '', lastM = -1;
+    for (var w = 0; w < weeks; w++) {
+      var cells = '';
+      var wkStart = addDays(start, w * 7);
+      if (wkStart.getMonth() !== lastM) {
+        months += '<span style="grid-column:' + (w + 1) + '">' + wkStart.toLocaleDateString('fr-FR', { month: 'short' }) + '</span>';
+        lastM = wkStart.getMonth();
+      }
+      for (var i = 0; i < 7; i++) {
+        var d = addDays(start, w * 7 + i), k = dayKey(d), v = days && days[k] ? days[k].xp : 0;
+        var lvl = d > today ? 'f' : (v ? Math.min(4, 1 + Math.floor(3.999 * v / max)) : 0);
+        cells += '<i class="h' + lvl + '" title="' + shortDate(d) + ' : ' + v + ' XP"></i>';
+      }
+      cols += '<div class="hp-hcol">' + cells + '</div>';
+    }
+    return '<div class="hp-heat"><div class="hp-heat-days"><span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span></div>' +
+      '<div class="hp-heat-body"><div class="hp-heat-months" style="grid-template-columns:repeat(' + weeks + ',17px)">' + months + '</div>' +
+      '<div class="hp-heat-grid">' + cols + '</div></div></div>' +
+      '<div class="hp-legend">Moins <i class="h0"></i><i class="h1"></i><i class="h2"></i><i class="h3"></i><i class="h4"></i> Plus</div>';
+  }
+
+  function xpBars(days, n, goal) {
+    n = n || 30;
+    var W = 620, H = 170, padB = 22, padT = 10, today = new Date(), vals = [], max = goal || 10;
+    for (var i = n - 1; i >= 0; i--) {
+      var d = addDays(today, -i), v = days && days[dayKey(d)] ? days[dayKey(d)].xp : 0;
+      vals.push({ d: d, v: v }); if (v > max) max = v;
+    }
+    var bw = W / n, svg = '';
+    vals.forEach(function (o, i) {
+      var h = Math.round((H - padB - padT) * o.v / max), x = i * bw + bw * 0.18, y = H - padB - h;
+      svg += '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + Math.max(h, o.v ? 2 : 0) +
+        '" rx="3" class="' + (goal && o.v >= goal ? 'hp-bar-hit' : 'hp-bar') + '"><title>' + shortDate(o.d) + ' : ' + o.v + ' XP</title></rect>';
+      if (i % 7 === (n - 1) % 7) svg += '<text x="' + (i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" class="hp-axis" text-anchor="middle">' + shortDate(o.d) + '</text>';
+    });
+    if (goal) {
+      var gy = H - padB - Math.round((H - padB - padT) * goal / max);
+      svg += '<line x1="0" x2="' + W + '" y1="' + gy + '" y2="' + gy + '" class="hp-goal-line"/>' +
+             '<text x="' + (W - 4) + '" y="' + (gy - 4) + '" class="hp-axis" text-anchor="end">objectif ' + goal + ' XP</text>';
+    }
+    return '<svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="XP par jour">' + svg + '</svg>';
+  }
+
+  function rateLine(days, weeks) {
+    var data = weekly(days || {}, weeks || 8), W = 620, H = 170, padB = 22, padT = 14, padX = 24;
+    var pts = [], svg = '';
+    [50, 75, 100].forEach(function (g) {
+      var y = H - padB - (H - padB - padT) * g / 100;
+      svg += '<line x1="' + padX + '" x2="' + (W - padX) + '" y1="' + y + '" y2="' + y + '" class="hp-grid"/>' +
+             '<text x="2" y="' + (y + 4) + '" class="hp-axis">' + g + '%</text>';
+    });
+    var step = (W - 2 * padX) / Math.max(1, data.length - 1);
+    data.forEach(function (w, i) {
+      var x = padX + i * step;
+      svg += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" class="hp-axis" text-anchor="middle">' + shortDate(w.start) + '</text>';
+      if (w.rate == null) return;
+      var y = H - padB - (H - padB - padT) * w.rate / 100;
+      pts.push([x, y, w]);
+    });
+    if (pts.length > 1) svg += '<polyline class="hp-line" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
+    pts.forEach(function (p) {
+      svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4.5" class="hp-dot"><title>Semaine du ' +
+        shortDate(p[2].start) + ' : ' + p[2].rate + ' % de réussite sur ' + p[2].answers + ' réponses</title></circle>' +
+        '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 9).toFixed(1) + '" class="hp-val" text-anchor="middle">' + p[2].rate + '%</text>';
+    });
+    if (!pts.length) svg += '<text x="' + W / 2 + '" y="' + H / 2 + '" class="hp-axis" text-anchor="middle">Pas encore de réponses enregistrées</text>';
+    return '<svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Taux de réussite par semaine">' + svg + '</svg>';
+  }
+
+  function themeBars(themes, opts) {
+    opts = opts || {};
+    var list = (themes || []).slice().sort(function (a, b) { return b.pct - a.pct || b.seen - a.seen || a.theme.localeCompare(b.theme, 'fr'); });
+    if (opts.limit) list = list.slice(0, opts.limit);
+    if (!list.length) return '<p class="hp-empty">Aucun thème pour le moment.</p>';
+    return '<div class="hp-themes">' + list.map(function (t) {
+      var seenPct = t.n ? Math.round(100 * t.seen / t.n) : 0;
+      return '<div class="hp-theme"><div class="hp-theme-name">' + esc(t.theme) + '</div>' +
+        '<div class="hp-theme-bar" title="' + t.m + ' maîtrisés, ' + t.seen + ' vus sur ' + t.n + '"><i class="seen" style="width:' + seenPct + '%"></i><i class="m" style="width:' + t.pct + '%"></i></div>' +
+        '<div class="hp-theme-num">' + t.m + '/' + t.n + '</div></div>';
+    }).join('') + '</div><div class="hp-legend2"><i class="m"></i> maîtrisés <i class="seen"></i> déjà vus</div>';
+  }
+
+  function badgesGrid(earned) {
+    earned = earned || {};
+    return '<div class="hp-badges">' + BADGES.map(function (b) {
+      var on = earned[b.id];
+      return '<div class="hp-badge' + (on ? ' on' : '') + '" title="' + esc(b.desc) + (on ? ' — obtenu le ' + shortDate(parseDay(on)) : '') + '">' +
+        '<span class="hp-badge-ic">' + b.icon + '</span><b>' + esc(b.name) + '</b><small>' + (on ? 'Obtenu le ' + shortDate(parseDay(on)) : esc(b.desc)) + '</small></div>';
+    }).join('') + '</div>';
+  }
+
+  function sparkline(days, n) {
+    n = n || 14;
+    var vals = [], max = 1, today = new Date();
+    for (var i = n - 1; i >= 0; i--) {
+      var d = days && days[dayKey(addDays(today, -i))]; var v = d ? d.xp : 0; vals.push(v); if (v > max) max = v;
+    }
+    var W = 120, H = 30, bw = W / n;
+    return '<svg class="hp-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + vals.map(function (v, i) {
+      var h = Math.round((H - 2) * v / max);
+      return '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (H - Math.max(h, 1)) + '" width="' + (bw - 2).toFixed(1) + '" height="' + Math.max(h, 1) + '" rx="1.5" class="' + (v ? 'hp-bar' : 'hp-bar0') + '"/>';
+    }).join('') + '</svg>';
+  }
+
+  var CSS = '' +
+    '.hp-level{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center}' +
+    '.hp-medal{width:74px;height:74px;border-radius:24px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 14px 28px -14px var(--accent);transform:rotate(-6deg)}' +
+    '.hp-medal span{font:700 38px/1 var(--font-he);color:var(--on-accent);transform:rotate(6deg)}' +
+    '.hp-level-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:8px}' +
+    '.hp-level-top strong{font:900 22px/1.1 var(--font-display);color:var(--ink)}' +
+    '.hp-tier{font-weight:700;color:var(--accent);font-size:14px}.hp-he{font-family:var(--font-he)}' +
+    '.hp-xpbar{height:12px;border-radius:99px;background:var(--accent-tint);overflow:hidden}' +
+    '.hp-xpbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .6s}' +
+    '.hp-level-sub{margin-top:7px;font-size:13px;color:var(--muted)}.hp-level-sub b{color:var(--ink-soft)}' +
+    '.hp-mini{display:flex;gap:14px;align-items:center}' +
+    '.hp-ring{position:relative;width:80px;height:80px}.hp-ring svg{width:80px;height:80px;transform:rotate(-90deg)}' +
+    '.hp-ring-bg{fill:none;stroke:var(--mint);stroke-width:8}.hp-ring-fg{fill:none;stroke:var(--olive);stroke-width:8;stroke-linecap:round;transition:stroke-dasharray .6s}' +
+    '.hp-ring-txt{position:absolute;inset:0;display:grid;place-content:center;text-align:center;line-height:1.05}' +
+    '.hp-ring-txt b{font:900 19px var(--font-display);color:var(--olive)}.hp-ring-txt span{font-size:10.5px;color:var(--muted);font-weight:700}' +
+    '.hp-streak{display:grid;justify-items:center;background:var(--peach);border-radius:18px;padding:8px 12px;min-width:84px;line-height:1.1}' +
+    '.hp-streak .hp-flame{font-size:20px}.hp-streak b{font:900 22px var(--font-display);color:var(--gold)}' +
+    '.hp-streak span{font-size:11px;font-weight:700;color:var(--ink-soft)}.hp-streak em{font-style:normal;font-size:10.5px;color:var(--muted);margin-top:2px}' +
+    '.hp-goalpick{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted);font-weight:600}' +
+    '.hp-goalpick button{border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);border-radius:99px;padding:5px 12px;font:700 12.5px var(--font-ui);cursor:pointer}' +
+    '.hp-goalpick button.on{background:var(--mint);color:var(--olive);border-color:transparent}' +
+    '@media (max-width:640px){.hp-level{grid-template-columns:auto 1fr}.hp-mini{grid-column:1/-1;justify-content:center}}' +
+    '.hp-heat{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}' +
+    '.hp-heat-days{display:grid;grid-template-rows:16px repeat(7,14px);row-gap:3px;font-size:10px;line-height:14px;color:var(--muted);font-weight:700;flex:none}' +
+    '.hp-heat-body{flex:none}' +
+    '.hp-heat-months{display:grid;height:16px;font-size:10px;color:var(--muted);font-weight:700;text-transform:capitalize;white-space:nowrap}' +
+    '.hp-heat-grid{display:flex;gap:3px}.hp-hcol{display:grid;grid-template-rows:repeat(7,14px);gap:3px}' +
+    '.hp-hcol i{display:block;width:14px;height:14px;border-radius:4px}.hp-legend i{display:block;width:11px;height:11px;border-radius:3px}' +
+    '.h0{background:var(--line)}.hf{background:transparent}' +
+    '.h1{background:color-mix(in srgb,var(--accent) 28%,var(--paper))}.h2{background:color-mix(in srgb,var(--accent) 52%,var(--paper))}' +
+    '.h3{background:color-mix(in srgb,var(--accent) 76%,var(--paper))}.h4{background:var(--accent)}' +
+    '.hp-legend{display:flex;align-items:center;justify-content:flex-start;gap:4px;font-size:11px;color:var(--muted);margin-top:8px}' +
+    '.hp-chart{width:100%;height:auto;display:block;overflow:visible}' +
+    '.hp-bar{fill:color-mix(in srgb,var(--accent) 55%,var(--paper))}.hp-bar-hit{fill:var(--accent)}.hp-bar0{fill:var(--line)}' +
+    '.hp-axis{fill:var(--muted);font:600 10.5px var(--font-ui)}.hp-val{fill:var(--ink-soft);font:800 11px var(--font-ui)}' +
+    '.hp-goal-line{stroke:var(--olive);stroke-width:1.5;stroke-dasharray:5 5}.hp-grid{stroke:var(--line);stroke-width:1}' +
+    '.hp-line{fill:none;stroke:var(--accent);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}.hp-dot{fill:var(--paper);stroke:var(--accent);stroke-width:3}' +
+    '.hp-spark{width:120px;height:30px;display:block}' +
+    '.hp-themes{display:grid;gap:9px}.hp-theme{display:grid;grid-template-columns:minmax(110px,190px) 1fr 54px;gap:10px;align-items:center;font-size:13.5px}' +
+    '.hp-theme-name{font-weight:600;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.hp-theme-bar{position:relative;height:10px;border-radius:99px;background:var(--line);overflow:hidden}' +
+    '.hp-theme-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}.hp-theme-bar .seen{background:color-mix(in srgb,var(--accent) 25%,var(--paper))}' +
+    '.hp-theme-bar .m{background:var(--olive)}.hp-theme-num{text-align:right;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}' +
+    '.hp-legend2{display:flex;gap:6px 12px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:10px}' +
+    '.hp-legend2 i{display:inline-block;width:12px;height:8px;border-radius:9px}.hp-legend2 .m{background:var(--olive)}.hp-legend2 .seen{background:color-mix(in srgb,var(--accent) 25%,var(--paper))}' +
+    '.hp-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}' +
+    '.hp-badge{display:grid;justify-items:center;text-align:center;gap:3px;padding:14px 8px;border-radius:18px;background:var(--zebra);border:1px dashed var(--line-strong);opacity:.62}' +
+    '.hp-badge .hp-badge-ic{font-size:28px;filter:grayscale(1)}.hp-badge b{font:800 13px var(--font-display);color:var(--ink-soft)}.hp-badge small{font-size:11px;color:var(--muted);line-height:1.3}' +
+    '.hp-badge.on{opacity:1;background:var(--accent-tint);border:1px solid var(--accent-soft)}.hp-badge.on .hp-badge-ic{filter:none}.hp-badge.on b{color:var(--accent)}' +
+    '.hp-empty{color:var(--muted);font-style:italic;font-size:14px}' +
+    '.hp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px}' +
+    '.hp-kpi{border-radius:18px;padding:14px 12px;background:var(--accent-tint)}.hp-kpi b{display:block;font:900 24px/1.1 var(--font-display);color:var(--accent);font-variant-numeric:tabular-nums}' +
+    '.hp-kpi span{font-size:12px;font-weight:700;color:var(--ink-soft)}.hp-kpi.green{background:var(--mint)}.hp-kpi.green b{color:var(--olive)}' +
+    '.hp-kpi.gold{background:var(--peach)}.hp-kpi.gold b{color:var(--gold)}.hp-kpi.rose{background:var(--rose-tint)}.hp-kpi.rose b{color:var(--rose)}' +
+    '.hp-kpi.sky{background:var(--sky-tint)}.hp-kpi.sky b{color:var(--sky)}' +
+    '.hp-weak{list-style:none;padding:0;margin:0;display:grid;gap:2px}.hp-weak li{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}' +
+    '.hp-weak .he{font-family:var(--font-he);font-weight:600;color:var(--he);direction:rtl;text-align:left}.hp-weak small{color:var(--muted);font-weight:600;white-space:nowrap}';
+
+  function injectCss() {
+    if (document.getElementById('hp-css')) return;
+    var s = document.createElement('style'); s.id = 'hp-css'; s.textContent = CSS;
+    document.head.appendChild(s);
+  }
+
+  return {
+    XP: XP, BADGES: BADGES, levelInfo: levelInfo, dayKey: dayKey, parseDay: parseDay, addDays: addDays,
+    shortDate: shortDate, emptyDay: emptyDay, dayActive: dayActive, dayGood: dayGood, dayBad: dayBad,
+    streaks: streaks, totalsFrom: totalsFrom, themeMastery: themeMastery, weakWords: weakWords,
+    badgeContext: badgeContext, summarize: summarize, weekly: weekly, rangeSum: rangeSum, rate: rate,
+    esc: esc, fmt: fmt, levelCard: levelCard, heatmap: heatmap, xpBars: xpBars, rateLine: rateLine,
+    themeBars: themeBars, badgesGrid: badgesGrid, sparkline: sparkline, injectCss: injectCss
+  };
+})();
+
+</script>
+<script>
+/* =====================================================================
+   HPG — gamification branchée sur le site de révision (XP, niveaux,
+   séries, badges, toasts) + onglet « Mes stats » enrichi.
+   S'appuie sur HP (progress.js) et sur les globales du site :
+   storage, saveData, updateWordStat, VOCAB.
+   ===================================================================== */
+var HPG = (function () {
+  'use strict';
+  var P, combo = 0, lastLevel = 1, syncTimer = null;
+
+  function prog() {
+    if (!storage.progress || typeof storage.progress !== 'object') storage.progress = {};
+    P = storage.progress;
+    if (typeof P.xp !== 'number') P.xp = 0;
+    if (!P.days) P.days = {};
+    if (!P.badges) P.badges = {};
+    if (!P.goal) P.goal = 60;
+    if (typeof P.bestCombo !== 'number') P.bestCombo = 0;
+    if (!P.backfilled) {
+      /* XP rétroactif : les réponses déjà enregistrées avant la mise en place des points */
+      var t = HP.totalsFrom(storage, VOCAB), X = HP.XP;
+      P.xp += t.qOk * X.quizOk + t.qKo * X.quizKo + t.fK * X.flashKnown + t.fA * X.flashAgain +
+              t.fS * X.flashSoft + t.cK * X.conjKnown + t.cA * X.conjAgain + t.cS * X.conjSoft +
+              t.mastered * X.mastered;
+      P.backfilled = HP.dayKey();
+    }
+    return P;
+  }
+
+  function today() {
+    var k = HP.dayKey();
+    return P.days[k] || (P.days[k] = HP.emptyDay());
+  }
+
+  /* ---------- toasts & célébrations ---------- */
+  function toastBox() {
+    var b = document.getElementById('hp-toasts');
+    if (!b) { b = document.createElement('div'); b.id = 'hp-toasts'; document.body.appendChild(b); }
+    return b;
+  }
+  function toast(html, kind) {
+    var el = document.createElement('div');
+    el.className = 'hp-toast ' + (kind || '');
+    el.innerHTML = html;
+    toastBox().appendChild(el);
+    setTimeout(function () { el.classList.add('out'); }, kind === 'xp' ? 900 : 2600);
+    setTimeout(function () { el.remove(); }, kind === 'xp' ? 1300 : 3000);
+  }
+  function celebrate(title, sub, big) {
+    var ov = document.createElement('div');
+    ov.className = 'hp-cele';
+    ov.innerHTML = '<div class="hp-cele-card"><div class="hp-cele-big">' + big + '</div><h3>' + title + '</h3><p>' + sub +
+      '</p><button type="button" class="btn primary">Continuer</button></div>';
+    ov.addEventListener('click', function (e) { if (e.target === ov || e.target.tagName === 'BUTTON') ov.remove(); });
+    document.body.appendChild(ov);
+    var conf = '';
+    for (var i = 0; i < 28; i++) {
+      conf += '<i style="left:' + (Math.random() * 100).toFixed(1) + '%;animation-delay:' + (Math.random() * .5).toFixed(2) +
+        's;background:var(' + ['--accent', '--accent-2', '--olive', '--gold', '--rose', '--sky'][i % 6] + ')"></i>';
+    }
+    ov.insertAdjacentHTML('beforeend', '<div class="hp-confetti">' + conf + '</div>');
+  }
+
+  /* ---------- gain d'XP ---------- */
+  function gain(n, fields) {
+    prog();
+    var d = today(), before = d.xp >= P.goal;
+    for (var f in fields) d[f] = (d[f] || 0) + fields[f];
+    d.xp += n; P.xp += n;
+    var h = new Date().getHours();
+    if (h < 8) P.early = true;
+    if (h >= 22) P.night = true;
+    if (!before && d.xp >= P.goal) {
+      d.goal = 1; d.xp += HP.XP.goal; P.xp += HP.XP.goal;
+      toast('🎯 <b>Objectif du jour atteint</b> · +' + HP.XP.goal + ' XP bonus', 'goal');
+    }
+    toast('+' + n + ' XP', 'xp');
+    var L = HP.levelInfo(P.xp);
+    if (L.level > lastLevel) {
+      celebrate('Niveau ' + L.level + ' !', L.title + ' · <span class="hp-he">' + L.titleHe + '</span> — continue comme ça.',
+        '<span class="hp-he">' + L.letter + '</span>');
+    }
+    lastLevel = L.level;
+    checkBadges();
+    hud();
+  }
+
+  function onAnswer(ok) {
+    if (ok) {
+      combo++;
+      if (combo > P.bestCombo) P.bestCombo = combo;
+      if (combo % 10 === 0) {
+        P.xp += HP.XP.combo; today().xp += HP.XP.combo;
+        toast('⚡ <b>' + combo + ' bonnes réponses d\'affilée</b> · +' + HP.XP.combo + ' XP', 'goal');
+      }
+    } else combo = 0;
+  }
+
+  function masteredNow(k) {
+    var q = storage.wordStats && storage.wordStats[k], f = storage.flash && storage.flash[k];
+    var qm = q && ((q.correct >= 3 && q.wrong === 0) || (q.seen >= 4 && q.correct / q.seen >= 0.8));
+    var fm = f && ((f.known >= 2 && !f.again && !f.soft) || (f.seen >= 4 && f.known / f.seen >= 0.8));
+    return !!(qm || fm);
+  }
+
+  function checkBadges() {
+    var totals = HP.totalsFrom(storage, VOCAB), themes = HP.themeMastery(storage, VOCAB);
+    var c = HP.badgeContext(P, totals, themes);
+    HP.BADGES.forEach(function (b) {
+      if (!P.badges[b.id] && b.test(c)) {
+        P.badges[b.id] = HP.dayKey();
+        toast('<span style="font-size:22px">' + b.icon + '</span> <span><b>Badge débloqué</b><br>' + HP.esc(b.name) + '</span>', 'badge');
+      }
+    });
+  }
+
+  /* ---------- crochets appelés par le site ---------- */
+  function before(e) {
+    if (!e || e.conj) return false;
+    return masteredNow(e[0] + '|' + e[1]);
+  }
+  function onFlash(e, verdict, wasMastered) {
+    prog();
+    var conj = e && e.conj, X = HP.XP, n, f = {};
+    if (conj) {
+      n = verdict === 'known' ? X.conjKnown : verdict === 'soft' ? X.conjSoft : X.conjAgain;
+      f[verdict === 'known' ? 'cK' : verdict === 'soft' ? 'cS' : 'cA'] = 1;
+    } else {
+      n = verdict === 'known' ? X.flashKnown : verdict === 'soft' ? X.flashSoft : X.flashAgain;
+      f[verdict === 'known' ? 'fK' : verdict === 'soft' ? 'fS' : 'fA'] = 1;
+      if (!wasMastered && masteredNow(e[0] + '|' + e[1])) { n += X.mastered; toast('📗 Mot maîtrisé : <span class="hp-he">' + HP.esc(e[0]) + '</span>', 'goal'); }
+    }
+    onAnswer(verdict === 'known');
+    gain(n, f);
+  }
+  function onQuiz(item, result, wasMastered) {
+    prog();
+    var ok = result === 'correct', n = ok ? HP.XP.quizOk : HP.XP.quizKo;
+    if (ok && !wasMastered && masteredNow(item.he + '|' + item.fr)) { n += HP.XP.mastered; toast('📗 Mot maîtrisé : <span class="hp-he">' + HP.esc(item.he) + '</span>', 'goal'); }
+    onAnswer(ok);
+    gain(n, ok ? { qOk: 1 } : { qKo: 1 });
+  }
+
+  /* ---------- synchronisation vers l'espace de la prof ---------- */
+  function sync() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () {
+      try {
+        if (window.parent && window.parent !== window && window.parent.HPB && window.__HP_STUDENT__) {
+          window.parent.HPB.pushProgress(window.__HP_STUDENT__, HP.summarize(storage, prog(), VOCAB), JSON.parse(JSON.stringify(storage)));
+        }
+      } catch (e) { /* hors espace élève */ }
+    }, 1200);
+  }
+
+  /* ---------- bandeau en-tête ---------- */
+  function hud() {
+    var el = document.getElementById('hp-hud');
+    if (!el) return;
+    var L = HP.levelInfo(P.xp), st = HP.streaks(P.days), d = P.days[HP.dayKey()] || HP.emptyDay();
+    el.innerHTML =
+      '<button type="button" class="hp-hud-lv" data-go="stats" title="Voir ma progression"><span class="hp-he">' + L.letter + '</span>Niv. ' + L.level +
+        '<i><b style="width:' + L.pct + '%"></b></i></button>' +
+      '<span class="hp-hud-pill" title="XP total">⭐ <b>' + HP.fmt(P.xp) + '</b> XP</span>' +
+      '<span class="hp-hud-pill" title="Jours de révision d\'affilée">' + (st.cur ? '🔥' : '·') + ' <b>' + st.cur + '</b> j</span>' +
+      '<span class="hp-hud-pill' + (d.xp >= P.goal ? ' done' : '') + '" title="Objectif du jour">🎯 <b>' + Math.min(d.xp, P.goal) + '</b>/' + P.goal + '</span>';
+  }
+
+  /* ---------- onglet Mes stats ---------- */
+  function kpi(cls, val, lbl) { return '<div class="hp-kpi ' + cls + '"><b>' + val + '</b><span>' + lbl + '</span></div>'; }
+  function delta(a, b) {
+    if (a == null || b == null) return '';
+    var d = a - b; if (!d) return ' <small class="hp-delta">=</small>';
+    return ' <small class="hp-delta ' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '▲' : '▼') + Math.abs(d) + '</small>';
+  }
+  function renderStats() {
+    var root = document.getElementById('hp-progress');
+    if (!root) return;
+    prog();
+    var now = new Date(), totals = HP.totalsFrom(storage, VOCAB), themes = HP.themeMastery(storage, VOCAB);
+    var w0 = HP.rangeSum(P.days, HP.addDays(now, -6), 7), w1 = HP.rangeSum(P.days, HP.addDays(now, -13), 7);
+    var r0 = HP.rate(w0), r1 = HP.rate(w1), active30 = 0;
+    for (var i = 0; i < 30; i++) if (HP.dayActive(P.days[HP.dayKey(HP.addDays(now, -i))])) active30++;
+    var nWords = themes.reduce(function (s, t) { return s + t.n; }, 0);
+    var answers = totals.qOk + totals.qKo + totals.fK + totals.fA + totals.fS + totals.cK + totals.cA + totals.cS;
+    var nb = Object.keys(P.badges).length;
+    root.innerHTML =
+      '<div class="stats-card">' + HP.levelCard(P, { goalPicker: true }) + '</div>' +
+      '<div class="stats-card"><h3>Ces 7 derniers jours</h3><div class="hp-kpis">' +
+        kpi('', HP.fmt(w0.xp) + delta(w0.xp, w1.xp), 'XP gagnés') +
+        kpi('sky', HP.fmt(HP.dayGood(w0) + HP.dayBad(w0)), 'réponses') +
+        kpi('green', (r0 == null ? '—' : r0 + '%') + delta(r0, r1), 'de réussite') +
+        kpi('gold', active30 + '/30', 'jours actifs (30 j)') +
+        kpi('green', HP.fmt(totals.mastered) + '<small class="hp-of">/' + HP.fmt(nWords) + '</small>', 'mots maîtrisés') +
+        kpi('rose', HP.fmt(answers), 'réponses au total') +
+      '</div><p class="hp-note">Flèches : comparaison avec les 7 jours précédents. Un mot compte comme maîtrisé s\'il l\'est au quiz <em>ou</em> en flashcards.</p></div>' +
+      '<div class="stats-card"><h3>Régularité</h3>' + HP.heatmap(P.days, 17) + '</div>' +
+      '<div class="stats-card"><h3>XP par jour — 30 derniers jours</h3>' + HP.xpBars(P.days, 30, P.goal) + '</div>' +
+      '<div class="stats-card"><h3>Taux de réussite par semaine</h3>' + HP.rateLine(P.days, 8) +
+        '<p class="hp-note">Toutes réponses confondues : quiz, flashcards et conjugaison.</p></div>' +
+      '<div class="stats-card"><h3>Maîtrise par thème</h3>' + HP.themeBars(themes) + '</div>' +
+      '<div class="stats-card"><h3>Badges <small class="hp-of">' + nb + ' / ' + HP.BADGES.length + '</small></h3>' + HP.badgesGrid(P.badges) + '</div>' +
+      '<div class="stats-card hp-rules"><h3>Comment gagner des XP</h3><ul>' +
+        '<li>Quiz : <b>+' + HP.XP.quizOk + '</b> bonne réponse, <b>+' + HP.XP.quizKo + '</b> erreur (l\'effort compte)</li>' +
+        '<li>Flashcard : <b>+' + HP.XP.flashKnown + '</b> « je sais », <b>+' + HP.XP.flashAgain + '</b> « à revoir »</li>' +
+        '<li>Conjugaison : <b>+' + HP.XP.conjKnown + '</b> réussie, <b>+' + HP.XP.conjAgain + '</b> à revoir</li>' +
+        '<li>Nouveau mot maîtrisé : <b>+' + HP.XP.mastered + '</b> · Objectif du jour : <b>+' + HP.XP.goal + '</b> · 10 bonnes réponses d\'affilée : <b>+' + HP.XP.combo + '</b></li>' +
+      '</ul></div>';
+    root.querySelectorAll('[data-goal]').forEach(function (b) {
+      b.addEventListener('click', function () { P.goal = +b.dataset.goal; saveData(); renderStats(); hud(); });
+    });
+  }
+
+  var CSS = '' +
+    '#hp-hud{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:-6px auto 18px}' +
+    '.hp-hud-pill,.hp-hud-lv{display:inline-flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--ink-soft);backdrop-filter:blur(8px)}' +
+    '.hp-hud-pill b{color:var(--accent);font-weight:800}.hp-hud-pill.done{background:var(--mint);border-color:transparent}.hp-hud-pill.done b{color:var(--olive)}' +
+    '.hp-hud-lv{cursor:pointer;font:800 13px var(--font-ui);color:var(--ink)}.hp-hud-lv .hp-he{display:grid;place-items:center;width:22px;height:22px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);font-size:13px}' +
+    '.hp-hud-lv i{display:block;width:56px;height:6px;border-radius:9px;background:var(--accent-tint);overflow:hidden}.hp-hud-lv i b{display:block;height:100%;background:var(--accent);border-radius:9px}' +
+    '#hp-toasts{position:fixed;right:16px;bottom:16px;z-index:9999;display:grid;gap:8px;justify-items:end;pointer-events:none}' +
+    '.hp-toast{display:flex;gap:10px;align-items:center;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:10px 14px;box-shadow:var(--shadow-pop);font-size:13.5px;animation:hpIn .25s ease-out;transition:opacity .35s,transform .35s}' +
+    '.hp-toast.xp{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);font:900 15px var(--font-display);border:0;padding:7px 14px}' +
+    '.hp-toast.goal{background:var(--mint);border-color:transparent}.hp-toast.badge{background:var(--peach);border-color:transparent}' +
+    '.hp-toast.out{opacity:0;transform:translateY(8px)}@keyframes hpIn{from{opacity:0;transform:translateY(10px) scale(.96)}}' +
+    '.hp-cele{position:fixed;inset:0;z-index:10000;background:var(--overlay);display:grid;place-items:center;padding:16px;overflow:hidden}' +
+    '.hp-cele-card{position:relative;z-index:1;background:var(--paper);border-radius:28px;padding:30px 34px;text-align:center;max-width:360px;box-shadow:var(--shadow-pop);animation:hpPop .4s cubic-bezier(.2,1.4,.4,1)}' +
+    '.hp-cele-big{width:96px;height:96px;margin:0 auto 14px;border-radius:30px;display:grid;place-items:center;font:700 52px var(--font-he);color:var(--on-accent);background:linear-gradient(135deg,var(--accent),var(--accent-2));transform:rotate(-6deg)}' +
+    '.hp-cele-card h3{font:900 28px var(--font-display);margin-bottom:6px}.hp-cele-card p{color:var(--ink-soft);margin-bottom:18px}' +
+    '@keyframes hpPop{from{transform:scale(.7);opacity:0}}' +
+    '.hp-confetti i{position:absolute;top:-12px;width:9px;height:14px;border-radius:3px;animation:hpFall 1.8s ease-in forwards}' +
+    '@keyframes hpFall{to{transform:translateY(105vh) rotate(540deg);opacity:.6}}' +
+    '#hp-progress{display:grid;gap:18px;margin-bottom:18px}#hp-progress .stats-card{margin:0}' +
+    '.hp-note{font-size:12px;color:var(--muted);font-style:italic;margin-top:12px}.hp-of{font-size:.55em;color:var(--muted);font-weight:700}' +
+    '.hp-delta{font:800 11px var(--font-ui);vertical-align:middle}.hp-delta.up{color:var(--olive)}.hp-delta.down{color:var(--rose)}' +
+    '.hp-rules ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px;color:var(--ink-soft)}.hp-rules b{color:var(--accent)}' +
+    '.hp-sep{font:800 13px var(--font-ui);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;margin:8px 0 14px}' +
+    '@media (prefers-reduced-motion:reduce){.hp-toast,.hp-cele-card,.hp-confetti i{animation:none}}';
+
+  function install() {
+    HP.injectCss();
+    var s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s);
+    prog();
+    lastLevel = HP.levelInfo(P.xp).level;
+    checkBadges();
+
+    /* bandeau sous les compteurs */
+    var gs = document.getElementById('global-stats');
+    if (gs) {
+      var h = document.createElement('div'); h.id = 'hp-hud';
+      gs.parentNode.insertBefore(h, gs.nextSibling);
+      h.addEventListener('click', function (e) {
+        if (e.target.closest('[data-go]')) { var t = document.querySelector('.tab[data-tab="stats"]'); if (t) t.click(); }
+      });
+    }
+    /* onglet stats : la progression passe en tête */
+    var panel = document.getElementById('panel-stats');
+    if (panel) {
+      var root = document.createElement('div'); root.id = 'hp-progress';
+      panel.insertBefore(root, panel.firstChild);
+      var sep = document.createElement('div'); sep.className = 'hp-sep'; sep.textContent = 'Détail par activité';
+      panel.insertBefore(sep, root.nextSibling);
+    }
+    var t = document.querySelector('.tab[data-tab="stats"]');
+    if (t) {
+      t.textContent = 'Ma progression';
+      t.addEventListener('click', renderStats);
+    }
+
+    /* crochet quiz : updateWordStat est une fonction globale, on l'enveloppe */
+    var orig = window.updateWordStat;
+    if (typeof orig === 'function') {
+      updateWordStat = function (item, result) {
+        var was = masteredNow(item.he + '|' + item.fr);
+        orig(item, result);
+        onQuiz(item, result, was);
+        saveData();
+      };
+    }
+    /* crochet sauvegarde : synchronise le résumé vers l'espace de la prof */
+    var origSave = window.saveData;
+    if (typeof origSave === 'function') {
+      saveData = function () { origSave(); sync(); };
+    }
+    saveData();
+    hud();
+    renderStats();
+  }
+
+  return { install: install, before: before, onFlash: onFlash, renderStats: renderStats, hud: hud };
+})();
+
+try { HPG.install(); } catch (e) { console.error("HPG", e); }
+</script>
+<!-- HP:END -->
 </body></html>

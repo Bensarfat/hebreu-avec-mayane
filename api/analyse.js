@@ -3,12 +3,19 @@
    - ANTHROPIC_API_KEY (obligatoire) : clé créée sur console.anthropic.com
    - ANALYSE_CODE (facultatif) : si défini, le site doit envoyer ce code (Réglages > Code d'analyse)
    - ANALYSE_MODEL (facultatif) : modèle Claude utilisé */
+const sb = require('./_supabase');
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed' }); return; }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) { res.status(503).json({ error: 'no_key' }); return; }
-  const code = process.env.ANALYSE_CODE;
-  if (code && req.headers['x-analyse-code'] !== code) { res.status(401).json({ error: 'bad_code' }); return; }
+  if (sb.configured()) {
+    /* site relié à Supabase : seule la professeure connectée peut lancer une analyse */
+    const me = await sb.caller(req);
+    if (!me || me.role !== 'teacher') { res.status(401).json({ error: 'not_teacher' }); return; }
+  } else {
+    const code = process.env.ANALYSE_CODE;
+    if (code && req.headers['x-analyse-code'] !== code) { res.status(401).json({ error: 'bad_code' }); return; }
+  }
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }
   const prompt = body && typeof body.prompt === 'string' ? body.prompt : '';

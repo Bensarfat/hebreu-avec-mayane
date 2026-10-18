@@ -40,13 +40,21 @@ var HPApp = (function () {
   /* ---------- démarrage ---------- */
   function boot() {
     HP.injectCss();
-    HPB.ready().then(function () { return HPB.getTeacher(); }).then(function (t) {
+    HPB.ready().then(function () {
+      if (HPB.remoteError) return 'error';
+      if (HPB.remote) return HPB.setupStatus().then(function (s) { return s.hasTeacher ? null : 'setup'; }, function () { return 'error'; });
+      return HPB.getTeacher().then(function (t) {
       return t ? HPB.listStudents().then(function (l) {
         var known = {}; DEMO.students.forEach(function (d) { known[d[0]] = d[1]; });
         return l.filter(function (x) { return x.demo && !x.pw && known[x.login]; })
           .reduce(function (p, x) { return p.then(function () { x.pw = known[x.login]; return HPB.saveStudent(x); }); }, Promise.resolve());
       }) : seedDemo();
-    }).then(route);
+      });
+    }).then(function (r) {
+      if (r === 'error') return renderFatal(HPB.remoteError || 'Le serveur ne répond pas. Rechargez la page dans un instant.');
+      if (r === 'setup') return renderSetup();
+      route();
+    });
     window.addEventListener('hashchange', route);
     window.addEventListener('hp-progress', function (e) {
       HPB.getSummary(e.detail).then(function (s) { cache.summaries[e.detail] = s; });
@@ -55,9 +63,13 @@ var HPApp = (function () {
 
   function route() {
     var s = sess();
+    if (!s && HPB.remote && !route.checked) {
+      route.checked = true;
+      return HPB.currentUser().then(function (u) { if (u && u.role !== 'blocked') sess(u); route(); });
+    }
     if (!s) return location.hash === '#/connexion' ? renderLogin() : HPHome.render(root, function () { location.hash = '#/connexion'; });
     if (s.role === 'student') return openStudent(s.id, false);
-    if (s.role === 'teacher') return loadAll().then(renderTeacher);
+    if (s.role === 'teacher') return loadAll().then(renderTeacher, function (e) { renderFatal('Impossible de charger vos données (' + ((e && e.message) || 'erreur') + '). Rechargez la page.'); });
     sess(null); renderLogin();
   }
 
@@ -65,6 +77,7 @@ var HPApp = (function () {
     return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings()]).then(function (r) {
       cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2];
       HPA.setCode(r[2].analyseCode || '');
+      if (HPB.me && HPB.me.role === 'teacher') cache.teacherLogin = HPB.me.login;
       return Promise.all(r[0].map(function (s) {
         return Promise.all([HPB.getSummary(s.id), HPB.getContent(s.id)]).then(function (x) {
           cache.summaries[s.id] = x[0]; cache.contents[s.id] = x[1];
@@ -88,10 +101,10 @@ var HPApp = (function () {
           (msg ? '<div class="err">' + esc(msg) + '</div>' : '') +
           '<button class="btn primary" type="submit">Se connecter</button>' +
         '</form></div>' +
-        '<div class="demo-box"><b>Version de démonstration</b> — comptes de test :' +
+        (HPB.remote ? '' : '<div class="demo-box"><b>Version de démonstration</b> — comptes de test :' +
           '<table><tr><td>Professeure</td><td class="mono">' + DEMO.teacher.join(' / ') + '</td><td><button data-demo="t">Utiliser</button></td></tr>' +
           DEMO.students.map(function (s, i) { return '<tr><td>Élève</td><td class="mono">' + s.join(' / ') + '</td><td><button data-demo="' + i + '">Utiliser</button></td></tr>'; }).join('') +
-          '</table></div>' +
+          '</table></div>') +
       '</div></div>';
     var f = $('#lf');
     $$('[data-demo]').forEach(function (b) {
@@ -110,7 +123,39 @@ var HPApp = (function () {
     });
   }
 
-  function logout() { sess(null); location.hash = '#/connexion'; renderLogin(); }
+  function logout() {
+    sess(null); route.checked = true;
+    Promise.resolve(HPB.logout ? HPB.logout() : null).then(function () { location.hash = '#/connexion'; renderLogin(); });
+  }
+
+  /* première ouverture du site en ligne : création du compte de la professeure */
+  function renderSetup(msg) {
+    document.title = 'Hébreu avec Mayane · première ouverture';
+    root.innerHTML = '<div class="login-wrap"><div class="login">' +
+      '<span class="kicker">Première ouverture</span><h1>Bienvenue <span class="grad">בְּרוּכָה הַבָּאָה</span></h1>' +
+      '<p class="sub">Créez votre compte de professeure. Vous seule aurez accès à l\'espace de gestion.</p>' +
+      '<div class="card"><form id="sf">' +
+        '<label class="f">Prénom<input class="in" name="first" value="Mayane" required></label>' +
+        '<label class="f">Identifiant<input class="in mono" name="login" value="mayane" autocapitalize="none" spellcheck="false" required></label>' +
+        '<label class="f">Mot de passe (8 caractères minimum)<input class="in" name="pw" type="password" minlength="8" autocomplete="new-password" required></label>' +
+        '<label class="f">Mot de passe, encore une fois<input class="in" name="pw2" type="password" minlength="8" autocomplete="new-password" required></label>' +
+        (msg ? '<div class="err">' + esc(msg) + '</div>' : '') +
+        '<button class="btn primary" type="submit">Créer mon compte</button></form></div></div></div>';
+    var f = $('#sf');
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (f.pw.value !== f.pw2.value) return renderSetup('Les deux mots de passe ne sont pas identiques.');
+      var login = slug(f.login.value);
+      HPB.setup(login, f.pw.value, f.first.value.trim()).then(function () { return HPB.login(login, f.pw.value); }).then(function (u) {
+        if (!u) throw new Error('connexion impossible');
+        sess(u); location.hash = '#/tableau'; route();
+      }).catch(function (err) { renderSetup('Création impossible : ' + ((err && err.message) || 'erreur') + '.'); });
+    });
+  }
+  function renderFatal(msg) {
+    root.innerHTML = '<div class="login-wrap"><div class="login card empty-state"><div class="big">🔌</div><p>' + esc(msg) + '</p>' +
+      '<button class="btn" onclick="location.reload()">Recharger la page</button></div></div>';
+  }
 
   /* ================= ESPACE ÉLÈVE ================= */
   function openStudent(id, preview) {
@@ -165,7 +210,7 @@ var HPApp = (function () {
   function nav(cur) {
     var pendingDocs = cache.docs.filter(function (d) { return d.status !== 'done'; }).length;
     var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
-    return '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>' +
+    return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
       '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '">' + it[1] + '</a>'; }).join('') +
       '</nav><button class="btn small" id="lo">Se déconnecter</button></header>';
@@ -443,15 +488,15 @@ var HPApp = (function () {
     var st = cache.settings || {};
     return '<div class="bo-head"><div><h1 class="page-title">Réglages</h1></div></div><div class="two">' +
       '<div class="card"><h3>Mon compte</h3><form id="tpw"><div class="stack" style="gap:12px">' +
-        '<label class="f">Identifiant<input class="in mono" name="login" value="' + esc(DEMO.teacher[0]) + '" required></label>' +
+        '<label class="f">Identifiant<input class="in mono" name="login" value="' + esc(HPB.remote ? (cache.teacherLogin || '') : DEMO.teacher[0]) + '" required></label>' +
         '<label class="f">Nouveau mot de passe<input class="in" type="password" name="pw" minlength="8" required autocomplete="new-password"></label>' +
         '<button class="btn primary" type="submit">Changer mon mot de passe</button><span id="tpw-msg"></span></div></form></div>' +
       '<div class="stack" style="gap:18px"><div class="card"><h3>Adresse du site</h3><p class="small muted" style="margin-top:-6px">Elle est ajoutée aux messages d\'accès envoyés aux élèves.</p>' +
         '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="https://…" value="' + esc(st.siteUrl || '') + '">' +
         '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>' +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
-      '<div class="card"><h3>Démonstration</h3><p class="small muted" style="margin-top:-6px">Remet le site dans son état de départ (comptes de test, contenus et statistiques fictives).</p>' +
-        '<button class="btn danger" data-act="resetdemo">Réinitialiser la démo</button></div></div></div>';
+      (HPB.remote ? '' : '<div class="card"><h3>Démonstration</h3><p class="small muted" style="margin-top:-6px">Remet le site dans son état de départ (comptes de test, contenus et statistiques fictives).</p>' +
+        '<button class="btn danger" data-act="resetdemo">Réinitialiser la démo</button></div>') + '</div></div>';
   }
 
   /* ---------- modale de création ---------- */
@@ -479,14 +524,17 @@ var HPApp = (function () {
         if (taken) { $('#nf-msg', m).innerHTML = '<div class="err">Cet identifiant est déjà utilisé.</div>'; return; }
         var s = { id: 's' + Date.now().toString(36), first: f.first.value.trim(), last: f.last.value.trim(), email: f.email.value.trim(), phone: f.phone.value.trim(), login: login, active: true, createdAt: new Date().toISOString() };
         var pw = f.pw.value.trim();
-        HPB.saveStudent(s, pw).then(function () {
+        HPB.saveStudent(s, pw).catch(function (err) {
+          $('#nf-msg', m).innerHTML = '<div class="err">Création impossible : ' + esc(err.code === 'login_taken' ? 'identifiant déjà utilisé' : (err.message || 'erreur')) + '</div>';
+          throw err;
+        }).then(function () {
           cache.students.push(s);
           $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>Compte créé 🎉</h2><p class="muted">Transmettez ces accès à ' + esc(s.first) + '.</p>' + accessCard(s, pw) +
             '<div class="row" style="margin-top:16px"><a class="btn primary" href="#/eleve/' + s.id + '/documents">Déposer ses premiers cours →</a></div>';
           bindCopy(m);
           $('.btn.primary', m).addEventListener('click', function () { m.remove(); });
           if (/eleves|tableau/.test(location.hash) || !location.hash) renderTeacher();
-        });
+        }).catch(function () {});
       });
     });
   }
@@ -704,14 +752,15 @@ var HPApp = (function () {
       tf.addEventListener('submit', function (e) {
         e.preventDefault();
         var login = slug(tf.login.value);
-        HPB.setTeacherPassword(login, tf.pw.value).then(function () { DEMO.teacher = [login, '••••']; $('#tpw-msg').innerHTML = '<span class="ok">Mot de passe changé</span>'; tf.pw.value = ''; });
+        HPB.setTeacherPassword(login, tf.pw.value).then(function () { DEMO.teacher = [login, '••••']; cache.teacherLogin = login; $('#tpw-msg').innerHTML = '<span class="ok">Identifiant et mot de passe enregistrés</span>'; tf.pw.value = ''; },
+          function (err) { $('#tpw-msg').innerHTML = '<span class="err">' + esc(err.code === 'login_taken' ? 'Identifiant déjà utilisé' : (err.message || 'Erreur')) + '</span>'; });
       });
       $('#site').addEventListener('submit', function (e) {
         e.preventDefault(); cache.settings.siteUrl = e.target.url.value.trim(); cache.settings.analyseCode = e.target.code.value.trim();
         HPA.setCode(cache.settings.analyseCode); HPB.setSettings(cache.settings).then(function () { toast('Enregistré'); });
       });
       var rd = $('[data-act="resetdemo"]');
-      rd.onclick = function () {
+      if (rd) rd.onclick = function () {
         if (!rd.dataset.armed) { rd.dataset.armed = 1; rd.textContent = 'Confirmer : tout effacer'; return; }
         HPB.reset().then(seedDemo).then(function () { sess(null); location.hash = '#/connexion'; renderLogin(); });
       };

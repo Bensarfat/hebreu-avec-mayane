@@ -99,8 +99,9 @@ var HPA = (function () {
   }
 
   /* ---------- analyse via la fonction serveur du site (Vercel + clé Claude) ---------- */
-  var serverCode = '';
+  var serverCode = '', authFn = null;
   function setCode(c) { serverCode = c || ''; }
+  function setAuth(f) { authFn = f; }
   function b64(blob) {
     return new Promise(function (res, rej) {
       var r = new FileReader();
@@ -129,10 +130,12 @@ var HPA = (function () {
   }
   function viaServer(ex, prompt, signal, onStep) {
     var imgs = ex.images.slice(0, 6);
-    return Promise.all(imgs.map(function (b) { return toJpeg(b).then(b64); })).then(function (list) {
+    return Promise.all([Promise.all(imgs.map(function (b) { return toJpeg(b).then(b64); })), authFn ? authFn() : null]).then(function (r) {
+      var list = r[0];
       onStep && onStep('Analyse par Claude… (jusqu\'à une minute)');
       var h = { 'content-type': 'application/json' };
       if (serverCode) h['x-analyse-code'] = serverCode;
+      if (r[1]) h.Authorization = 'Bearer ' + r[1];
       return fetch('/api/analyse', { method: 'POST', headers: h, body: JSON.stringify({ prompt: prompt, images: list }), signal: signal });
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
@@ -279,6 +282,6 @@ var HPA = (function () {
 
   return {
     kind: kind, extract: extract, analyse: analyse, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
-    stats: stats, emptyContent: emptyContent, instructions: instructions, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode
+    stats: stats, emptyContent: emptyContent, instructions: instructions, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();

@@ -33,6 +33,7 @@ var DEMO_DATA = ${j(data)};
 ${fs.readFileSync(path.join(B, 'progress.js'), 'utf8')}
 ${rd('backend.js')}
 ${rd('analyse.js')}
+${rd('backend-remote.js')}
 ${rd('home.js')}
 ${rd('app.js')}
 </script>

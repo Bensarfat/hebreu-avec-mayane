@@ -1,0 +1,177 @@
+/* =====================================================================
+   HPB en ligne — même interface que backend.js, mais les comptes, contenus,
+   progressions et documents sont enregistrés dans Supabase : chacun retrouve
+   son espace depuis n'importe quel appareil.
+   S'active tout seul quand le site (sur Vercel) est relié à Supabase
+   (fonction /api/config) ; sinon le site reste en mode démonstration.
+   ===================================================================== */
+(function () {
+  'use strict';
+  var LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
+  var DOMAIN = 'hebreu-avec-mayane.app';
+  var local = {};                       // méthodes du mode démo, gardées en secours
+  Object.keys(HPB).forEach(function (k) { local[k] = HPB[k]; });
+  var sbc = null;                       // client Supabase
+
+  function loadLib() {
+    return new Promise(function (res, rej) {
+      if (window.supabase && window.supabase.createClient) return res();
+      var s = document.createElement('script'); s.src = LIB; s.onload = res;
+      s.onerror = function () { rej(new Error('Impossible de charger Supabase')); };
+      document.head.appendChild(s);
+    });
+  }
+  function q(p) {                       // { data, error } → data ou exception
+    return p.then(function (r) { if (r.error) { var e = new Error(r.error.message || 'Erreur Supabase'); e.code = r.error.code; throw e; } return r.data; });
+  }
+  function emailFor(login) { return String(login || '').trim().toLowerCase() + '@' + DOMAIN; }
+  function token() { return sbc.auth.getSession().then(function (r) { return r.data && r.data.session ? r.data.session.access_token : null; }); }
+  function admin(body) {
+    return token().then(function (t) {
+      return fetch('/api/admin', { method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + (t || '') }, body: JSON.stringify(body) });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) { var e = new Error(j.detail || j.error || ('HTTP ' + r.status)); e.code = j.error; throw e; }
+        return j;
+      });
+    });
+  }
+  function toStudent(p, secrets) {
+    return {
+      id: p.id, first: p.first || '', last: p.last || '', login: p.login, email: p.email || '', phone: p.phone || '',
+      active: p.active !== false, createdAt: p.created_at, pw: secrets ? (secrets[p.id] || '') : undefined
+    };
+  }
+  function docFromRow(r) {
+    return {
+      id: r.id, name: r.name, type: r.type, size: r.size, path: r.path, students: r.students || [], status: r.status,
+      result: r.result || undefined, summary: r.summary || undefined, error: r.error || undefined,
+      addedAt: r.added_at, integratedAt: r.integrated_at || undefined
+    };
+  }
+  function safeName(n) { return String(n || 'document').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80); }
+
+  var remote = {
+    remote: true,
+
+    /* qui est connecté ? (pour rester connecté d'une visite à l'autre) */
+    currentUser: function () {
+      return sbc.auth.getSession().then(function (r) {
+        var s = r.data && r.data.session; if (!s) return null;
+        return q(sbc.from('profiles').select('id,role,active,login').eq('id', s.user.id).maybeSingle()).then(function (p) {
+          if (!p) return null;
+          HPB.me = p;
+          if (p.role === 'student' && p.active === false) return { role: 'blocked' };
+          return p.role === 'teacher' ? { role: 'teacher' } : { role: 'student', id: p.id };
+        });
+      }).catch(function () { return null; });
+    },
+    setupStatus: function () { return admin({ action: 'status' }); },
+    setup: function (login, pw, first) { return admin({ action: 'setup', login: login, pw: pw, first: first }); },
+    logout: function () { return sbc.auth.signOut().catch(function () {}); },
+    authToken: token,
+
+    getTeacher: function () { return Promise.resolve({ remote: true }); },
+    setTeacherPassword: function (login, pw) { return admin({ action: 'teacher', login: login, pw: pw }); },
+    getSettings: function () { return q(sbc.from('settings').select('data').eq('id', 1).maybeSingle()).then(function (r) { return (r && r.data) || {}; }).catch(function () { return {}; }); },
+    setSettings: function (s) { return q(sbc.from('settings').upsert({ id: 1, data: s })); },
+
+    listStudents: function () {
+      return Promise.all([
+        q(sbc.from('profiles').select('*').eq('role', 'student').order('created_at')),
+        q(sbc.from('student_secrets').select('student_id,pw')).catch(function () { return []; })
+      ]).then(function (r) {
+        var sec = {}; r[1].forEach(function (x) { sec[x.student_id] = x.pw; });
+        return r[0].map(function (p) { return toStudent(p, sec); });
+      });
+    },
+    getStudent: function (id) {
+      return q(sbc.from('profiles').select('*').eq('id', id).maybeSingle()).then(function (p) { return p ? toStudent(p, null) : null; });
+    },
+    saveStudent: function (st, pw) {
+      return admin({ action: 'save', student: st, pw: pw || '' }).then(function (j) {
+        st.id = j.id; if (pw) st.pw = pw; return st;
+      });
+    },
+    deleteStudent: function (id) {
+      return admin({ action: 'delete', id: id }).then(function () { return remote.listDocs(); }).then(function (docs) {
+        return Promise.all(docs.filter(function (d) { return d.students.indexOf(id) >= 0; }).map(function (d) {
+          return q(sbc.from('docs').update({ students: d.students.filter(function (x) { return x !== id; }) }).eq('id', d.id));
+        }));
+      });
+    },
+    loginTaken: function (login, exceptId) {
+      login = (login || '').trim().toLowerCase();
+      return q(sbc.from('profiles').select('id').eq('login', login)).then(function (rows) {
+        return rows.some(function (r) { return r.id !== exceptId; });
+      });
+    },
+    login: function (login, pw) {
+      return sbc.auth.signInWithPassword({ email: emailFor(login), password: pw }).then(function (r) {
+        if (r.error || !r.data.session) return null;
+        return remote.currentUser().then(function (u) {
+          if (u && u.role === 'blocked') sbc.auth.signOut();
+          return u;
+        });
+      });
+    },
+
+    getContent: function (id) { return q(sbc.from('contents').select('data').eq('student_id', id).maybeSingle()).then(function (r) { return r ? r.data : null; }); },
+    setContent: function (id, c) {
+      c.updatedAt = new Date().toISOString();
+      return q(sbc.from('contents').upsert({ student_id: id, data: c, updated_at: c.updatedAt }));
+    },
+    getSummary: function (id) { return q(sbc.from('progress').select('summary').eq('student_id', id).maybeSingle()).then(function (r) { return r ? r.summary : null; }); },
+    getProgress: function (id) { return q(sbc.from('progress').select('storage').eq('student_id', id).maybeSingle()).then(function (r) { return r ? r.storage : null; }); },
+    pushProgress: function (id, summary, storage) {
+      if (!id) return Promise.resolve();
+      return q(sbc.from('progress').upsert({ student_id: id, summary: summary, storage: storage, updated_at: new Date().toISOString() }))
+        .then(function () { try { window.dispatchEvent(new CustomEvent('hp-progress', { detail: id })); } catch (e) {} })
+        .catch(function (e) { console.warn('Progression non enregistrée', e); });
+    },
+
+    listDocs: function () { return q(sbc.from('docs').select('*').order('added_at', { ascending: false })).then(function (rows) { return rows.map(docFromRow); }); },
+    addDoc: function (file, students) {
+      var id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      var path = id + '/' + safeName(file.name);
+      return q(sbc.storage.from('documents').upload(path, file, { contentType: file.type || 'application/octet-stream' })).then(function () {
+        var row = { id: id, name: file.name, type: file.type || '', size: file.size, path: path, students: students.slice(), status: 'pending' };
+        return q(sbc.from('docs').insert(row)).then(function () { return docFromRow(Object.assign({ added_at: new Date().toISOString() }, row)); });
+      });
+    },
+    updateDoc: function (d) {
+      return q(sbc.from('docs').update({
+        students: d.students, status: d.status, result: d.result || null, summary: d.summary || null,
+        error: d.error || null, integrated_at: d.integratedAt || null
+      }).eq('id', d.id));
+    },
+    deleteDoc: function (id) {
+      return q(sbc.from('docs').select('path').eq('id', id).maybeSingle()).then(function (r) {
+        return (r ? q(sbc.storage.from('documents').remove([r.path])).catch(function () {}) : Promise.resolve())
+          .then(function () { return q(sbc.from('docs').delete().eq('id', id)); });
+      });
+    },
+    getBlob: function (id) {
+      return q(sbc.from('docs').select('path').eq('id', id).maybeSingle()).then(function (r) {
+        return r ? q(sbc.storage.from('documents').download(r.path)) : null;
+      });
+    },
+    reset: function () { return Promise.resolve(); }
+  };
+
+  HPB.remote = false;
+  HPB.ready = function () {
+    return fetch('/api/config', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : { remote: false }; }).catch(function () { return { remote: false }; })
+      .then(function (cfg) {
+        if (!cfg || !cfg.remote) return local.ready();
+        return loadLib().then(function () {
+          sbc = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'hp-mayane-auth' } });
+          Object.keys(remote).forEach(function (k) { HPB[k] = remote[k]; });
+          if (window.HPA && HPA.setAuth) HPA.setAuth(token);
+        }).catch(function (e) {
+          console.error(e);
+          HPB.remoteError = 'Le site n\'arrive pas à joindre le serveur. Vérifiez votre connexion internet, puis rechargez la page.';
+        });
+      });
+  };
+})();

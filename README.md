@@ -27,3 +27,12 @@ Dans Vercel > Settings > Environment Variables :
 - `ANALYSE_CODE` : un code à saisir dans Réglages > Code d'analyse (facultatif)
 
 Puis redéployer. Sans clé, le site propose l'import manuel d'un fichier .json préparé par Claude.
+
+## Mode en ligne (Supabase)
+
+Sans réglage, le site fonctionne en mode démonstration (données dans le navigateur). Relié à Supabase, chaque élève retrouve son espace sur n'importe quel appareil.
+
+1. Supabase > SQL Editor : exécuter `supabase/schema.sql`.
+2. Supabase > Authentication > Sign In / Providers > Email : décocher « Confirm email ».
+3. Vercel > Settings > Environment Variables : `SUPABASE_URL`, `SUPABASE_ANON_KEY` (clé publique « anon » ou « publishable »), `SUPABASE_SERVICE_ROLE_KEY` (clé secrète « service_role » ou « secret » — ne jamais la partager), puis Redeploy.
+4. À la première ouverture, le site propose de créer le compte de la professeure.

@@ -1,0 +1,149 @@
+/* =====================================================================
+   Page d'accueil publique — cours d'hébreu en français avec Mayane
+   ===================================================================== */
+var HPHome = (function () {
+  'use strict';
+
+  /* Illustration : Mayane (grande, brune, yeux marron, souriante) */
+  var PORTRAIT = '' +
+  '<svg class="mv-portrait" viewBox="0 0 360 440" role="img" aria-label="Illustration de Mayane">' +
+    '<defs>' +
+      '<linearGradient id="mvBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient>' +
+      '<linearGradient id="mvHair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2a1c"/><stop offset="1" stop-color="#2c1810"/></linearGradient>' +
+      '<clipPath id="mvClip"><path d="M30 120 Q30 40 110 30 L250 30 Q330 40 330 120 L330 440 L30 440 Z"/></clipPath>' +
+    '</defs>' +
+    '<path d="M30 120 Q30 40 110 30 L250 30 Q330 40 330 120 L330 440 L30 440 Z" fill="url(#mvBg)"/>' +
+    '<g clip-path="url(#mvClip)">' +
+      '<text x="62" y="118" font-family="var(--font-he)" font-size="44" font-weight="700" fill="#fff" opacity=".22">א</text>' +
+      '<text x="268" y="160" font-family="var(--font-he)" font-size="36" font-weight="700" fill="#fff" opacity=".2">ש</text>' +
+      '<text x="58" y="300" font-family="var(--font-he)" font-size="30" font-weight="700" fill="#fff" opacity=".18">ל</text>' +
+      '<text x="284" y="290" font-family="var(--font-he)" font-size="40" font-weight="700" fill="#fff" opacity=".2">מ</text>' +
+      /* cheveux, arrière */
+      '<path d="M104 170 Q96 82 180 74 Q266 80 258 172 L270 330 Q232 352 180 350 Q126 352 90 330 Z" fill="url(#mvHair)"/>' +
+      /* corps */
+      '<path d="M84 440 Q88 352 150 330 L210 330 Q272 352 276 440 Z" fill="#fff8f2"/>' +
+      '<path d="M150 330 L180 372 L210 330" fill="none" stroke="#efd9c8" stroke-width="3"/>' +
+      '<path d="M84 440 Q88 352 150 330 L160 336 Q118 360 112 440 Z" fill="#f4e5d6"/>' +
+      /* cou */
+      '<path d="M162 286 L162 334 Q180 346 198 334 L198 286 Z" fill="#d9a07a"/>' +
+      '<path d="M162 304 Q180 318 198 304 L198 290 L162 290 Z" fill="#c78c66" opacity=".55"/>' +
+      /* visage */
+      '<ellipse cx="180" cy="214" rx="62" ry="78" fill="#e8b48e"/>' +
+      '<ellipse cx="119" cy="222" rx="10" ry="16" fill="#e0a985"/><ellipse cx="241" cy="222" rx="10" ry="16" fill="#e0a985"/>' +
+      '<circle cx="120" cy="240" r="4" fill="var(--gold)"/><circle cx="240" cy="240" r="4" fill="var(--gold)"/>' +
+      /* cheveux, devant */
+      '<path d="M114 196 Q116 130 182 128 Q248 132 248 196 Q236 160 196 150 Q170 170 120 186 Z" fill="url(#mvHair)"/>' +
+      '<path d="M118 176 Q110 250 104 330 L90 330 Q88 230 108 170 Z" fill="url(#mvHair)"/>' +
+      '<path d="M244 176 Q252 250 258 330 L272 330 Q274 230 252 170 Z" fill="url(#mvHair)"/>' +
+      /* sourcils */
+      '<path d="M140 190 Q154 182 168 188" fill="none" stroke="#3b2216" stroke-width="5" stroke-linecap="round"/>' +
+      '<path d="M192 188 Q206 182 220 190" fill="none" stroke="#3b2216" stroke-width="5" stroke-linecap="round"/>' +
+      /* yeux marron */
+      '<ellipse cx="155" cy="212" rx="12" ry="9" fill="#fff"/><ellipse cx="205" cy="212" rx="12" ry="9" fill="#fff"/>' +
+      '<circle cx="156" cy="213" r="7" fill="#6b3a1f"/><circle cx="204" cy="213" r="7" fill="#6b3a1f"/>' +
+      '<circle cx="156" cy="213" r="3.2" fill="#2a160b"/><circle cx="204" cy="213" r="3.2" fill="#2a160b"/>' +
+      '<circle cx="158.5" cy="210.5" r="2" fill="#fff"/><circle cx="206.5" cy="210.5" r="2" fill="#fff"/>' +
+      '<path d="M142 206 Q155 198 168 206" fill="none" stroke="#2a160b" stroke-width="2.5" stroke-linecap="round"/>' +
+      '<path d="M192 206 Q205 198 218 206" fill="none" stroke="#2a160b" stroke-width="2.5" stroke-linecap="round"/>' +
+      /* nez, joues, sourire */
+      '<path d="M180 220 Q176 238 184 242" fill="none" stroke="#c98a63" stroke-width="3" stroke-linecap="round"/>' +
+      '<ellipse cx="140" cy="242" rx="13" ry="8" fill="var(--rose)" opacity=".18"/><ellipse cx="220" cy="242" rx="13" ry="8" fill="var(--rose)" opacity=".18"/>' +
+      '<path d="M156 256 Q180 280 204 256 Q180 266 156 256 Z" fill="#b5524a"/>' +
+      '<path d="M160 257 Q180 264 200 257 Q180 270 160 257 Z" fill="#fff"/>' +
+      /* livre */
+      '<g transform="translate(206 378) rotate(-8)">' +
+        '<rect x="0" y="0" width="92" height="66" rx="8" fill="var(--paper)" stroke="var(--line-strong)" stroke-width="2"/>' +
+        '<line x1="46" y1="6" x2="46" y2="60" stroke="var(--line-strong)" stroke-width="2"/>' +
+        '<text x="23" y="44" text-anchor="middle" font-family="var(--font-he)" font-size="26" font-weight="700" fill="var(--accent)">ב</text>' +
+        '<text x="69" y="44" text-anchor="middle" font-family="var(--font-he)" font-size="26" font-weight="700" fill="var(--accent-2)">א</text>' +
+      '</g>' +
+      '<ellipse cx="214" cy="418" rx="20" ry="12" fill="#e8b48e"/>' +
+    '</g>' +
+  '</svg>';
+
+  var CSS = '' +
+    '.mv{min-height:100vh}' +
+    '.mv-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:0 auto;padding:18px 16px}' +
+    '.mv-hero{max-width:1120px;margin:0 auto;padding:24px 16px 56px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}' +
+    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;max-width:300px;margin:0 auto}}' +
+    '.mv-hero h1{font:900 clamp(36px,6vw,62px)/1.04 var(--font-display);letter-spacing:-.025em;margin:14px 0 0;text-wrap:balance}' +
+    '.mv-hero h1 .grad{display:inline-block}' +
+    '.mv-lead{font-size:clamp(16px,2vw,19px);color:var(--ink-soft);margin:18px 0 26px;max-width:560px}' +
+    '.mv-he{font:700 clamp(22px,3vw,30px) var(--font-he);color:var(--he);margin-top:10px;direction:rtl;text-align:left}' +
+    '.mv-cta{display:flex;gap:10px;flex-wrap:wrap}.mv-cta .btn{padding:14px 24px;font-size:15.5px}' +
+    '.mv-art{position:relative}.mv-portrait{width:100%;height:auto;display:block;filter:drop-shadow(0 30px 40px rgba(84,52,150,.25))}' +
+    '.mv-bubble{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:10px 14px;box-shadow:var(--shadow-card);font-size:13.5px;font-weight:700;color:var(--ink);display:flex;gap:8px;align-items:center;animation:mvFloat 5s ease-in-out infinite}' +
+    '.mv-bubble .he{color:var(--accent);font-size:16px}' +
+    '.mv-b1{left:-6%;top:14%}.mv-b2{right:-4%;top:46%;animation-delay:-2s}.mv-b3{left:2%;bottom:10%;animation-delay:-3.5s}' +
+    '@keyframes mvFloat{50%{transform:translateY(-8px)}}' +
+    '@media (prefers-reduced-motion:reduce){.mv-bubble{animation:none}}' +
+    '.mv-sec{max-width:1120px;margin:0 auto;padding:30px 16px}' +
+    '.mv-sec h2{font:900 clamp(26px,4vw,36px)/1.1 var(--font-display);letter-spacing:-.02em;margin:0 0 8px;text-align:center}' +
+    '.mv-sec .mv-sub{color:var(--muted);text-align:center;margin:0 auto 28px;max-width:620px}' +
+    '.mv-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}@media (max-width:860px){.mv-steps{grid-template-columns:1fr}}' +
+    '.mv-step{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:var(--shadow-card)}' +
+    '.mv-step .n{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:900 20px var(--font-display);margin-bottom:14px}' +
+    '.mv-step h3{font:800 18px var(--font-display);margin:0 0 6px}.mv-step p{margin:0;color:var(--ink-soft);font-size:14.5px}' +
+    '.mv-feats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media (max-width:860px){.mv-feats{grid-template-columns:1fr 1fr}}' +
+    '.mv-feat{border-radius:22px;padding:18px;background:var(--glass);border:1px solid var(--line)}.mv-feat .ic{font-size:26px}.mv-feat b{display:block;margin:8px 0 2px;font-family:var(--font-display);font-size:16px}.mv-feat span{font-size:13.5px;color:var(--ink-soft)}' +
+    '.mv-about{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:var(--shadow-card)}' +
+    '@media (max-width:700px){.mv-about{grid-template-columns:1fr;text-align:center}.mv-about .mv-face{margin:0 auto}}' +
+    '.mv-face{width:120px;height:120px;border-radius:36px;overflow:hidden;background:var(--accent-tint)}.mv-face svg{width:100%;height:auto;transform:scale(1.7) translateY(-2%)}' +
+    '.mv-about h3{font:900 24px var(--font-display);margin:0 0 6px}.mv-about p{margin:0 0 10px;color:var(--ink-soft)}' +
+    '.mv-tags{display:flex;gap:6px;flex-wrap:wrap}@media (max-width:700px){.mv-tags{justify-content:center}}' +
+    '.mv-band{max-width:1120px;margin:20px auto 0;padding:0 16px 60px}' +
+    '.mv-band>div{border-radius:30px;padding:34px 24px;text-align:center;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent)}' +
+    '.mv-band h2{font:900 clamp(24px,4vw,34px) var(--font-display);margin:0 0 6px}.mv-band p{margin:0 0 18px;opacity:.9}' +
+    '.mv-band .btn{background:var(--paper);color:var(--accent);border-color:transparent;font-weight:800;padding:13px 26px}' +
+    '.mv-foot{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 30px}.mv-foot .he{color:var(--accent)}';
+
+  function render(root, go) {
+    if (!document.getElementById('mv-css')) { var s = document.createElement('style'); s.id = 'mv-css'; s.textContent = CSS; document.head.appendChild(s); }
+    document.title = 'Hébreu avec Mayane · cours en français';
+    root.innerHTML =
+      '<div class="mv">' +
+      '<div class="demo-strip">Version de démonstration — textes et illustration à valider par Mayane.</div>' +
+      '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Mayane</a>' +
+        '<button class="btn" data-go="login">Mon espace</button></header>' +
+      '<section class="mv-hero"><div>' +
+        '<span class="kicker">Cours d\'hébreu en français · tous niveaux</span>' +
+        '<h1>Apprendre l\'hébreu,<br>à ton rythme, <span class="grad">avec le sourire</span></h1>' +
+        '<div class="mv-he">לוֹמְדִים עִבְרִית בְּיַחַד</div>' +
+        '<p class="mv-lead">Des cours en français, bienveillants et motivants, et un espace de révision rien qu\'à toi : ton vocabulaire, tes règles de grammaire, tes flashcards — préparés à partir de tes propres cours.</p>' +
+        '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
+      '</div><div class="mv-art">' + PORTRAIT +
+        '<div class="mv-bubble mv-b1"><span class="he">שָׁלוֹם!</span> Bonjour !</div>' +
+        '<div class="mv-bubble mv-b2">🔥 7 jours d\'affilée</div>' +
+        '<div class="mv-bubble mv-b3">⭐ +10 XP</div>' +
+      '</div></section>' +
+
+      '<section class="mv-sec" id="comment"><h2>Comment ça marche</h2><p class="mv-sub">Le cours, puis la révision : tout ce que tu vois en classe se retrouve dans ton espace.</p>' +
+        '<div class="mv-steps">' +
+          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Mayane</h3><p>On avance ensemble, en français, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Mayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--peach);color:var(--gold)">3</div><h3>Tu révises en jouant</h3><p>Quiz, flashcards, conjugaison : tu gagnes des XP, tu montes de niveau et tu débloques des badges.</p></div>' +
+        '</div></section>' +
+
+      '<section class="mv-sec"><div class="mv-feats">' +
+        '<div class="mv-feat"><div class="ic">🃏</div><b>Flashcards</b><span>Français → hébreu, hébreu → français, avec nikoud.</span></div>' +
+        '<div class="mv-feat"><div class="ic">📖</div><b>Grammaire</b><span>Des fiches courtes, avec les exemples du cours.</span></div>' +
+        '<div class="mv-feat"><div class="ic">🎯</div><b>Objectif du jour</b><span>Quelques minutes par jour, une série qui grandit.</span></div>' +
+        '<div class="mv-feat"><div class="ic">📈</div><b>Ta progression</b><span>Mots maîtrisés, régularité, points à revoir.</span></div>' +
+      '</div></section>' +
+
+      '<section class="mv-sec"><div class="mv-about"><div class="mv-face">' + PORTRAIT + '</div><div>' +
+        '<h3>Ta professeure : Mayane</h3>' +
+        '<p>Patiente, à l\'écoute et toujours positive, Mayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
+        '<div class="mv-tags"><span class="pill">Cours en français</span><span class="pill green">Bienveillance</span><span class="pill gold">Motivation</span><span class="pill rose">Tous niveaux</span></div>' +
+      '</div></div></section>' +
+
+      '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Mayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +
+      '<footer class="mv-foot"><span class="he">לְאַט לְאַט</span> · petit à petit · Hébreu avec Mayane</footer>' +
+      '</div>';
+    Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
+    var a = root.querySelector('a[href="#comment"]');
+    if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: 'smooth' }); });
+    window.scrollTo(0, 0);
+  }
+  return { render: render };
+})();

@@ -472,7 +472,7 @@ var HPApp = (function () {
         '<button class="btn danger" data-act="delete">Supprimer l\'élève</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
   }
   function accessCard(s, pw) {
-    var site = (cache.settings && cache.settings.siteUrl) || '';
+    var site = (cache.settings && cache.settings.siteUrl) || (HPB.remote ? location.origin : '');
     var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMayane';
     return '<div class="access"><div><div class="k">Identifiant</div><div class="v">' + esc(s.login) + '</div></div>' +
       '<div><div class="k">Mot de passe</div><div class="v">' + esc(pw) + '</div></div>' +
@@ -492,7 +492,7 @@ var HPApp = (function () {
         '<label class="f">Nouveau mot de passe<input class="in" type="password" name="pw" minlength="8" required autocomplete="new-password"></label>' +
         '<button class="btn primary" type="submit">Changer mon mot de passe</button><span id="tpw-msg"></span></div></form></div>' +
       '<div class="stack" style="gap:18px"><div class="card"><h3>Adresse du site</h3><p class="small muted" style="margin-top:-6px">Elle est ajoutée aux messages d\'accès envoyés aux élèves.</p>' +
-        '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="https://…" value="' + esc(st.siteUrl || '') + '">' +
+        '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="' + esc(HPB.remote ? location.origin : 'https://…') + '" value="' + esc(st.siteUrl || '') + '">' +
         (HPB.remote ? '<input type="hidden" name="code" value="">' : '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>') +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       (HPB.remote ? '' : '<div class="card"><h3>Démonstration</h3><p class="small muted" style="margin-top:-6px">Remet le site dans son état de départ (comptes de test, contenus et statistiques fictives).</p>' +

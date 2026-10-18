@@ -493,7 +493,7 @@ var HPApp = (function () {
         '<button class="btn primary" type="submit">Changer mon mot de passe</button><span id="tpw-msg"></span></div></form></div>' +
       '<div class="stack" style="gap:18px"><div class="card"><h3>Adresse du site</h3><p class="small muted" style="margin-top:-6px">Elle est ajoutée aux messages d\'accès envoyés aux élèves.</p>' +
         '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="https://…" value="' + esc(st.siteUrl || '') + '">' +
-        '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>' +
+        (HPB.remote ? '<input type="hidden" name="code" value="">' : '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>') +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       (HPB.remote ? '' : '<div class="card"><h3>Démonstration</h3><p class="small muted" style="margin-top:-6px">Remet le site dans son état de départ (comptes de test, contenus et statistiques fictives).</p>' +
         '<button class="btn danger" data-act="resetdemo">Réinitialiser la démo</button></div>') + '</div></div>';

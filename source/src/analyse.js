@@ -98,11 +98,70 @@ var HPA = (function () {
     catch (e) { return Promise.resolve(null); }
   }
 
+  /* ---------- analyse via la fonction serveur du site (Vercel + clé Claude) ---------- */
+  var serverCode = '';
+  function setCode(c) { serverCode = c || ''; }
+  function b64(blob) {
+    return new Promise(function (res, rej) {
+      var r = new FileReader();
+      r.onload = function () { res(String(r.result).split(',')[1] || ''); };
+      r.onerror = rej; r.readAsDataURL(blob);
+    });
+  }
+  function toJpeg(blob) {
+    if (blob.type === 'image/jpeg' && blob.size < 3e6) return Promise.resolve(blob);
+    return new Promise(function (res) {
+      var u = URL.createObjectURL(blob), im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 2000 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+        c.toBlob(function (b) { res(b || blob); }, 'image/jpeg', 0.85);
+      };
+      im.onerror = function () { URL.revokeObjectURL(u); res(blob); };
+      im.src = u;
+    });
+  }
+  function parseJson(text) {
+    var a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a < 0 || b <= a) { var e = new Error('invalid_json'); e.code = 'invalid_json'; throw e; }
+    try { return JSON.parse(text.slice(a, b + 1)); } catch (x) { var e2 = new Error('invalid_json'); e2.code = 'invalid_json'; throw e2; }
+  }
+  function viaServer(ex, prompt, signal, onStep) {
+    var imgs = ex.images.slice(0, 6);
+    return Promise.all(imgs.map(function (b) { return toJpeg(b).then(b64); })).then(function (list) {
+      onStep && onStep('Analyse par Claude… (jusqu\'à une minute)');
+      var h = { 'content-type': 'application/json' };
+      if (serverCode) h['x-analyse-code'] = serverCode;
+      return fetch('/api/analyse', { method: 'POST', headers: h, body: JSON.stringify({ prompt: prompt, images: list }), signal: signal });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (r.ok && j.text) return parseJson(j.text);
+        var e = new Error(j.detail || j.error || ('HTTP ' + r.status));
+        e.code = r.status === 404 || r.status === 405 || j.error === 'no_key' ? 'no_server' : j.error === 'bad_code' ? 'bad_code' : 'server_error';
+        throw e;
+      });
+    }, function (err) {
+      if (err && err.name === 'AbortError') { var c = new Error('cancelled'); c.code = 'cancelled'; throw c; }
+      var e = new Error('no_server'); e.code = 'no_server'; throw e;
+    });
+  }
+  function buildPrompt(ex, existingThemes, docName) {
+    var text = ex.text.length > 180000 ? ex.text.slice(0, 180000) : ex.text;
+    return instructions(existingThemes, docName) +
+      (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).');
+  }
+
   function analyse(doc, blob, existingThemes, onStep, signal) {
     return extract(doc, blob, onStep).then(function (ex) {
       if (!ex.text.trim() && !ex.images.length) throw new Error('Aucun texte lisible dans ce document.');
       return sampleFn().then(function (sample) {
-        if (!sample) { var e = new Error('no_sample'); e.code = 'no_sample'; e.extracted = ex; throw e; }
+        if (!sample) {
+          return viaServer(ex, buildPrompt(ex, existingThemes, doc.name), signal, onStep).catch(function (e) {
+            if (e.code === 'no_server') { var n = new Error('no_sample'); n.code = 'no_sample'; n.extracted = ex; throw n; }
+            throw e;
+          });
+        }
         var p = Promise.resolve(null);
         if (ex.images.length) p = sample.limits().then(function (l) { return l; }).catch(function () { return null; });
         return p.then(function (lim) {
@@ -220,6 +279,6 @@ var HPA = (function () {
 
   return {
     kind: kind, extract: extract, analyse: analyse, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
-    stats: stats, emptyContent: emptyContent, instructions: instructions, SCHEMA: SCHEMA, sampleFn: sampleFn
+    stats: stats, emptyContent: emptyContent, instructions: instructions, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode
   };
 })();

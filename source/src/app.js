@@ -64,6 +64,7 @@ var HPApp = (function () {
   function loadAll() {
     return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings()]).then(function (r) {
       cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2];
+      HPA.setCode(r[2].analyseCode || '');
       return Promise.all(r[0].map(function (s) {
         return Promise.all([HPB.getSummary(s.id), HPB.getContent(s.id)]).then(function (x) {
           cache.summaries[s.id] = x[0]; cache.contents[s.id] = x[1];
@@ -446,7 +447,9 @@ var HPApp = (function () {
         '<label class="f">Nouveau mot de passe<input class="in" type="password" name="pw" minlength="8" required autocomplete="new-password"></label>' +
         '<button class="btn primary" type="submit">Changer mon mot de passe</button><span id="tpw-msg"></span></div></form></div>' +
       '<div class="stack" style="gap:18px"><div class="card"><h3>Adresse du site</h3><p class="small muted" style="margin-top:-6px">Elle est ajoutée aux messages d\'accès envoyés aux élèves.</p>' +
-        '<form id="site" class="row"><input class="in" name="url" placeholder="https://…" value="' + esc(st.siteUrl || '') + '" style="flex:1;min-width:200px"><button class="btn" type="submit">Enregistrer</button></form></div>' +
+        '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="https://…" value="' + esc(st.siteUrl || '') + '">' +
+        '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>' +
+        '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       '<div class="card"><h3>Démonstration</h3><p class="small muted" style="margin-top:-6px">Remet le site dans son état de départ (comptes de test, contenus et statistiques fictives).</p>' +
         '<button class="btn danger" data-act="resetdemo">Réinitialiser la démo</button></div></div></div>';
   }
@@ -524,6 +527,8 @@ var HPApp = (function () {
       if (e && e.code === 'no_sample') return showManual(slot, d, e.extracted);
       var msg = e && e.code === 'rate_limited' ? 'Trop de demandes pour le moment : réessayez dans quelques minutes.'
         : e && e.code === 'invalid_json' ? 'La réponse de Claude n\'était pas exploitable. Réessayez.'
+        : e && e.code === 'bad_code' ? 'Le code d\'analyse est incorrect : vérifiez-le dans Réglages.'
+        : e && e.code === 'server_error' ? 'L\'analyse a échoué (' + e.message + '). Réessayez dans un instant.'
         : e && (e.code === 'not_granted' || e.code === 'sampling_disabled') ? 'L\'analyse par Claude n\'est pas autorisée pour ce site. Autorisez-la dans le menu Permissions de la page, ou utilisez l\'import manuel (onglet Contenu du site).'
         : (e && e.message) || 'Erreur inconnue.';
       slot.innerHTML = '<div class="review"><div class="err">' + esc(msg) + '</div></div>';
@@ -532,8 +537,8 @@ var HPApp = (function () {
 
   function showManual(slot, d, ex) {
     var prompt = HPA.instructions([], d.name);
-    slot.innerHTML = '<div class="review"><b>L\'analyse automatique n\'est pas disponible dans cette fenêtre.</b>' +
-      '<p class="small muted">Elle fonctionne quand le site est ouvert depuis Claude. En attendant : envoyez ce document à Claude dans une conversation avec la consigne ci-dessous, puis importez le fichier .json obtenu dans l\'onglet « Contenu du site » de l\'élève.</p>' +
+    slot.innerHTML = '<div class="review"><b>L\'analyse automatique n\'est pas encore activée sur ce site.</b>' +
+      '<p class="small muted">Elle s\'active une fois pour toutes en ajoutant une clé Claude au site (voir le guide). En attendant : envoyez ce document à Claude dans une conversation avec la consigne ci-dessous, puis importez le fichier .json obtenu dans l\'onglet « Contenu du site » de l\'élève.</p>' +
       '<button class="btn small" data-copy="' + esc(prompt) + '">Copier la consigne pour Claude</button>' +
       (ex && ex.text ? '<details style="margin-top:10px"><summary class="small">Texte extrait du document (' + fmt(ex.text.length) + ' caractères)</summary><pre class="code">' + esc(ex.text.slice(0, 4000)) + (ex.text.length > 4000 ? '\n…' : '') + '</pre></details>' : '') + '</div>';
     bindCopy(slot);
@@ -702,7 +707,8 @@ var HPApp = (function () {
         HPB.setTeacherPassword(login, tf.pw.value).then(function () { DEMO.teacher = [login, '••••']; $('#tpw-msg').innerHTML = '<span class="ok">Mot de passe changé</span>'; tf.pw.value = ''; });
       });
       $('#site').addEventListener('submit', function (e) {
-        e.preventDefault(); cache.settings.siteUrl = e.target.url.value.trim(); HPB.setSettings(cache.settings).then(function () { toast('Enregistré'); });
+        e.preventDefault(); cache.settings.siteUrl = e.target.url.value.trim(); cache.settings.analyseCode = e.target.code.value.trim();
+        HPA.setCode(cache.settings.analyseCode); HPB.setSettings(cache.settings).then(function () { toast('Enregistré'); });
       });
       var rd = $('[data-act="resetdemo"]');
       rd.onclick = function () {

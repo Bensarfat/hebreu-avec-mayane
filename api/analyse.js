@@ -2,7 +2,8 @@
    Variables d'environnement (Vercel > Settings > Environment Variables) :
    - ANTHROPIC_API_KEY (obligatoire) : clé créée sur console.anthropic.com
    - ANALYSE_CODE (facultatif) : si défini, le site doit envoyer ce code (Réglages > Code d'analyse)
-   - ANALYSE_MODEL (facultatif) : modèle Claude utilisé */
+   - ANALYSE_MODEL (facultatif) : modèle Claude utilisé
+   - ANTHROPIC_WORKSPACE_ID (facultatif) : identifiant du workspace, si la clé n'est rattachée à aucun */
 const sb = require('./_supabase');
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed' }); return; }
@@ -28,7 +29,11 @@ module.exports = async function handler(req, res) {
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      headers: Object.assign(
+        { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        /* clé créée hors d'un « workspace » de la console Claude : il faut préciser lequel utiliser */
+        process.env.ANTHROPIC_WORKSPACE_ID ? { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } : {}
+      ),
       body: JSON.stringify({ model: process.env.ANALYSE_MODEL || 'claude-sonnet-5-5', max_tokens: 12000, messages: [{ role: 'user', content: content }] })
     });
     const j = await r.json();

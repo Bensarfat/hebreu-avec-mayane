@@ -258,7 +258,7 @@ var HPApp = (function () {
 
   /* ================= ESPACE ÉLÈVE ================= */
   function openStudent(id, preview) {
-    Promise.all([HPB.getStudent(id), HPB.getContent(id), HPB.getProgress(id)]).catch(function (e) {
+    Promise.all([HPB.getStudent(id), HPB.getContent(id), HPB.getProgress(id).then(function (p) { return preview ? p : freshest(id, p); })]).catch(function (e) {
       renderFatal('Impossible d\'ouvrir l\'espace (' + errText(e) + '). Rechargez la page.'); throw e;
     }).then(function (r) {
       var st = r[0], content = r[1], prog = r[2];
@@ -326,6 +326,22 @@ var HPApp = (function () {
   });
   /* envois de progression un par un ; si plusieurs arrivent pendant un envoi, seul le plus récent part ensuite */
   var pushQueue = Promise.resolve(), nextPush = null;
+  function backup(id, v) {
+    try {
+      if (v === undefined) return JSON.parse(localStorage.getItem('hp_backup_' + id) || 'null');
+      if (v === null) localStorage.removeItem('hp_backup_' + id); else localStorage.setItem('hp_backup_' + id, JSON.stringify(v));
+    } catch (e) { return null; }
+  }
+  /* au retour de l'élève : si une copie locale non envoyée est plus récente que celle du serveur, on la reprend */
+  function freshest(id, prog) {
+    var b = backup(id);
+    if (!b || !b.storage || !b.sum || !HPB.getSummary) return Promise.resolve(prog);
+    return Promise.resolve(HPB.getSummary(id)).catch(function () { return null; }).then(function (srv) {
+      var a = String(b.sum.updatedAt || ''), z = String((srv && srv.updatedAt) || '');
+      if (a > z) { queuePush(id, b.sum, b.storage); return b.storage; }
+      backup(id, null); return prog;
+    });
+  }
   function queuePush(id, sum, storage) {
     var first = !nextPush;
     nextPush = { id: id, sum: sum, storage: storage };
@@ -334,7 +350,10 @@ var HPApp = (function () {
       var p = nextPush; nextPush = null;
       return Promise.resolve(HPB.pushProgress(p.id, p.sum, p.storage)).catch(function (e) {
         console.warn('progression', e);
-        return new Promise(function (r) { setTimeout(r, 4000); }).then(function () { return HPB.pushProgress(p.id, p.sum, p.storage); }).catch(function () {});
+        return new Promise(function (r) { setTimeout(r, 4000); }).then(function () { return HPB.pushProgress(p.id, p.sum, p.storage); });
+      }).then(function () { backup(p.id, null); }, function () {
+        /* pas de réseau : copie gardée dans ce navigateur, renvoyée à la prochaine ouverture de l'espace */
+        backup(p.id, { sum: p.sum, storage: p.storage });
       });
     });
   }

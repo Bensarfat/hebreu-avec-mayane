@@ -142,7 +142,7 @@
       if (!id) return Promise.resolve();
       return q(sbc.from('progress').upsert({ student_id: id, summary: summary, storage: storage, updated_at: new Date().toISOString() }))
         .then(function () { try { window.dispatchEvent(new CustomEvent('hp-progress', { detail: id })); } catch (e) {} })
-        .catch(function (e) { console.warn('Progression non enregistrée', e); });
+        .catch(function (e) { console.warn('Progression non enregistrée', e); throw e; });
     },
 
     listDocs: function () { return q(sbc.from('docs').select('*').order('added_at', { ascending: false })).then(function (rows) { return rows.map(docFromRow); }); },

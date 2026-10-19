@@ -1684,8 +1684,11 @@
     .container > .tabs .tab { flex: none; }
   }
   /* sur telephone ou tablette tactile, pas de clavier : on cache les touches Espace / A / O / P */
+  .hint-touch { display: none; }
   @media (hover: none), (max-width: 700px) {
     .flash-key { display: none; }
+    .hint-mouse { display: none; }
+    .hint-touch { display: inline; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -1702,9 +1705,9 @@
   </header>
 
   <div class="global-stats" id="global-stats">
-    <span><strong id="gs-seen">1</strong>mots vus</span>
+    <span><strong id="gs-seen">1</strong><span data-pl="mot vu|mots vus">mots vus</span></span>
     <span class="sep">·</span>
-    <span><strong id="gs-mastered">0</strong>maîtrisés</span>
+    <span><strong id="gs-mastered">0</strong><span data-pl="maîtrisé|maîtrisés">maîtrisés</span></span>
     <span class="sep">·</span>
     <span><strong id="gs-difficult">0</strong>à revoir</span>
   </div>
@@ -1772,7 +1775,7 @@
         <div class="quiz-word" id="quiz-word">—</div>
         <div class="answer-zone empty" id="answer-zone"></div>
         <div class="actions" id="actions-reveal">
-          <span class="tap-hint">Clique sur la carte pour voir la réponse</span>
+          <span class="tap-hint"><span class="hint-mouse">Clique sur la carte ou appuie sur Espace pour voir la réponse</span><span class="hint-touch">Touche la carte pour voir la réponse</span></span>
         </div>
         <div class="actions" id="actions-judge" style="display:none;">
           <button class="judge-btn judge-up" id="correct-btn" title="J'avais juste" aria-label="J'avais juste">
@@ -3024,8 +3027,8 @@
   <div class="panel" id="panel-cours">
     <div class="cours-dash" id="cours-dash">
       <div class="cd-grid">
-        <div class="cd-box"><b id="cd-seen">0</b><span>mots vus</span></div>
-        <div class="cd-box green"><b id="cd-mastered">0</b><span>ma&icirc;tris&eacute;s</span></div>
+        <div class="cd-box"><b id="cd-seen">0</b><span data-pl="mot vu|mots vus">mots vus</span></div>
+        <div class="cd-box green"><b id="cd-mastered">0</b><span data-pl="maîtrisé|maîtrisés">ma&icirc;tris&eacute;s</span></div>
         <div class="cd-box red"><b id="cd-review">0</b><span>&agrave; revoir (quiz + cartes)</span></div>
         <div class="cd-box gold"><b id="cd-rate">&mdash;</b><span>r&eacute;ussite quiz</span></div>
       </div>
@@ -4345,8 +4348,8 @@ Formes vocalisées selon la norme de l'Académie de la langue hébraïque&nbsp;;
     <div class="stats-card">
       <h3>Vue d'ensemble</h3>
       <div class="stats-numbers">
-        <div class="stat-box"><span class="num" id="st-seen">1</span><span class="lbl">mots vus</span></div>
-        <div class="stat-box green"><span class="num" id="st-mastered">0</span><span class="lbl">maîtrisés</span></div>
+        <div class="stat-box"><span class="num" id="st-seen">1</span><span class="lbl" data-pl="mot vu|mots vus">mots vus</span></div>
+        <div class="stat-box green"><span class="num" id="st-mastered">0</span><span class="lbl" data-pl="maîtrisé|maîtrisés">maîtrisés</span></div>
         <div class="stat-box red"><span class="num" id="st-difficult">0</span><span class="lbl">à revoir</span></div>
         <div class="stat-box gold"><span class="num" id="st-rate">100%</span><span class="lbl">% réussite</span></div>
       </div>
@@ -7193,6 +7196,15 @@ function computeGlobalStats() {
   return { seen, mastered, difficult, rate };
 }
 
+// accord des libellés : « 1 mot vu », « 3 mots vus »
+function fixPlurals() {
+  document.querySelectorAll('[data-pl]').forEach(function (l) {
+    var n = l.previousElementSibling, v = parseInt(((n && n.textContent) || '').replace(/[^0-9]/g, ''), 10);
+    var f = l.getAttribute('data-pl').split('|');
+    l.textContent = (isNaN(v) || v < 2) ? f[0] : f[1];
+  });
+}
+
 function refreshGlobalStatsDisplay() {
   const s = computeGlobalStats();
   document.getElementById('gs-seen').textContent = s.seen;
@@ -7203,6 +7215,7 @@ function refreshGlobalStatsDisplay() {
   document.getElementById('st-mastered').textContent = s.mastered;
   document.getElementById('st-difficult').textContent = s.difficult;
   document.getElementById('st-rate').textContent = s.rate !== null ? s.rate + '%' : '—';
+  fixPlurals();
 
   // Top 15 difficult words
   const allWords = [];
@@ -7849,6 +7862,7 @@ refreshGlobalStatsDisplay();
     set('cd-mastered', mastered);
     set('cd-review', nrev);
     set('cd-rate', att ? Math.round(100 * correct / att) + '%' : '—');
+    fixPlurals();
 
     var fs = 0, fk = 0, fa = 0, fo = 0;
     var fl = storage.flash || {};

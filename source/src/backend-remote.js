@@ -17,6 +17,8 @@
     return new Promise(function (res, rej) {
       if (window.supabase && window.supabase.createClient) return res();
       var s = document.createElement('script'); s.src = LIB; s.onload = res;
+      /* empreinte de la bibliothèque : le navigateur refuse un fichier modifié sur le CDN */
+      s.integrity = 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o'; s.crossOrigin = 'anonymous';
       s.onerror = function () { rej(new Error('Impossible de charger Supabase')); };
       document.head.appendChild(s);
     });
@@ -121,6 +123,19 @@
       c.updatedAt = new Date().toISOString();
       return q(sbc.from('contents').upsert({ student_id: id, data: c, updated_at: c.updatedAt }));
     },
+    /* tous les élèves en une requête (tableau de bord) */
+    getSummaries: function (ids) {
+      if (!ids.length) return Promise.resolve({});
+      return q(sbc.from('progress').select('student_id,summary').in('student_id', ids)).then(function (rows) {
+        var o = {}; rows.forEach(function (r) { o[r.student_id] = r.summary; }); return o;
+      });
+    },
+    getContents: function (ids) {
+      if (!ids.length) return Promise.resolve({});
+      return q(sbc.from('contents').select('student_id,data').in('student_id', ids)).then(function (rows) {
+        var o = {}; rows.forEach(function (r) { o[r.student_id] = r.data; }); return o;
+      });
+    },
     getSummary: function (id) { return q(sbc.from('progress').select('summary').eq('student_id', id).maybeSingle()).then(function (r) { return r ? r.summary : null; }); },
     getProgress: function (id) { return q(sbc.from('progress').select('storage').eq('student_id', id).maybeSingle()).then(function (r) { return r ? r.storage : null; }); },
     pushProgress: function (id, summary, storage) {
@@ -161,10 +176,13 @@
 
   HPB.remote = false;
   HPB.ready = function () {
+    /* la bibliothèque se charge en même temps que la configuration (gain d'un aller-retour) */
+    var libP = location.protocol === 'file:' ? null : loadLib().then(function () { return null; }, function (e) { return e; });
     return fetch('/api/config', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : { remote: false }; }).catch(function () { return { remote: false }; })
       .then(function (cfg) {
         if (!cfg || !cfg.remote) return local.ready();
-        return loadLib().then(function () {
+        return (libP || loadLib()).then(function (err) {
+          if (err) throw err;
           sbc = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'hp-mayane-auth' } });
           Object.keys(remote).forEach(function (k) { HPB[k] = remote[k]; });
           if (window.HPA && HPA.setAuth) HPA.setAuth(token);

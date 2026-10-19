@@ -1,6 +1,9 @@
 # Reprend automatiquement les évolutions du site de Benjamin (github.com/Bensarfat/hebreu)
 # dans le site de Mayane : toutes les heures, et à la demande (onglet Actions > « Synchroniser » > Run workflow).
 # Seules les fonctions et le design sont repris ; les contenus des élèves restent ceux de Mayane.
+#
+# Sécurité : la construction (qui lit le site de Benjamin) tourne SANS droit d'écriture ;
+# seule l'étape « Publier » peut écrire, et elle ne fait que déposer les fichiers produits (index.html, assets/).
 name: Synchroniser avec le site de Benjamin
 
 on:
@@ -8,48 +11,81 @@ on:
     - cron: "17 * * * *"
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 concurrency:
   group: sync
   cancel-in-progress: false
 
 jobs:
-  sync:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.fetch.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Récupérer le site de Benjamin
+        id: fetch
         run: |
           curl -fsSL "https://raw.githubusercontent.com/Bensarfat/hebreu/main/index.html" -o /tmp/benjamin.html
           test -s /tmp/benjamin.html
           if cmp -s /tmp/benjamin.html source/src/original.html; then
             echo "Aucun changement sur le site de Benjamin."
-            echo "CHANGED=0" >> "$GITHUB_ENV"
+            echo "changed=0" >> "$GITHUB_OUTPUT"
           else
             cp /tmp/benjamin.html source/src/original.html
-            echo "CHANGED=1" >> "$GITHUB_ENV"
+            echo "changed=1" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Reconstruire le site de Mayane
-        if: env.CHANGED == '1'
+        if: steps.fetch.outputs.changed == '1'
         working-directory: source
         run: |
           node src/build_templates.js
           node build.js
 
+      - name: Transmettre le résultat
+        if: steps.fetch.outputs.changed == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: |
+            index.html
+            assets/
+            source/src/original.html
+          retention-days: 3
+
+  publish:
+    needs: build
+    if: needs.build.outputs.changed == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: /tmp/site
+
       - name: Publier
-        if: env.CHANGED == '1'
         run: |
+          cp /tmp/site/index.html index.html
+          rm -rf assets && cp -r /tmp/site/assets assets
+          cp /tmp/site/source/src/original.html source/src/original.html
           git config user.name "Benjamin Sarfati"
           git config user.email "contact@docteursarfati.com"
-          git add index.html source/src/original.html
+          git add -A index.html assets source/src/original.html
           git diff --cached --quiet && exit 0
           git commit -m "Synchronisation automatique avec le site de Benjamin"
           git push

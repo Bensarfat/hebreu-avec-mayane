@@ -9,6 +9,25 @@ async function readBody(req) {
   return {};
 }
 function clean(v, max) { return String(v == null ? '' : v).trim().slice(0, max || 200); }
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/* crée le compte Auth puis le profil ; si le profil échoue, le compte Auth est supprimé (pas de compte orphelin) */
+async function createAccount(login, pw, profile) {
+  let u;
+  try {
+    u = await sb.call('/auth/v1/admin/users', { method: 'POST', body: { email: sb.emailFor(login), password: pw, email_confirm: true } });
+  } catch (e) {
+    if (e.status === 422 || /already/i.test(e.message)) { const t = new Error('login_taken'); t.code = 'login_taken'; throw t; }
+    throw e;
+  }
+  try {
+    await sb.call('/rest/v1/profiles', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: Object.assign({ id: u.id, login: login }, profile) });
+  } catch (e) {
+    await sb.call('/auth/v1/admin/users/' + u.id, { method: 'DELETE' }).catch(function () {});
+    throw e;
+  }
+  return u.id;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -23,8 +42,7 @@ module.exports = async function handler(req, res) {
       if (await sb.hasTeacher()) { res.status(409).json({ error: 'already_setup' }); return; }
       const login = clean(b.login, 40).toLowerCase(), pw = String(b.pw || '');
       if (!sb.validLogin(login) || pw.length < 8) { res.status(400).json({ error: 'invalid' }); return; }
-      const u = await sb.call('/auth/v1/admin/users', { method: 'POST', body: { email: sb.emailFor(login), password: pw, email_confirm: true } });
-      await sb.call('/rest/v1/profiles', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: { id: u.id, role: 'teacher', login: login, first: clean(b.first) || 'Mayane' } });
+      await createAccount(login, pw, { role: 'teacher', first: clean(b.first) || 'Mayane' });
       res.status(200).json({ ok: true });
       return;
     }
@@ -43,12 +61,10 @@ module.exports = async function handler(req, res) {
       if (pw && pw.length < 6) { res.status(400).json({ error: 'short_password' }); return; }
       const profile = { role: 'student', login: login, first: clean(s.first), last: clean(s.last), email: clean(s.email), phone: clean(s.phone, 40), active: s.active !== false };
       let id = s.id;
-      const exists = id && /^[0-9a-f-]{36}$/.test(id) && (await sb.call('/rest/v1/profiles?select=id,role&id=eq.' + id)).some(function (r) { return r.role === 'student'; });
+      const exists = id && UUID.test(id) && (await sb.call('/rest/v1/profiles?select=id,role&id=eq.' + id)).some(function (r) { return r.role === 'student'; });
       if (!exists) {
         if (!pw) { res.status(400).json({ error: 'password_required' }); return; }
-        const u = await sb.call('/auth/v1/admin/users', { method: 'POST', body: { email: sb.emailFor(login), password: pw, email_confirm: true } });
-        id = u.id;
-        await sb.call('/rest/v1/profiles', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: Object.assign({ id: id }, profile) });
+        id = await createAccount(login, pw, profile);
       } else {
         const upd = { email: sb.emailFor(login) };
         if (pw) upd.password = pw;
@@ -62,6 +78,7 @@ module.exports = async function handler(req, res) {
 
     if (b.action === 'delete') {
       const id = clean(b.id, 40);
+      if (!UUID.test(id)) { res.status(400).json({ error: 'invalid_id' }); return; }
       const rows = await sb.call('/rest/v1/profiles?select=role&id=eq.' + encodeURIComponent(id));
       if (!rows.length || rows[0].role !== 'student') { res.status(404).json({ error: 'not_found' }); return; }
       await sb.call('/auth/v1/admin/users/' + id, { method: 'DELETE' });   // profil, contenu, progression : supprimés en cascade
@@ -71,10 +88,13 @@ module.exports = async function handler(req, res) {
 
     if (b.action === 'teacher') {
       const login = clean(b.login, 40).toLowerCase(), pw = String(b.pw || '');
-      if (!sb.validLogin(login) || pw.length < 8) { res.status(400).json({ error: 'invalid' }); return; }
+      /* mot de passe facultatif : vide = on ne change que l'identifiant */
+      if (!sb.validLogin(login) || (pw && pw.length < 8)) { res.status(400).json({ error: 'invalid' }); return; }
       const taken = await sb.call('/rest/v1/profiles?select=id&login=eq.' + encodeURIComponent(login));
       if (taken.some(function (r) { return r.id !== me.id; })) { res.status(409).json({ error: 'login_taken' }); return; }
-      await sb.call('/auth/v1/admin/users/' + me.id, { method: 'PUT', body: { email: sb.emailFor(login), password: pw } });
+      const upd = { email: sb.emailFor(login) };
+      if (pw) upd.password = pw;
+      await sb.call('/auth/v1/admin/users/' + me.id, { method: 'PUT', body: upd });
       await sb.call('/rest/v1/profiles?id=eq.' + me.id, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: { login: login } });
       res.status(200).json({ ok: true });
       return;
@@ -82,6 +102,8 @@ module.exports = async function handler(req, res) {
 
     res.status(400).json({ error: 'unknown_action' });
   } catch (e) {
-    res.status(e.status && e.status < 500 ? e.status : 502).json({ error: 'supabase', detail: e.message });
+    if (e.code === 'login_taken') { res.status(409).json({ error: 'login_taken' }); return; }
+    console.error('admin', b.action, e.status, e.message);
+    res.status(502).json({ error: 'server', detail: 'Le serveur n\'a pas pu enregistrer la modification. Réessayez dans un instant.' });
   }
 };

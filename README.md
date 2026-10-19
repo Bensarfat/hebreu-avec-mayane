@@ -2,7 +2,8 @@
 
 Site de cours d'hébreu en français : page d'accueil, espace élève (quiz, flashcards, grammaire, XP, niveaux, badges) et back-office de la professeure (comptes élèves, dépôt et analyse de documents, suivi de progression).
 
-- `index.html` : le site publié (fichier unique, déployé par Vercel).
+- `index.html` : la page publiée (accueil, connexion, espace de Mayane), déployée par Vercel.
+- `assets/` : l'espace élève (`student.*.txt`) et les données de démonstration (`demo.*.json`), chargés seulement quand on en a besoin. Leur nom contient une empreinte du contenu, ce qui permet de les garder en cache longtemps. Ne pas modifier à la main : ils sont produits par `source/build.js`.
 - `api/analyse.js` : fonction Vercel d'analyse des documents par Claude.
 - `source/` : les sources.
 

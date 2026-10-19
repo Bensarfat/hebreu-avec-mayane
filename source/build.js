@@ -1,6 +1,10 @@
-const fs = require('fs'), path = require('path');
-const S = path.join(__dirname, 'src'), B = path.join(__dirname, 'build'), D = path.join(__dirname, '..');
-fs.mkdirSync(D, { recursive: true });
+/* Construit le site publié :
+   - index.html            : la page (accueil, connexion, espace de Mayane), légère
+   - assets/student.*.txt  : l'espace élève, chargé seulement à l'ouverture d'un espace
+   - assets/demo.*.json    : les données de démonstration, chargées seulement en mode démo
+   Les noms contiennent une empreinte du contenu : le navigateur peut les garder en cache longtemps. */
+const fs = require('fs'), path = require('path'), crypto = require('crypto');
+const S = path.join(__dirname, 'src'), B = path.join(__dirname, 'build'), D = path.join(__dirname, '..'), A = path.join(D, 'assets');
 const origTxt = fs.readFileSync(path.join(S, 'original.html'), 'utf8').replace(/\r\n/g, '\n');
 /* charte graphique reprise du site de Benjamin : jetons de couleur (clair + sombre) et fond */
 const tStart = origTxt.indexOf(':root {'), tEnd = origTxt.indexOf('\n  html, body {', tStart);
@@ -10,34 +14,55 @@ const bg = origTxt.match(/  body \{\n    background-image:[\s\S]*?\n  \}/);
 const bodyBg = bg ? bg[0] : '';
 const rd = f => fs.readFileSync(path.join(S, f), 'utf8');
 const j = x => JSON.stringify(x).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-const data = JSON.parse(fs.readFileSync(path.join(B, 'full_data.json'), 'utf8'));
+const hash = t => crypto.createHash('sha256').update(t).digest('hex').slice(0, 10);
+
+/* fichiers chargés à la demande */
 const tpl = fs.readFileSync(path.join(B, 'student-template.html'), 'utf8');
-const tenses = fs.readFileSync(path.join(B, 'tenses.html'), 'utf8');
-const html = `<meta charset="utf-8">
+const demo = JSON.stringify({ data: JSON.parse(fs.readFileSync(path.join(B, 'full_data.json'), 'utf8')), tenses: fs.readFileSync(path.join(B, 'tenses.html'), 'utf8') });
+fs.rmSync(A, { recursive: true, force: true });
+fs.mkdirSync(A, { recursive: true });
+const studentFile = 'assets/student.' + hash(tpl) + '.txt';
+const demoFile = 'assets/demo.' + hash(demo) + '.json';
+fs.writeFileSync(path.join(D, studentFile), tpl);
+fs.writeFileSync(path.join(D, demoFile), demo);
+
+const FONTS = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap';
+const ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7457f5"/><stop offset="1" stop-color="#b86cf2"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#g)"/><text x="32" y="45" text-anchor="middle" font-family="Arial" font-weight="700" font-size="38" fill="#fff">מ</text></svg>');
+
+const html = `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hébreu avec Mayane</title>
+<meta name="description" content="Cours d'hébreu en français avec Mayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
+<meta name="theme-color" content="#7457f5">
+<link rel="icon" href="${ICON}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="${FONTS}" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="${FONTS}"></noscript>
 <style>
 ${tokens}
 ${bodyBg}
 ${rd('shell.css')}
 </style>
+</head>
+<body>
 <div id="app"></div>
 <script>
-var TPL = ${j(tpl)};
-var TENSES = ${j(tenses)};
-var DEMO_DATA = ${j(data)};
+var ASSETS = ${j({ student: studentFile, demo: demoFile })};
 </script>
 <script>
-${fs.readFileSync(path.join(B, 'progress.js'), 'utf8')}
+${rd('progress.js')}
 ${rd('backend.js')}
 ${rd('analyse.js')}
 ${rd('backend-remote.js')}
 ${rd('home.js')}
 ${rd('app.js')}
 </script>
+</body>
+</html>
 `;
 fs.writeFileSync(path.join(D, 'index.html'), html);
-
-console.log('index.html', (html.length / 1024).toFixed(0) + ' Ko');
+console.log('index.html', (html.length / 1024).toFixed(0) + ' Ko · ' + studentFile + ' ' + (tpl.length / 1024).toFixed(0) + ' Ko · ' + demoFile + ' ' + (demo.length / 1024).toFixed(0) + ' Ko');

@@ -62,18 +62,22 @@ var HPG = (function () {
   }
 
   /* ---------- gain d'XP ---------- */
+  /* objectif du jour : vérifié après chaque ajout d'XP (réponse ou bonus de série) */
+  function checkGoal(d) {
+    if (!d.goal && d.xp >= P.goal) {
+      d.goal = 1; d.xp += HP.XP.goal; P.xp += HP.XP.goal;
+      toast('🎯 <b>Objectif du jour atteint</b> · +' + HP.XP.goal + ' XP bonus', 'goal');
+    }
+  }
   function gain(n, fields) {
     prog();
-    var d = today(), before = d.xp >= P.goal;
+    var d = today();
     for (var f in fields) d[f] = (d[f] || 0) + fields[f];
     d.xp += n; P.xp += n;
     var h = new Date().getHours();
     if (h < 8) P.early = true;
     if (h >= 22) P.night = true;
-    if (!before && d.xp >= P.goal) {
-      d.goal = 1; d.xp += HP.XP.goal; P.xp += HP.XP.goal;
-      toast('🎯 <b>Objectif du jour atteint</b> · +' + HP.XP.goal + ' XP bonus', 'goal');
-    }
+    checkGoal(d);
     toast('+' + n + ' XP', 'xp');
     var L = HP.levelInfo(P.xp);
     if (L.level > lastLevel) {
@@ -90,8 +94,10 @@ var HPG = (function () {
       combo++;
       if (combo > P.bestCombo) P.bestCombo = combo;
       if (combo % 10 === 0) {
-        P.xp += HP.XP.combo; today().xp += HP.XP.combo;
+        var d = today();
+        P.xp += HP.XP.combo; d.xp += HP.XP.combo;
         toast('⚡ <b>' + combo + ' bonnes réponses d\'affilée</b> · +' + HP.XP.combo + ' XP', 'goal');
+        checkGoal(d);
       }
     } else combo = 0;
   }
@@ -142,16 +148,21 @@ var HPG = (function () {
   }
 
   /* ---------- synchronisation vers l'espace de la prof ---------- */
+  function send() {
+    try {
+      if (window.parent && window.parent !== window && window.__HP_STUDENT__) {
+        window.parent.postMessage({ hp: 'progress', summary: HP.summarize(storage, prog(), VOCAB), storage: JSON.parse(JSON.stringify(storage)) }, '*');
+      }
+    } catch (e) { /* hors espace élève */ }
+  }
   function sync() {
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(function () {
-      try {
-        if (window.parent && window.parent !== window && window.parent.HPB && window.__HP_STUDENT__) {
-          window.parent.HPB.pushProgress(window.__HP_STUDENT__, HP.summarize(storage, prog(), VOCAB), JSON.parse(JSON.stringify(storage)));
-        }
-      } catch (e) { /* hors espace élève */ }
-    }, 1200);
+    syncTimer = setTimeout(function () { syncTimer = null; send(); }, 1200);
   }
+  /* envoi immédiat de ce qui attend encore (déconnexion, page fermée) */
+  function flush() { if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; send(); } }
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
 
   /* ---------- bandeau en-tête ---------- */
   function hud() {
@@ -286,5 +297,5 @@ var HPG = (function () {
     renderStats();
   }
 
-  return { install: install, before: before, onFlash: onFlash, renderStats: renderStats, hud: hud };
+  return { install: install, flush: flush, before: before, onFlash: onFlash, renderStats: renderStats, hud: hud };
 })();

@@ -106,6 +106,7 @@ var HPB = (function () {
       return get('teacher').then(function (t) {
         t = t || { name: 'Mayane' };
         t.login = login;
+        if (!pw) return set('teacher', t);   /* identifiant seul : mot de passe inchangé */
         return withPassword(t, pw).then(function (r) { return set('teacher', r); });
       });
     },

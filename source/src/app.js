@@ -8,20 +8,48 @@ var HPApp = (function () {
   var esc = HP.esc, fmt = HP.fmt;
   var root = document.getElementById('app');
   var DEMO = { teacher: ['mayane', 'mayane2026'], students: [['benjamin', 'ivrit2026'], ['lea', 'lea2026'], ['noam', 'noam2026']] };
+  var DEMO_TEACHER = DEMO.teacher.slice();   /* identifiants de départ, pour « Réinitialiser la démo » */
+  var results = {};                          /* analyses terminées pendant que la page affichait autre chose */
   var cache = { students: [], summaries: {}, contents: {}, docs: [] };
   var sortKey = 'xp7', sortDir = -1, pending = {};
 
   /* ---------- session ---------- */
   function sess(v) {
+    if (v !== undefined && typeof cache === 'object') cache.loadedAt = 0;   /* nouveau compte : données rechargées */
     try {
       if (v === undefined) return JSON.parse(sessionStorage.getItem('hp_session') || 'null');
       if (v === null) sessionStorage.removeItem('hp_session'); else sessionStorage.setItem('hp_session', JSON.stringify(v));
     } catch (e) { if (v !== undefined) window.__hpSess = v; return window.__hpSess || null; }
   }
-  function toast(msg) {
-    var t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2400);
+  function toast(msg, long) {
+    var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+    t.textContent = msg; document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, long ? 6000 : 2600);
   }
+  function plural(n, one, many) { return n + ' ' + (n > 1 ? (many || one + 's') : one); }
+  /* bouton occupé pendant une opération, puis rendu ; affiche l'erreur si elle échoue */
+  function busy(btn, promise, errMsg) {
+    if (btn) { btn.disabled = true; btn.dataset.label = btn.dataset.label || btn.textContent; btn.textContent = 'Un instant…'; }
+    return Promise.resolve(promise).then(function (v) {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = btn.dataset.label; }
+      return v;
+    }, function (e) {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = btn.dataset.label; }
+      toast((errMsg || 'L\'opération n\'a pas abouti') + ' : ' + errText(e), true);
+      throw e;
+    });
+  }
+  function errText(e) {
+    var c = e && e.code;
+    if (c === 'login_taken') return 'cet identifiant est déjà utilisé';
+    if (c === 'not_teacher') return 'votre session a expiré, reconnectez-vous';
+    if (e && /fetch|network|Failed/i.test(e.message || '')) return 'connexion internet interrompue';
+    return (e && e.message) || 'erreur inconnue';
+  }
+  window.addEventListener('unhandledrejection', function (e) {
+    console.error(e.reason);
+    toast('Une opération n\'a pas abouti : ' + errText(e.reason) + '. Réessayez.', true);
+  });
   function copy(txt) {
     try { navigator.clipboard.writeText(txt).then(function () { toast('Copié'); }, function () { toast('Copie impossible ici : sélectionnez le texte à la main'); }); }
     catch (e) { toast('Copie impossible ici : sélectionnez le texte à la main'); }
@@ -37,8 +65,49 @@ var HPApp = (function () {
     return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
   }
 
+  /* ---------- statistiques d'élève : uniquement des nombres et des textes courts ----------
+     Un élève écrit lui-même sa progression : rien de ce qu'il envoie n'est affiché sans être nettoyé. */
+  function num(v) { v = +v; return isFinite(v) ? v : 0; }
+  function txt(v, max) { return typeof v === 'string' ? v.slice(0, max || 120) : ''; }
+  var DAY = /^\d{4}-\d{2}-\d{2}$/;
+  function cleanSummary(s) {
+    if (!s || typeof s !== 'object') return null;
+    var o = { updatedAt: txt(s.updatedAt, 40), xp: num(s.xp), level: num(s.level), streak: num(s.streak), best: num(s.best),
+      bestCombo: num(s.bestCombo), goal: [30, 60, 100, 150].indexOf(num(s.goal)) >= 0 ? num(s.goal) : 60,
+      lastActive: DAY.test(s.lastActive) ? s.lastActive : null, days: {}, totals: {}, themes: [], weak: [], badges: {} };
+    var days = s.days && typeof s.days === 'object' ? s.days : {};
+    Object.keys(days).slice(-400).forEach(function (k) {
+      if (!DAY.test(k) || !days[k] || typeof days[k] !== 'object') return;
+      var d = HP.emptyDay(); for (var f in d) d[f] = num(days[k][f]); o.days[k] = d;
+    });
+    var t = s.totals && typeof s.totals === 'object' ? s.totals : {};
+    ['qOk', 'qKo', 'fK', 'fA', 'fS', 'cK', 'cA', 'cS', 'mastered'].forEach(function (k) { o.totals[k] = num(t[k]); });
+    (Array.isArray(s.themes) ? s.themes : []).slice(0, 300).forEach(function (x) {
+      if (x && typeof x === 'object') o.themes.push({ theme: txt(x.theme), n: num(x.n), m: num(x.m), seen: num(x.seen), pct: Math.max(0, Math.min(100, num(x.pct))) });
+    });
+    (Array.isArray(s.weak) ? s.weak : []).slice(0, 15).forEach(function (x) {
+      if (x && typeof x === 'object') o.weak.push({ he: txt(x.he, 80), fr: txt(x.fr, 160), bad: num(x.bad), seen: num(x.seen) });
+    });
+    var b = s.badges && typeof s.badges === 'object' ? s.badges : {};
+    HP.BADGES.forEach(function (x) { if (DAY.test(b[x.id])) o.badges[x.id] = b[x.id]; });
+    return o;
+  }
+
+  /* ---------- fichiers chargés à la demande ---------- */
+  var tplP = null, demoP = null;
+  function fetchOk(url, kind) {
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error('fichier ' + url + ' introuvable (' + r.status + ')'); return kind === 'json' ? r.json() : r.text(); });
+  }
+  function getTpl() { return tplP || (tplP = fetchOk(ASSETS.student, 'text').catch(function (e) { tplP = null; throw e; })); }
+  function loadDemo() { return demoP || (demoP = fetchOk(ASSETS.demo, 'json').catch(function (e) { demoP = null; throw e; })); }
+  function idle(fn) { (window.requestIdleCallback || function (f) { setTimeout(f, 1500); })(function () { try { fn(); } catch (e) {} }); }
+
   /* ---------- démarrage ---------- */
   function boot() {
+    /* la page d'accueil ne dépend pas du serveur : elle s'affiche tout de suite */
+    if (!sess() && location.hash !== '#/connexion' && !/^#\/(tableau|eleve|documents|reglages)/.test(location.hash)) {
+      HPHome.render(root, function () { location.hash = '#/connexion'; });
+    }
     HP.injectCss();
     HPB.ready().then(function () {
       if (HPB.remoteError) return 'error';
@@ -57,7 +126,7 @@ var HPApp = (function () {
     });
     window.addEventListener('hashchange', route);
     window.addEventListener('hp-progress', function (e) {
-      HPB.getSummary(e.detail).then(function (s) { cache.summaries[e.detail] = s; });
+      HPB.getSummary(e.detail).then(function (s) { cache.summaries[e.detail] = cleanSummary(s); });
     });
   }
 
@@ -67,36 +136,58 @@ var HPApp = (function () {
       route.checked = true;
       return HPB.currentUser().then(function (u) { if (u && u.role !== 'blocked') sess(u); route(); });
     }
-    if (!s) return location.hash === '#/connexion' ? renderLogin() : HPHome.render(root, function () { location.hash = '#/connexion'; });
-    if (s.role === 'student') return openStudent(s.id, false);
-    if (s.role === 'teacher') return loadAll().then(renderTeacher, function (e) { renderFatal('Impossible de charger vos données (' + ((e && e.message) || 'erreur') + '). Rechargez la page.'); });
+    if (!s) {
+      if (location.hash === '#/connexion') { idle(getTpl); return renderLogin(); }
+      if (root.querySelector('.mv') && HPB.remote) return;   /* accueil déjà affiché */
+      return HPHome.render(root, function () { location.hash = '#/connexion'; });
+    }
+    if (s.role === 'student' && !HPB.remote) return openStudent(s.id, false);
+    if (s.role === 'student' && route.verified) return openStudent(s.id, false);
+    if (HPB.remote && !route.verified) {
+      /* la session enregistrée dans l'onglet doit correspondre au compte réellement connecté */
+      return HPB.currentUser().then(function (u) {
+        if (!u || u.role !== s.role || (s.role === 'student' && u.id !== s.id)) { sess(null); route.checked = true; return renderLogin(u && u.role === 'blocked' ? 'Ce compte est suspendu. Contacte Mayane.' : null); }
+        route.verified = true; route();
+      });
+    }
+    if (s.role === 'teacher') {
+      /* données gardées en mémoire entre les pages ; rechargées après une modification ou au bout d'une minute */
+      if (cache.loadedAt && Date.now() - cache.loadedAt < 60000) return renderTeacher();
+      return loadAll().then(renderTeacher, function (e) { renderFatal('Impossible de charger vos données (' + errText(e) + '). Rechargez la page.'); });
+    }
     sess(null); renderLogin();
   }
 
   function loadAll() {
+    var slow = setTimeout(function () { document.body.classList.add('is-loading'); }, 250);
     return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings()]).then(function (r) {
       cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2];
       HPA.setCode(r[2].analyseCode || '');
       if (HPB.me && HPB.me.role === 'teacher') cache.teacherLogin = HPB.me.login;
-      return Promise.all(r[0].map(function (s) {
-        return Promise.all([HPB.getSummary(s.id), HPB.getContent(s.id)]).then(function (x) {
-          cache.summaries[s.id] = x[0]; cache.contents[s.id] = x[1];
-        });
-      }));
-    });
+      var ids = r[0].map(function (s) { return s.id; });
+      /* une seule requête par type de données quand le serveur le permet */
+      var sums = HPB.getSummaries ? HPB.getSummaries(ids) : Promise.all(ids.map(function (id) { return HPB.getSummary(id); })).then(function (l) { var o = {}; ids.forEach(function (id, i) { o[id] = l[i]; }); return o; });
+      var conts = HPB.getContents ? HPB.getContents(ids) : Promise.all(ids.map(function (id) { return HPB.getContent(id); })).then(function (l) { var o = {}; ids.forEach(function (id, i) { o[id] = l[i]; }); return o; });
+      return Promise.all([sums, conts]).then(function (x) {
+        cache.summaries = {}; cache.contents = {};
+        ids.forEach(function (id) { cache.summaries[id] = cleanSummary(x[0][id]); cache.contents[id] = x[1][id] || null; });
+        cache.loadedAt = Date.now();
+      });
+    }).then(function (v) { clearTimeout(slow); document.body.classList.remove('is-loading'); return v; },
+      function (e) { clearTimeout(slow); document.body.classList.remove('is-loading'); throw e; });
   }
 
   /* ================= CONNEXION ================= */
-  function renderLogin(msg) {
+  function renderLogin(msg, loginValue) {
     document.title = 'Hébreu avec Mayane';
     root.innerHTML =
       '<div class="login-wrap"><div class="login">' +
         '<a class="back" href="#">← Accueil</a><br>' +
         '<span class="kicker">Espace de révision</span>' +
         '<h1>Hébreu avec Mayane <span class="grad">עִבְרִית</span></h1>' +
-        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Mayane t\'a donnés.</p>' +
+        '<p class="sub">Élèves : connectez-vous avec l\'identifiant et le mot de passe donnés par Mayane.</p>' +
         '<div class="card"><form id="lf" autocomplete="on">' +
-          '<label class="f">Identifiant<input class="in" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>' +
+          '<label class="f">Identifiant<input class="in" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required value="' + esc(loginValue || '') + '"></label>' +
           '<label class="f">Mot de passe<input class="in" name="pw" type="password" autocomplete="current-password" required></label>' +
           (msg ? '<div class="err">' + esc(msg) + '</div>' : '') +
           '<button class="btn primary" type="submit">Se connecter</button>' +
@@ -115,17 +206,20 @@ var HPApp = (function () {
     });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      HPB.login(f.login.value, f.pw.value).then(function (r) {
-        if (!r) return renderLogin('Identifiant ou mot de passe incorrect.');
-        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Mayane.');
+      var btn = $('button[type=submit]', f);
+      busy(btn, HPB.login(f.login.value, f.pw.value), 'Connexion impossible').then(function (r) {
+        if (!r) { renderLogin('Identifiant ou mot de passe incorrect.', f.login.value); var pw = $('#lf [name=pw]'); if (pw) pw.focus(); return; }
+        route.verified = true;
+        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contactez Mayane.');
         sess(r); if (r.role === 'teacher') location.hash = '#/tableau'; else history.replaceState(null, '', location.pathname + location.search); route();
-      });
+      }).catch(function () {});
     });
   }
 
   function logout() {
-    sess(null); route.checked = true;
-    Promise.resolve(HPB.logout ? HPB.logout() : null).then(function () { location.hash = '#/connexion'; renderLogin(); });
+    sess(null); route.checked = true; route.verified = false; frame = null;
+    pushQueue.then(function () { return HPB.logout ? HPB.logout() : null; }).catch(function () {})
+      .then(function () { location.hash = '#/connexion'; renderLogin(); });
   }
 
   /* première ouverture du site en ligne : création du compte de la professeure */
@@ -146,10 +240,15 @@ var HPApp = (function () {
       e.preventDefault();
       if (f.pw.value !== f.pw2.value) return renderSetup('Les deux mots de passe ne sont pas identiques.');
       var login = slug(f.login.value);
+      if (!login) return renderSetup('Choisissez un identifiant en lettres latines (par exemple « mayane »).');
+      $('button[type=submit]', f).disabled = true;
       HPB.setup(login, f.pw.value, f.first.value.trim()).then(function () { return HPB.login(login, f.pw.value); }).then(function (u) {
         if (!u) throw new Error('connexion impossible');
-        sess(u); location.hash = '#/tableau'; route();
-      }).catch(function (err) { renderSetup('Création impossible : ' + ((err && err.message) || 'erreur') + '.'); });
+        route.verified = true; sess(u); location.hash = '#/tableau'; route();
+      }).catch(function (err) {
+        var c = err && err.code;
+        renderSetup(c === 'already_setup' ? 'Le compte de la professeure existe déjà : connectez-vous.' : c === 'invalid' ? 'Identifiant invalide ou mot de passe trop court (8 caractères minimum).' : 'Création impossible : ' + errText(err) + '.');
+      });
     });
   }
   function renderFatal(msg) {
@@ -159,7 +258,9 @@ var HPApp = (function () {
 
   /* ================= ESPACE ÉLÈVE ================= */
   function openStudent(id, preview) {
-    Promise.all([HPB.getStudent(id), HPB.getContent(id), HPB.getProgress(id)]).then(function (r) {
+    Promise.all([HPB.getStudent(id), HPB.getContent(id), HPB.getProgress(id)]).catch(function (e) {
+      renderFatal('Impossible d\'ouvrir l\'espace (' + errText(e) + '). Rechargez la page.'); throw e;
+    }).then(function (r) {
       var st = r[0], content = r[1], prog = r[2];
       if (!st) { sess(null); return renderLogin(); }
       var s = HPAstats(content);
@@ -171,15 +272,22 @@ var HPApp = (function () {
         $('#out').onclick = preview ? closePreview : logout;
         return;
       }
+      /* thèmes retirés depuis la dernière visite : on les enlève aussi des préférences de l'élève */
+      if (prog && prog.preferences && content.VOCAB) {
+        ['selectedThemes', 'knownThemes'].forEach(function (k) {
+          if (Array.isArray(prog.preferences[k])) prog.preferences[k] = prog.preferences[k].filter(function (t) { return content.VOCAB[t]; });
+        });
+      }
       var head = '<script>window.__HP_DATA__=' + JSON.stringify(content).replace(/</g, '\\u003c') +
         ';window.__HP_KEY__=' + JSON.stringify(preview ? 'hp_preview' : 'hp_cache_' + id) +
-        ';window.__HP_RAW__=' + (prog ? JSON.stringify(JSON.stringify(prog)).replace(/</g, '\\u003c') : 'undefined') +
+        ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
-        '<button type="button" onclick="parent.HPApp.' + (preview ? 'closePreview' : 'logout') + '()">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
+        '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
+      return getTpl().then(function (TPL) {
       var html = TPL.replace('<!--HP_HEAD-->', function () { return head; })
         .replace('<!--HP_BAR-->', function () { return bar; })
         .replace('<!--HP_TITLE-->', function () { return 'Hébreu · ' + esc(st.first); })
@@ -187,24 +295,49 @@ var HPApp = (function () {
       root.innerHTML = '';
       var fr = document.createElement('iframe');
       fr.id = 'student-frame'; fr.title = 'Espace de révision de ' + fullName(st);
+      /* espace élève isolé : il ne peut ni lire la page qui l'accueille, ni utiliser la session ouverte ;
+         il ne communique que par messages (progression, déconnexion) */
+      fr.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms allow-downloads');
       root.appendChild(fr);
+      frame = { el: fr, id: id, preview: !!preview };
       fr.srcdoc = html;
-      /* filet de sécurité : si srcdoc est refusé par l'hôte, on écrit le document directement */
-      setTimeout(function () {
-        try {
-          var w = fr.contentWindow;
-          if (w && !w.HPG && fr.isConnected) { var d = fr.contentDocument; d.open(); d.write(html); d.close(); }
-        } catch (e) {}
-      }, 3500);
       document.title = 'Hébreu · ' + st.first;
-    });
+      });
+    }).catch(function (e) { if (!root.querySelector('#student-frame')) renderFatal('Impossible d\'ouvrir l\'espace (' + errText(e) + '). Rechargez la page.'); });
   }
   function HPAstats(c) { return HPA.stats(c); }
   var SBAR_CSS = '.hp-sbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;padding:8px 8px 8px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:14px;color:var(--ink-soft)}' +
     '.hp-sbar .he{font-family:var(--font-he);color:var(--accent);font-weight:700}.hp-sbar b{color:var(--ink)}' +
     '.hp-sbar button{border:1.5px solid var(--line-strong);background:var(--paper);border-radius:999px;padding:6px 14px;font:700 13px var(--font-ui);color:var(--ink-soft);cursor:pointer}' +
     '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
-  function closePreview() { location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
+  function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
+
+  /* messages venant de l'espace élève : la page décide elle-même de quel élève il s'agit */
+  var frame = null;
+  window.addEventListener('message', function (e) {
+    if (!frame || !frame.el.isConnected || e.source !== frame.el.contentWindow || !e.data || typeof e.data !== 'object') return;
+    var m = e.data;
+    if (m.hp === 'logout' && !frame.preview) { frame = null; logout(); return; }
+    if (m.hp === 'close' && frame.preview) { closePreview(); return; }
+    if (m.hp === 'progress' && !frame.preview) {
+      var sum = cleanSummary(m.summary), storage = m.storage && typeof m.storage === 'object' ? m.storage : null;
+      if (sum && storage) queuePush(frame.id, sum, storage);
+    }
+  });
+  /* envois de progression un par un ; si plusieurs arrivent pendant un envoi, seul le plus récent part ensuite */
+  var pushQueue = Promise.resolve(), nextPush = null;
+  function queuePush(id, sum, storage) {
+    var first = !nextPush;
+    nextPush = { id: id, sum: sum, storage: storage };
+    if (!first) return;
+    pushQueue = pushQueue.then(function () {
+      var p = nextPush; nextPush = null;
+      return Promise.resolve(HPB.pushProgress(p.id, p.sum, p.storage)).catch(function (e) {
+        console.warn('progression', e);
+        return new Promise(function (r) { setTimeout(r, 4000); }).then(function () { return HPB.pushProgress(p.id, p.sum, p.storage); }).catch(function () {});
+      });
+    });
+  }
 
   /* ================= BACK-OFFICE ================= */
   function nav(cur) {
@@ -235,10 +368,11 @@ var HPApp = (function () {
     var sum = cache.summaries[s.id], now = new Date();
     var m = { xp: 0, level: 1, streak: 0, best: 0, last: null, xp7: 0, rate7: null, rate7p: null, mastered: 0, words: 0, days: {}, ans7: 0, goal: 60, active7: 0 };
     var c = HPA.stats(cache.contents[s.id]); m.words = c.words;
+    m.docs = docsFor(s.id).filter(function (x) { return x.status !== 'done'; }).length * 1000 + docsFor(s.id).length;
     if (!sum) return m;
     var d = sum.days || {}, w0 = HP.rangeSum(d, HP.addDays(now, -6), 7), w1 = HP.rangeSum(d, HP.addDays(now, -13), 7);
     var st = HP.streaks(d);
-    m.xp = sum.xp; m.level = HP.levelInfo(sum.xp).level; m.streak = st.cur; m.best = st.best; m.days = d; m.goal = sum.goal || 60;
+    m.xp = sum.xp; m.level = HP.levelInfo(sum.xp).level; m.streak = st.cur; m.best = Math.max(st.best, sum.best || 0); m.days = d; m.goal = sum.goal || 60;
     m.last = Object.keys(d).filter(function (k) { return HP.dayActive(d[k]); }).sort().pop() || null;
     m.xp7 = w0.xp; m.rate7 = HP.rate(w0); m.rate7p = HP.rate(w1); m.ans7 = HP.dayGood(w0) + HP.dayBad(w0);
     m.mastered = sum.totals ? sum.totals.mastered : 0;
@@ -291,7 +425,7 @@ var HPApp = (function () {
       '<div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' +
       '<div class="card"><h3>Activité de la classe <small>XP par jour, 30 jours</small></h3>' + HP.xpBars(classDays, 30, 0) + '</div>' +
       '<div class="card"><h3>À surveiller</h3>' + (alerts.length ? '<div class="alerts">' + alerts.map(function (a) {
-        return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '"><span class="ic">' + a[1] + '</span><span>' + a[2] + '</span></div>';
+        return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '" tabindex="0" role="link"><span class="ic">' + a[1] + '</span><span>' + a[2] + '</span></div>';
       }).join('') + '</div>' : '<p class="hp-empty">Rien à signaler.</p>') + '</div>' +
       '</div>';
   }
@@ -303,14 +437,14 @@ var HPApp = (function () {
       var x, y;
       if (sortKey === 'name') { x = fullName(a).toLowerCase(); y = fullName(b).toLowerCase(); return x < y ? -sortDir : x > y ? sortDir : 0; }
       x = M[a.id][sortKey]; y = M[b.id][sortKey];
-      if (x == null) x = -1; if (y == null) y = -1;
+      if (x == null) x = sortKey === 'last' ? '' : -1; if (y == null) y = sortKey === 'last' ? '' : -1;
       return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
     });
     return '<div class="tbl-wrap"><table class="tbl"><thead><tr>' + cols.map(function (c) {
-      return '<th data-sort="' + c[0] + '" class="' + (sortKey === c[0] ? 'sorted' : '') + '">' + c[1] + (sortKey === c[0] ? (sortDir > 0 ? ' ↑' : ' ↓') : '') + '</th>';
+      return '<th data-sort="' + c[0] + '" class="' + (sortKey === c[0] ? 'sorted' : '') + '"' + (c[0] === 'spark' ? '' : ' tabindex="0" aria-sort="' + (sortKey === c[0] ? (sortDir > 0 ? 'ascending' : 'descending') : 'none') + '"') + '>' + c[1] + (sortKey === c[0] ? (sortDir > 0 ? ' ↑' : ' ↓') : '') + '</th>';
     }).join('') + '</tr></thead><tbody>' + list.map(function (s) {
       var m = M[s.id], L = HP.levelInfo(m.xp), pd = docsFor(s.id).filter(function (d) { return d.status !== 'done'; }).length;
-      return '<tr class="click" data-open="' + s.id + '">' +
+      return '<tr class="click" data-open="' + s.id + '" tabindex="0" aria-label="Ouvrir la fiche de ' + esc(fullName(s)) + '">' +
         '<td><div class="who"><span class="av">' + initials(s) + '</span><div><b>' + esc(fullName(s)) + '</b><small class="mono">' + esc(s.login) + '</small></div></div></td>' +
         '<td><span class="lv"><span class="he">' + L.letter + '</span>' + L.level + '</span></td>' +
         '<td class="num">' + fmt(m.xp7) + '</td>' +
@@ -383,7 +517,7 @@ var HPApp = (function () {
               (r[1] ? '<div class="small muted" style="margin:-4px 0 10px">réussite ' + r[2] + ' %</div>' : '');
           }).join('') + '</div>' +
           '<div class="card"><h3>Mots les plus difficiles</h3>' + (sum.weak && sum.weak.length ? '<ul class="hp-weak">' + sum.weak.map(function (w) {
-            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + w.bad + ' erreur' + (w.bad > 1 ? 's' : '') + ' / ' + w.seen + '</small></li>';
+            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + plural(w.bad, 'erreur') + ' / ' + w.seen + '</small></li>';
           }).join('') + '</ul>' : '<p class="hp-empty">Aucun mot raté pour l\'instant.</p>') + '</div>' +
         '</div>' +
       '</div>' +
@@ -397,13 +531,13 @@ var HPApp = (function () {
     return '<div class="drop" id="drop" data-target="' + (target || '') + '" tabindex="0" role="button">' +
       '<div class="big">📄</div><b>Glissez-déposez vos documents ici</b>' +
       '<span class="muted small">ou cliquez pour choisir — PDF, Word (.docx), images (photo de tableau, fiche scannée), texte</span>' +
-      '<input type="file" id="file" multiple accept=".pdf,.docx,.doc,.txt,.md,image/*" hidden></div>';
+      '<input type="file" id="file" multiple accept=".pdf,.docx,.txt,.md,image/*" hidden></div>';
   }
   function docRow(d, opts) {
     var k = HPA.kind(d), ft = k === 'pdf' ? 'pdf' : (k === 'docx' || k === 'doc') ? 'doc' : k === 'img' ? 'img' : 'txt';
     var lbl = k === 'docx' ? 'DOCX' : k === 'img' ? 'IMG' : k.toUpperCase();
     var names = (d.students || []).map(function (id) { var s = cache.students.filter(function (x) { return x.id === id; })[0]; return s ? s.first : null; }).filter(Boolean);
-    var status = d.status === 'done' ? '<span class="pill green">✓ Intégré' + (d.result ? ' · ' + d.result.words + ' mots, ' + d.result.grammar + ' fiches' : '') + '</span>'
+    var status = d.status === 'done' ? '<span class="pill green">✓ Intégré' + (d.result ? ' · ' + plural(+d.result.words || 0, 'mot') + ', ' + plural(+d.result.grammar || 0, 'fiche') : '') + '</span>'
       : d.status === 'error' ? '<span class="pill rose">Échec de l\'analyse</span>' : '<span class="pill gold">À intégrer</span>';
     return '<div class="doc" data-doc="' + d.id + '"><span class="ft ' + ft + '">' + lbl + '</span>' +
       '<div><div class="nm">' + esc(d.name) + '</div><div class="sb">' + status + '<span>' + new Date(d.addedAt).toLocaleDateString('fr-FR') + '</span><span>' + Math.max(1, Math.round(d.size / 1024)) + ' Ko</span>' +
@@ -414,21 +548,26 @@ var HPApp = (function () {
       '<button class="btn small" data-dl="' + d.id + '">Ouvrir</button><button class="btn small ghost" data-rm="' + d.id + '" title="Supprimer">🗑</button></div>' +
       '<div class="rv-slot" style="grid-column:1/-1" id="rv-' + d.id + '"></div></div>';
   }
+  function analyseAllBtn(docs) {
+    var todo = docs.filter(function (d) { return d.status !== 'done' && HPA.kind(d) !== 'doc' && (d.students || []).length; });
+    if (todo.length < 2) return '';
+    return '<button class="btn small primary" data-anall="' + todo.map(function (d) { return d.id; }).join(',') + '">Analyser les ' + todo.length + ' documents en attente</button>';
+  }
   function stDocs(s) {
     var docs = docsFor(s.id);
     return '<div class="stack"><div class="card"><h3>Ajouter des cours pour ' + esc(s.first) + '</h3>' + dropZone(s.id) +
       '<p class="small muted" style="margin:12px 0 0">Après le dépôt, cliquez sur « Analyser et intégrer » : Claude lit le document, en extrait le vocabulaire et la grammaire, puis vous montre ce qui sera ajouté à l\'espace de ' + esc(s.first) + '. Rien n\'est ajouté sans votre validation, et uniquement à partir de vos documents.</p></div>' +
-      '<div class="card"><h3>Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3>' +
+      '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3>' + analyseAllBtn(docs) + '</div>' +
       (docs.length ? '<div class="docs">' + docs.map(function (d) { return docRow(d); }).join('') + '</div>' : '<p class="hp-empty">Aucun document pour l\'instant.</p>') + '</div></div>';
   }
   function docsPage() {
     var docs = cache.docs, pend = docs.filter(function (d) { return d.status !== 'done'; });
     return '<div class="bo-head"><div><h1 class="page-title">Documents</h1><p>Déposez un cours une seule fois et attribuez-le à un ou plusieurs élèves.</p></div></div>' +
       '<div class="stack"><div class="card"><h3>Nouveau dépôt</h3><p class="small muted" style="margin:-6px 0 10px">1. Choisissez les élèves concernés</p>' +
-      '<div class="chips" id="targets">' + cache.students.map(function (s) { return '<span class="chip" data-sid="' + s.id + '">' + esc(fullName(s)) + '</span>'; }).join('') +
-        (cache.students.length > 1 ? '<span class="chip" data-sid="*" style="border-style:dashed">Toute la classe</span>' : '') + '</div>' +
+      '<div class="chips" id="targets" role="group" aria-label="Élèves concernés">' + cache.students.map(function (s) { return '<button type="button" class="chip" aria-pressed="false" data-sid="' + s.id + '">' + esc(fullName(s)) + '</button>'; }).join('') +
+        (cache.students.length > 1 ? '<button type="button" class="chip" aria-pressed="false" data-sid="*" style="border-style:dashed">Toute la classe</button>' : '') + '</div>' +
       '<p class="small muted" style="margin:14px 0 10px">2. Déposez les documents</p>' + dropZone('') + '</div>' +
-      '<div class="card"><h3>À intégrer <small>' + pend.length + '</small></h3>' + (pend.length ? '<div class="docs">' + pend.map(function (d) { return docRow(d, { showStudents: true }); }).join('') + '</div>' : '<p class="hp-empty">Tout est intégré. 👌</p>') + '</div>' +
+      '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">À intégrer <small>' + pend.length + '</small></h3>' + analyseAllBtn(pend) + '</div>' + (pend.length ? '<div class="docs">' + pend.map(function (d) { return docRow(d, { showStudents: true }); }).join('') + '</div>' : '<p class="hp-empty">Tout est intégré. 👌</p>') + '</div>' +
       '<div class="card"><h3>Déjà intégrés <small>' + (docs.length - pend.length) + '</small></h3>' + (docs.length - pend.length ? '<div class="docs">' + docs.filter(function (d) { return d.status === 'done'; }).map(function (d) { return docRow(d, { showStudents: true }); }).join('') + '</div>' : '<p class="hp-empty">Aucun.</p>') + '</div></div>';
   }
 
@@ -456,7 +595,7 @@ var HPApp = (function () {
       '<label class="f">Nom<input class="in" name="last" value="' + esc(s.last || '') + '"></label>' +
       '<label class="f">Adresse e-mail<input class="in" name="email" type="email" value="' + esc(s.email || '') + '" autocomplete="off"></label>' +
       '<label class="f">Téléphone<input class="in" name="phone" type="tel" value="' + esc(s.phone || '') + '" autocomplete="off"></label>' +
-      '<label class="f">Identifiant (login)<input class="in mono" name="login" value="' + esc(s.login || '') + '" autocapitalize="none" spellcheck="false" required></label>' +
+      '<label class="f">Identifiant<input class="in mono" name="login" value="' + esc(s.login || '') + '" autocapitalize="none" spellcheck="false" required></label>' +
       (s.id ? '' : '<label class="f">Mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" value="' + HPB.genPassword() + '" required minlength="6"><button type="button" class="btn small" data-gen>↻</button></span></label>') +
       '</div>';
   }
@@ -489,8 +628,8 @@ var HPApp = (function () {
     return '<div class="bo-head"><div><h1 class="page-title">Réglages</h1></div></div><div class="two">' +
       '<div class="card"><h3>Mon compte</h3><form id="tpw"><div class="stack" style="gap:12px">' +
         '<label class="f">Identifiant<input class="in mono" name="login" value="' + esc(HPB.remote ? (cache.teacherLogin || '') : DEMO.teacher[0]) + '" required></label>' +
-        '<label class="f">Nouveau mot de passe<input class="in" type="password" name="pw" minlength="8" required autocomplete="new-password"></label>' +
-        '<button class="btn primary" type="submit">Changer mon mot de passe</button><span id="tpw-msg"></span></div></form></div>' +
+        '<label class="f">Nouveau mot de passe <span class="muted" style="font-weight:500">(laisser vide pour le garder)</span><input class="in" type="password" name="pw" minlength="8" autocomplete="new-password"></label>' +
+        '<button class="btn primary" type="submit">Enregistrer</button><span id="tpw-msg"></span></div></form></div>' +
       '<div class="stack" style="gap:18px"><div class="card"><h3>Adresse du site</h3><p class="small muted" style="margin-top:-6px">Elle est ajoutée aux messages d\'accès envoyés aux élèves.</p>' +
         '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="' + esc(HPB.remote ? location.origin : 'https://…') + '" value="' + esc(st.siteUrl || '') + '">' +
         (HPB.remote ? '<input type="hidden" name="code" value="">' : '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>') +
@@ -502,9 +641,15 @@ var HPApp = (function () {
   /* ---------- modale de création ---------- */
   function modal(html) {
     var m = document.createElement('div'); m.className = 'modal';
+    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
     m.innerHTML = '<div class="card"><button class="close" aria-label="Fermer">×</button>' + html + '</div>';
-    m.addEventListener('click', function (e) { if (e.target === m || e.target.classList.contains('close')) m.remove(); });
+    var before = document.activeElement;
+    function close() { m.remove(); document.removeEventListener('keydown', onEsc); if (before && before.focus) before.focus(); }
+    function onEsc(e) { if (e.key === 'Escape' && m.isConnected) close(); }
+    m.addEventListener('click', function (e) { if (e.target === m || e.target.classList.contains('close')) close(); });
+    document.addEventListener('keydown', onEsc);
     document.body.appendChild(m);
+    var first = m.querySelector('input, button:not(.close), a'); if (first) setTimeout(function () { first.focus(); }, 30);
     return m;
   }
   function newStudent() {
@@ -518,14 +663,18 @@ var HPApp = (function () {
     f.first.focus();
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      var login = slug(f.login.value).replace(/\./g, '.') || '';
-      if (!login) return;
-      HPB.loginTaken(login).then(function (taken) {
+      var login = slug(f.login.value);
+      if (!login) { $('#nf-msg', m).innerHTML = '<div class="err">Choisissez un identifiant en lettres latines (par exemple « sarah.cohen »).</div>'; return; }
+      var btn = $('button[type=submit]', f); if (btn.disabled) return; btn.disabled = true;
+      HPB.loginTaken(login).catch(function () { return false; }).then(function (taken) {
+        btn.disabled = false;
         if (taken) { $('#nf-msg', m).innerHTML = '<div class="err">Cet identifiant est déjà utilisé.</div>'; return; }
         var s = { id: 's' + Date.now().toString(36), first: f.first.value.trim(), last: f.last.value.trim(), email: f.email.value.trim(), phone: f.phone.value.trim(), login: login, active: true, createdAt: new Date().toISOString() };
         var pw = f.pw.value.trim();
+        btn.disabled = true;
         HPB.saveStudent(s, pw).catch(function (err) {
-          $('#nf-msg', m).innerHTML = '<div class="err">Création impossible : ' + esc(err.code === 'login_taken' ? 'identifiant déjà utilisé' : (err.message || 'erreur')) + '</div>';
+          btn.disabled = false;
+          $('#nf-msg', m).innerHTML = '<div class="err">Création impossible : ' + esc(errText(err)) + '</div>';
           throw err;
         }).then(function () {
           cache.students.push(s);
@@ -545,41 +694,63 @@ var HPApp = (function () {
     files = Array.prototype.slice.call(files || []);
     if (!files.length) return;
     if (!targets.length) { toast('Choisissez d\'abord au moins un élève'); return; }
+    var refused = files.filter(function (f) { var k = HPA.kind(f); return k === 'doc' || k === 'other'; });
+    files = files.filter(function (f) { return refused.indexOf(f) < 0; });
+    if (refused.length) toast(refused.map(function (f) { return f.name; }).join(', ') + ' : format non lu. Enregistrez-le en .docx ou en PDF.', true);
+    if (!files.length) return;
+    var drop = $('#drop'); if (drop) drop.classList.add('busy');
+    var ok = 0;
     /* un par un : chaque ajout relit la liste, des ajouts simultanés s'écraseraient */
-    files.reduce(function (p, f) { return p.then(function () { return HPB.addDoc(f, targets); }); }, Promise.resolve()).then(function () {
-      toast(files.length + ' document' + (files.length > 1 ? 's' : '') + ' déposé' + (files.length > 1 ? 's' : ''));
+    files.reduce(function (p, f) {
+      return p.then(function () { return HPB.addDoc(f, targets).then(function () { ok++; }, function (e) { toast(f.name + ' n\'a pas pu être déposé : ' + errText(e), true); }); });
+    }, Promise.resolve()).then(function () {
+      if (ok) toast(plural(ok, 'document déposé', 'documents déposés'));
       return loadAll();
-    }).then(renderTeacher);
+    }).then(renderTeacher, function (e) { if (drop) drop.classList.remove('busy'); toast('Dépôt interrompu : ' + errText(e), true); });
   }
 
   function runAnalysis(docId) {
     var d = cache.docs.filter(function (x) { return x.id === docId; })[0];
     var slot = document.getElementById('rv-' + docId);
-    if (!d || !slot) return;
-    if (pending[docId]) return;
+    if (!d || !slot) return Promise.resolve();
+    if (pending[docId]) return Promise.resolve();
+    if (!(d.students || []).length) { toast('Ce document n\'est attribué à aucun élève.'); return Promise.resolve(); }
     var ctl = new AbortController(); pending[docId] = ctl;
     slot.innerHTML = '<div class="review"><b id="st-' + docId + '">Préparation…</b><div class="progress-line"><i></i></div><div class="row" style="margin-top:10px"><button class="btn small" data-stop>Arrêter</button></div></div>';
     $('[data-stop]', slot).onclick = function () { ctl.abort(); };
     var step = function (t) { var el = document.getElementById('st-' + docId); if (el) el.textContent = t; };
+    /* la page a pu changer pendant l'analyse : on retrouve l'emplacement à jour */
+    var here = function () { var el = document.getElementById('rv-' + docId); return el || null; };
     var themes = {};
     (d.students || []).forEach(function (id) { var c = cache.contents[id]; if (c) Object.keys(c.VOCAB || {}).forEach(function (t) { themes[t] = 1; }); });
-    HPB.getBlob(docId).then(function (blob) {
+    return HPB.getBlob(docId).then(function (blob) {
       if (!blob) throw new Error('Fichier introuvable.');
       return HPA.analyse(d, blob, Object.keys(themes), step, ctl.signal);
     }).then(function (res) {
       delete pending[docId];
-      showReview(slot, d, res);
+      var el = here();
+      if (el) showReview(el, d, res);
+      else { results[docId] = res; toast('Analyse de « ' + d.name + ' » terminée : ouvrez Documents pour la valider.', true); }
     }).catch(function (e) {
       delete pending[docId];
-      if (e && e.code === 'cancelled') { slot.innerHTML = ''; return; }
-      if (e && e.code === 'no_sample') return showManual(slot, d, e.extracted);
-      var msg = e && e.code === 'rate_limited' ? 'Trop de demandes pour le moment : réessayez dans quelques minutes.'
+      var el = here();
+      if (e && e.code === 'cancelled') { if (el) el.innerHTML = ''; return; }
+      if (e && e.code === 'no_sample') { if (el) showManual(el, d, e.extracted); return; }
+      var msg = e && (e.code === 'rate_limited' || e.code === 'busy') ? 'Claude est très sollicité en ce moment : réessayez dans quelques minutes.'
         : e && e.code === 'invalid_json' ? 'La réponse de Claude n\'était pas exploitable. Réessayez.'
+        : e && e.code === 'truncated' ? 'Le document est trop long pour être analysé d\'un coup : découpez-le en plusieurs fichiers.'
+        : e && e.code === 'timeout' ? 'L\'analyse a pris trop de temps. Réessayez, ou découpez le document.'
+        : e && e.code === 'too_large' ? 'Les images de ce document sont trop lourdes : réduisez le nombre de pages ou de photos.'
+        : e && e.code === 'network' ? 'Connexion internet interrompue pendant l\'analyse. Réessayez.'
+        : e && e.code === 'not_teacher' ? 'Votre session a expiré : reconnectez-vous, puis relancez l\'analyse.'
         : e && e.code === 'bad_code' ? 'Le code d\'analyse est incorrect : vérifiez-le dans Réglages.'
         : e && e.code === 'server_error' ? 'L\'analyse a échoué (' + e.message + '). Réessayez dans un instant.'
-        : e && (e.code === 'not_granted' || e.code === 'sampling_disabled') ? 'L\'analyse par Claude n\'est pas autorisée pour ce site. Autorisez-la dans le menu Permissions de la page, ou utilisez l\'import manuel (onglet Contenu du site).'
+        : e && (e.code === 'not_granted' || e.code === 'sampling_disabled') ? 'L\'analyse par Claude n\'est pas autorisée pour ce site. Utilisez l\'import manuel (onglet Contenu du site).'
         : (e && e.message) || 'Erreur inconnue.';
-      slot.innerHTML = '<div class="review"><div class="err">' + esc(msg) + '</div></div>';
+      if (el) el.innerHTML = '<div class="review"><div class="err">' + esc(msg) + '</div></div>';
+      else toast('Analyse de « ' + d.name + ' » : ' + msg, true);
+      d.status = 'error'; d.error = msg;
+      return Promise.resolve(HPB.updateDoc(d)).catch(function () {});
     });
   }
 
@@ -594,14 +765,13 @@ var HPApp = (function () {
 
   function showReview(slot, d, res, targetIds) {
     var targets = targetIds || (d ? d.students : []) || [];
-    var base = targets.length ? cache.contents[targets[0]] : null;
-    HPA.markDuplicates(res, base);
+    HPA.markDuplicates(res, targets.map(function (id) { return cache.contents[id]; }));
     var nWords = res.themes.reduce(function (s, t) { return s + t.words.length; }, 0);
     var names = targets.map(function (id) { var s = cache.students.filter(function (x) { return x.id === id; })[0]; return s ? s.first : ''; }).filter(Boolean);
     function render() {
       var keep = res.themes.reduce(function (s, t) { return s + t.words.filter(function (w) { return w.keep; }).length; }, 0) + res.grammar.filter(function (g) { return g.keep; }).length;
       slot.innerHTML = '<div class="review"><b>Résultat de l\'analyse</b>' + (res.summary ? '<p class="small muted" style="margin:4px 0 0">' + esc(res.summary) + '</p>' : '') +
-        '<p class="small">' + nWords + ' mot' + (nWords > 1 ? 's' : '') + ' dans ' + res.themes.length + ' thème' + (res.themes.length > 1 ? 's' : '') + ', ' + res.grammar.length + ' fiche' + (res.grammar.length > 1 ? 's' : '') + ' de grammaire. Décochez ce que vous ne voulez pas ajouter. Les mots déjà présents sont grisés.</p>' +
+        '<p class="small">' + plural(nWords, 'mot') + ' dans ' + plural(res.themes.length, 'thème') + ', ' + plural(res.grammar.length, 'fiche') + ' de grammaire. Décochez ce que vous ne voulez pas ajouter. Les mots déjà présents sont grisés.</p>' +
         res.themes.map(function (t, ti) {
           return '<h4>' + esc(t.name) + ' <span class="pill grey">' + t.words.length + '</span></h4><table class="rv-words">' + t.words.map(function (w, wi) {
             return '<tr class="' + (w.dup ? 'dup' : '') + '"><td style="width:28px"><input type="checkbox" data-w="' + ti + ':' + wi + '"' + (w.keep ? ' checked' : '') + (w.dup ? ' disabled' : '') + '></td>' +
@@ -619,15 +789,17 @@ var HPApp = (function () {
       $('[data-cancel]', slot).onclick = function () { slot.innerHTML = ''; };
       $('[data-apply]', slot).onclick = function () {
         var name = d ? d.name : 'Import JSON', added = { words: 0, grammar: 0 };
-        Promise.all(targets.map(function (id) {
-          return HPB.getContent(id).then(function (c) {
+        /* élève par élève, en relisant son contenu juste avant d'écrire */
+        var work = targets.reduce(function (p, id) {
+          return p.then(function () { return HPB.getContent(id); }).then(function (c) {
             var r = HPA.merge(c, res, name);
             added.words = Math.max(added.words, r.words); added.grammar = Math.max(added.grammar, r.grammar);
             return HPB.setContent(id, r.content);
           });
-        })).then(function () {
-          if (d) { d.status = 'done'; d.integratedAt = new Date().toISOString(); d.result = added; d.summary = res.summary || d.summary; delete d.error; return HPB.updateDoc(d); }
-        }).then(function () { toast('Espace mis à jour ✓'); return loadAll(); }).then(renderTeacher);
+        }, Promise.resolve()).then(function () {
+          if (d) { d.status = 'done'; d.integratedAt = new Date().toISOString(); d.result = added; d.summary = res.summary || d.summary; delete d.error; delete results[d.id]; return HPB.updateDoc(d); }
+        });
+        busy(this, work, 'Ajout impossible').then(function () { toast('Espace mis à jour ✓'); return loadAll(); }).then(renderTeacher).catch(function () {});
       };
     }
     render();
@@ -637,9 +809,28 @@ var HPApp = (function () {
   function bind(page, h) {
     $$('[data-act="new"]').forEach(function (b) { b.onclick = newStudent; });
     $$('[data-act="upload"]').forEach(function (b) { b.onclick = function () { location.hash = '#/documents'; }; });
-    $$('[data-open]').forEach(function (r) { r.onclick = function () { location.hash = '#/eleve/' + r.dataset.open + '/' + (r.dataset.tab || 'progression'); }; });
+    function onKey(el, fn) { el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } }); }
+    $$('[data-open]').forEach(function (r) {
+      var go = function () { location.hash = '#/eleve/' + r.dataset.open + '/' + (r.dataset.tab || 'progression'); };
+      r.onclick = go; onKey(r, go);
+    });
     $$('th[data-sort]').forEach(function (th) {
-      th.onclick = function () { var k = th.dataset.sort; if (k === 'spark') return; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = k === 'name' ? 1 : -1; } renderTeacher(); };
+      var go = function () { var k = th.dataset.sort; if (k === 'spark') return; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = k === 'name' || k === 'last' ? 1 : -1; } renderTeacher(); };
+      th.onclick = go; onKey(th, go);
+    });
+    /* analyses terminées pendant que la page affichait autre chose */
+    Object.keys(results).forEach(function (id) {
+      var el = document.getElementById('rv-' + id), d = cache.docs.filter(function (x) { return x.id === id; })[0];
+      if (el && d) showReview(el, d, results[id]);
+    });
+    $$('[data-anall]').forEach(function (b) {
+      b.onclick = function () {
+        var ids = b.dataset.anall.split(',').filter(Boolean);
+        b.disabled = true;
+        ids.reduce(function (p, id, i) {
+          return p.then(function () { b.textContent = 'Analyse ' + (i + 1) + ' / ' + ids.length + '…'; return runAnalysis(id); });
+        }, Promise.resolve()).then(function () { if (b.isConnected) { b.textContent = 'Analyses terminées : validez-les ci-dessous'; } });
+      };
     });
     $$('[data-act="preview"]').forEach(function (b) { b.onclick = function () { openStudent(b.dataset.id, true); }; });
     $$('[data-delst]').forEach(function (b) {
@@ -653,7 +844,7 @@ var HPApp = (function () {
           '<div class="row" style="margin-top:16px"><button class="btn danger" data-yes>Supprimer définitivement</button><button class="btn" data-no>Annuler</button></div>');
         $('[data-no]', m).onclick = function () { m.remove(); };
         $('[data-yes]', m).onclick = function () {
-          HPB.deleteStudent(st.id).then(function () { m.remove(); toast('Compte de ' + st.first + ' supprimé'); return loadAll(); }).then(renderTeacher);
+          busy(this, HPB.deleteStudent(st.id), 'Suppression impossible').then(function () { m.remove(); toast('Compte de ' + st.first + ' supprimé'); return loadAll(); }).then(renderTeacher).catch(function () {});
         };
       };
     });
@@ -670,11 +861,16 @@ var HPApp = (function () {
             var all = !$$('#targets .chip').filter(function (x) { return x.dataset.sid !== '*'; }).every(function (x) { return x.classList.contains('on'); });
             $$('#targets .chip').forEach(function (x) { x.classList.toggle('on', all); });
           } else c.classList.toggle('on');
+          $$('#targets .chip').forEach(function (x) { x.setAttribute('aria-pressed', x.classList.contains('on') ? 'true' : 'false'); });
           targets = $$('#targets .chip.on').map(function (x) { return x.dataset.sid; }).filter(function (x) { return x !== '*'; });
         };
       });
-      drop.onclick = function () { input.click(); };
-      drop.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } };
+      var pick = function () {
+        if (!targets.length) { toast('Choisissez d\'abord le ou les élèves concernés'); var t = $('#targets'); if (t) { t.classList.add('shake'); setTimeout(function () { t.classList.remove('shake'); }, 600); } return; }
+        input.click();
+      };
+      drop.onclick = pick;
+      drop.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } };
       input.onchange = function () { handleFiles(input.files, targets); input.value = ''; };
       ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
       ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
@@ -683,12 +879,20 @@ var HPApp = (function () {
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
     $$('[data-dl]').forEach(function (b) {
       b.onclick = function () {
-        HPB.getBlob(b.dataset.dl).then(function (blob) { if (!blob) return toast('Fichier introuvable'); var u = URL.createObjectURL(blob), w = null; try { w = window.open(u, '_blank'); } catch (e) {} if (!w) toast('Aperçu indisponible dans cette fenêtre'); setTimeout(function () { URL.revokeObjectURL(u); }, 60000); });
+        /* la fenêtre s'ouvre tout de suite (sinon le navigateur la bloque), le fichier s'y affiche ensuite */
+        var w = null; try { w = window.open('', '_blank'); } catch (e) {}
+        if (w) { try { w.document.title = 'Chargement…'; w.document.body.textContent = 'Chargement du document…'; } catch (e) {} }
+        HPB.getBlob(b.dataset.dl).then(function (blob) {
+          if (!blob) { if (w) w.close(); return toast('Fichier introuvable'); }
+          var u = URL.createObjectURL(blob);
+          if (w) w.location.href = u; else toast('Autorisez les fenêtres pop-up pour ouvrir le document');
+          setTimeout(function () { URL.revokeObjectURL(u); }, 120000);
+        }, function (e) { if (w) w.close(); toast('Ouverture impossible : ' + errText(e), true); });
       };
     });
     $$('[data-rm]').forEach(function (b) {
       b.onclick = function () {
-        if (b.dataset.armed) { HPB.deleteDoc(b.dataset.rm).then(loadAll).then(renderTeacher); return; }
+        if (b.dataset.armed) { busy(b, HPB.deleteDoc(b.dataset.rm), 'Suppression impossible').then(loadAll).then(renderTeacher).catch(function () {}); return; }
         b.dataset.armed = 1; b.textContent = 'Confirmer ?'; b.classList.add('danger');
         setTimeout(function () { if (b.isConnected) { delete b.dataset.armed; b.textContent = '🗑'; b.classList.remove('danger'); } }, 3000);
       };
@@ -701,11 +905,13 @@ var HPApp = (function () {
       if (ef) ef.addEventListener('submit', function (e) {
         e.preventDefault();
         var login = slug(ef.login.value);
-        HPB.loginTaken(login, s.id).then(function (taken) {
-          if (taken) { $('#edit-msg').innerHTML = '<span class="err">Identifiant déjà utilisé</span>'; return; }
-          s.first = ef.first.value.trim(); s.last = ef.last.value.trim(); s.email = ef.email.value.trim(); s.phone = ef.phone.value.trim(); s.login = login;
-          HPB.saveStudent(s).then(function () { toast('Enregistré'); renderTeacher(); });
-        });
+        if (!login) { $('#edit-msg').innerHTML = '<span class="err">Identifiant en lettres latines, chiffres et points uniquement</span>'; return; }
+        var btn = $('button[type=submit]', ef);
+        busy(btn, HPB.loginTaken(login, s.id).then(function (taken) {
+          if (taken) { $('#edit-msg').innerHTML = '<span class="err">Identifiant déjà utilisé</span>'; return false; }
+          var upd = Object.assign({}, s, { first: ef.first.value.trim(), last: ef.last.value.trim(), email: ef.email.value.trim(), phone: ef.phone.value.trim(), login: login });
+          return HPB.saveStudent(upd).then(function () { Object.assign(s, upd); return true; });
+        }), 'Enregistrement impossible').then(function (done) { if (done) { toast('Enregistré'); renderTeacher(); } }).catch(function () {});
       });
       var pwf = $('#pwf');
       if (pwf) {
@@ -713,11 +919,15 @@ var HPApp = (function () {
         pwf.addEventListener('submit', function (e) {
           e.preventDefault();
           var pw = pwf.pw.value.trim(); if (pw.length < 6) return;
-          HPB.saveStudent(s, pw).then(function () { toast('Mot de passe changé — pensez à le transmettre'); renderTeacher(); });
+          busy($('button[type=submit]', pwf), HPB.saveStudent(Object.assign({}, s), pw), 'Changement impossible')
+            .then(function () { s.pw = pw; toast('Mot de passe changé — pensez à le transmettre'); renderTeacher(); }).catch(function () {});
         });
       }
       var sp = $('[data-act="suspend"]') || $('[data-act="activate"]');
-      if (sp) sp.onclick = function () { s.active = s.active === false; HPB.saveStudent(s).then(renderTeacher); };
+      if (sp) sp.onclick = function () {
+        var upd = Object.assign({}, s, { active: s.active === false });
+        busy(sp, HPB.saveStudent(upd), 'Modification impossible').then(function () { s.active = upd.active; renderTeacher(); }).catch(function () {});
+      };
       var del = $('[data-act="delete"]');
       if (del) del.onclick = function () {
         var m = modal('<h2>Supprimer le compte de ' + esc(fullName(s)) + ' ?</h2>' +
@@ -725,17 +935,20 @@ var HPApp = (function () {
           '<div class="row" style="margin-top:16px"><button class="btn danger" data-yes>Supprimer définitivement</button><button class="btn" data-no>Annuler</button></div>');
         $('[data-no]', m).onclick = function () { m.remove(); };
         $('[data-yes]', m).onclick = function () {
-          HPB.deleteStudent(s.id).then(function () { m.remove(); toast('Compte de ' + s.first + ' supprimé'); location.hash = '#/eleves'; return loadAll(); }).then(renderTeacher);
+          busy(this, HPB.deleteStudent(s.id), 'Suppression impossible').then(function () { m.remove(); toast('Compte de ' + s.first + ' supprimé'); location.hash = '#/eleves'; return loadAll(); }).then(renderTeacher).catch(function () {});
         };
       };
       $$('[data-rmtheme]').forEach(function (b) {
         b.onclick = function () {
           if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Retirer ?'; b.classList.add('danger'); return; }
-          var c = cache.contents[s.id], t = b.dataset.rmtheme;
-          delete c.VOCAB[t]; if (c.NATURE) delete c.NATURE[t];
-          c.CORE_THEMES = (c.CORE_THEMES || []).filter(function (x) { return x !== t; });
-          c.ADVANCED_THEMES = (c.ADVANCED_THEMES || []).filter(function (x) { return x !== t; });
-          HPB.setContent(s.id, c).then(renderTeacher);
+          var t = b.dataset.rmtheme;
+          busy(b, HPB.getContent(s.id).then(function (c) {
+            c = c || HPA.emptyContent();
+            delete c.VOCAB[t]; if (c.NATURE) delete c.NATURE[t];
+            c.CORE_THEMES = (c.CORE_THEMES || []).filter(function (x) { return x !== t; });
+            c.ADVANCED_THEMES = (c.ADVANCED_THEMES || []).filter(function (x) { return x !== t; });
+            return HPB.setContent(s.id, c).then(function () { cache.contents[s.id] = c; });
+          }), 'Retrait impossible').then(renderTeacher).catch(function () {});
         };
       });
       var imp = $('#imp');
@@ -752,16 +965,21 @@ var HPApp = (function () {
       tf.addEventListener('submit', function (e) {
         e.preventDefault();
         var login = slug(tf.login.value);
-        HPB.setTeacherPassword(login, tf.pw.value).then(function () { DEMO.teacher = [login, '••••']; cache.teacherLogin = login; $('#tpw-msg').innerHTML = '<span class="ok">Identifiant et mot de passe enregistrés</span>'; tf.pw.value = ''; },
-          function (err) { $('#tpw-msg').innerHTML = '<span class="err">' + esc(err.code === 'login_taken' ? 'Identifiant déjà utilisé' : (err.message || 'Erreur')) + '</span>'; });
+        if (!login) { $('#tpw-msg').innerHTML = '<span class="err">Identifiant en lettres latines, chiffres et points uniquement</span>'; return; }
+        var btn = $('button[type=submit]', tf); btn.disabled = true;
+        HPB.setTeacherPassword(login, tf.pw.value).then(function () {
+          DEMO.teacher = [login, '••••']; cache.teacherLogin = login; if (HPB.me) HPB.me.login = login;
+          $('#tpw-msg').innerHTML = '<span class="ok">Identifiant et mot de passe enregistrés</span>'; tf.pw.value = ''; btn.disabled = false;
+        }, function (err) { btn.disabled = false; $('#tpw-msg').innerHTML = '<span class="err">' + esc(errText(err)) + '</span>'; });
       });
       $('#site').addEventListener('submit', function (e) {
         e.preventDefault(); cache.settings.siteUrl = e.target.url.value.trim(); cache.settings.analyseCode = e.target.code.value.trim();
-        HPA.setCode(cache.settings.analyseCode); HPB.setSettings(cache.settings).then(function () { toast('Enregistré'); });
+        HPA.setCode(cache.settings.analyseCode); busy($('button[type=submit]', e.target), HPB.setSettings(cache.settings), 'Enregistrement impossible').then(function () { toast('Enregistré'); }).catch(function () {});
       });
       var rd = $('[data-act="resetdemo"]');
       if (rd) rd.onclick = function () {
         if (!rd.dataset.armed) { rd.dataset.armed = 1; rd.textContent = 'Confirmer : tout effacer'; return; }
+        DEMO.teacher = DEMO_TEACHER.slice();
         HPB.reset().then(seedDemo).then(function () { sess(null); location.hash = '#/connexion'; renderLogin(); });
       };
     }
@@ -769,6 +987,9 @@ var HPApp = (function () {
 
   /* ================= DONNÉES DE DÉMONSTRATION ================= */
   function seedDemo() {
+    return loadDemo().then(function (d) { return seedDemoWith(d.data, d.tenses); });
+  }
+  function seedDemoWith(DEMO_DATA, TENSES) {
     var full = DEMO_DATA, now = new Date();
     var allThemes = Object.keys(full.VOCAB);
     function subset(themes, gramCats, conj) {

@@ -191,7 +191,7 @@ var HP = (function () {
     var s = emptyDay();
     for (var i = 0; i < n; i++) {
       var d = days[dayKey(addDays(from, i))];
-      if (d) for (var k in s) s[k] += d[k] || 0;
+      if (d) for (var k in s) s[k] += +d[k] || 0;
     }
     return s;
   }
@@ -212,7 +212,7 @@ var HP = (function () {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function fmt(n) { return (n || 0).toLocaleString('fr-FR'); }
+  function fmt(n) { n = +n; return (isFinite(n) ? n : 0).toLocaleString('fr-FR'); }
 
   function levelCard(P, opts) {
     opts = opts || {};
@@ -248,13 +248,13 @@ var HP = (function () {
     var start = addDays(end, -(weeks * 7) + 1);
     var max = 1;
     Object.keys(days || {}).forEach(function (k) { if (days[k].xp > max) max = days[k].xp; });
-    var cols = '', months = '', lastM = -1;
+    var cols = '', months = '', lastM = -1, lastCol = -9;
     for (var w = 0; w < weeks; w++) {
       var cells = '';
       var wkStart = addDays(start, w * 7);
-      if (wkStart.getMonth() !== lastM) {
+      if (wkStart.getMonth() !== lastM && w - lastCol >= 3) {
         months += '<span style="grid-column:' + (w + 1) + '">' + wkStart.toLocaleDateString('fr-FR', { month: 'short' }) + '</span>';
-        lastM = wkStart.getMonth();
+        lastM = wkStart.getMonth(); lastCol = w;
       }
       for (var i = 0; i < 7; i++) {
         var d = addDays(start, w * 7 + i), k = dayKey(d), v = days && days[k] ? days[k].xp : 0;
@@ -286,9 +286,9 @@ var HP = (function () {
     if (goal) {
       var gy = H - padB - Math.round((H - padB - padT) * goal / max);
       svg += '<line x1="0" x2="' + W + '" y1="' + gy + '" y2="' + gy + '" class="hp-goal-line"/>' +
-             '<text x="' + (W - 4) + '" y="' + (gy - 4) + '" class="hp-axis" text-anchor="end">objectif ' + goal + ' XP</text>';
+             '<text x="' + (W - 4) + '" y="' + (gy - 5) + '" class="hp-axis hp-goal-txt" text-anchor="end">objectif ' + goal + ' XP</text>';
     }
-    return '<svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="XP par jour">' + svg + '</svg>';
+    return '<div class="hp-chart-wrap"><svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="XP par jour">' + svg + '</svg></div>';
   }
 
   function rateLine(days, weeks) {
@@ -314,7 +314,7 @@ var HP = (function () {
         '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 9).toFixed(1) + '" class="hp-val" text-anchor="middle">' + p[2].rate + '%</text>';
     });
     if (!pts.length) svg += '<text x="' + W / 2 + '" y="' + H / 2 + '" class="hp-axis" text-anchor="middle">Pas encore de réponses enregistrées</text>';
-    return '<svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Taux de réussite par semaine">' + svg + '</svg>';
+    return '<div class="hp-chart-wrap"><svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Taux de réussite par semaine">' + svg + '</svg></div>';
   }
 
   function themeBars(themes, opts) {
@@ -384,7 +384,10 @@ var HP = (function () {
     '.h1{background:color-mix(in srgb,var(--accent) 28%,var(--paper))}.h2{background:color-mix(in srgb,var(--accent) 52%,var(--paper))}' +
     '.h3{background:color-mix(in srgb,var(--accent) 76%,var(--paper))}.h4{background:var(--accent)}' +
     '.hp-legend{display:flex;align-items:center;justify-content:flex-start;gap:4px;font-size:11px;color:var(--muted);margin-top:8px}' +
-    '.hp-chart{width:100%;height:auto;display:block;overflow:visible}' +
+    '.hp-chart-wrap{overflow-x:auto;overflow-y:hidden}' +
+    '.hp-chart{width:100%;height:auto;max-height:230px;display:block;overflow:visible}' +
+    '@media (max-width:640px){.hp-chart{min-width:520px}}' +
+    '.hp-goal-txt{paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;font-weight:800;fill:var(--olive)}' +
     '.hp-bar{fill:color-mix(in srgb,var(--accent) 55%,var(--paper))}.hp-bar-hit{fill:var(--accent)}.hp-bar0{fill:var(--line)}' +
     '.hp-axis{fill:var(--muted);font:600 10.5px var(--font-ui)}.hp-val{fill:var(--ink-soft);font:800 11px var(--font-ui)}' +
     '.hp-goal-line{stroke:var(--olive);stroke-width:1.5;stroke-dasharray:5 5}.hp-grid{stroke:var(--line);stroke-width:1}' +

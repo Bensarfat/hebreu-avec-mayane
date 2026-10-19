@@ -34,7 +34,11 @@ const [d0, d1] = between(src, DATA_START, DATA_END, 'données (VOCAB … GRAMMAR
 const dataBlock = src.slice(d0, d1);
 let data;
 try {
-  data = new Function(dataBlock + ';return {VOCAB,NATURE,CONJ,CORE_THEMES,ADVANCED_THEMES,VERB_PRESENT,GRAMMAR_CATEGORIES};')();
+  /* le bloc est évalué à part, sans accès à Node (pas de require, process, fichiers), avec une limite de temps */
+  const vm = require('vm');
+  const out = vm.runInNewContext(dataBlock + ';({VOCAB,NATURE,CONJ,CORE_THEMES,ADVANCED_THEMES,VERB_PRESENT,GRAMMAR_CATEGORIES})',
+    Object.create(null), { timeout: 2000 });
+  data = JSON.parse(JSON.stringify(out));   // données pures uniquement
 } catch (e) { fail('le bloc de données ne se lit plus : ' + e.message); }
 fs.writeFileSync(path.join(OUT, 'full_data.json'), JSON.stringify(data));
 

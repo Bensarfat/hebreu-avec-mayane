@@ -62,6 +62,12 @@ create table if not exists public.settings (
 );
 insert into public.settings (id) values (1) on conflict do nothing;
 
+-- Une seule professeure ; taille raisonnable des progressions.
+create unique index if not exists one_teacher on public.profiles ((role)) where role = 'teacher';
+alter table public.progress drop constraint if exists progress_size;
+alter table public.progress add constraint progress_size
+  check (coalesce(pg_column_size(summary), 0) < 300000 and coalesce(pg_column_size(storage), 0) < 3000000);
+
 -- ---------------------------------------------------------------------
 -- Droits d'accès (Row Level Security)
 -- ---------------------------------------------------------------------
@@ -100,7 +106,7 @@ drop policy if exists "eleve : lit sa progression" on public.progress;
 drop policy if exists "eleve : cree sa progression" on public.progress;
 drop policy if exists "eleve : met a jour sa progression" on public.progress;
 create policy "prof : tout"                      on public.progress for all    using (public.is_teacher()) with check (public.is_teacher());
-create policy "eleve : lit sa progression"       on public.progress for select using (student_id = auth.uid());
+create policy "eleve : lit sa progression"       on public.progress for select using (student_id = auth.uid() and public.is_active_student());
 create policy "eleve : cree sa progression"      on public.progress for insert with check (student_id = auth.uid() and public.is_active_student());
 create policy "eleve : met a jour sa progression" on public.progress for update using (student_id = auth.uid() and public.is_active_student()) with check (student_id = auth.uid());
 

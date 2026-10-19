@@ -131,7 +131,8 @@ var HPB = (function () {
       return api.listStudents().then(function (l) {
         return set('students', l.filter(function (s) { return s.id !== id; }));
       }).then(function () {
-        return Promise.all([del('content:' + id), del('summary:' + id), del('progress:' + id)]);
+        return Promise.all([del('content:' + id), del('summary:' + id), del('progress:' + id),
+          get('bookings').then(function (l) { return set('bookings', (l || []).filter(function (b) { return b.studentId !== id; })); })]);
       }).then(function () {
         return api.listDocs().then(function (docs) {
           docs.forEach(function (d) { d.students = (d.students || []).filter(function (x) { return x !== id; }); });
@@ -195,6 +196,60 @@ var HPB = (function () {
         .then(function () { return del('blob:' + id); });
     },
     getBlob: function (id) { return get('blob:' + id); },
+
+    /* ---------- agenda : cours réservés (mêmes règles que le serveur, via HPCal) ---------- */
+    listBookings: function (from, to) {
+      return get('bookings').then(function (l) {
+        return (l || []).filter(function (b) { return (!from || b.end > from) && (!to || b.start < to); })
+          .sort(function (a, b) { return a.start - b.start; });
+      });
+    },
+    addBooking: function (b) {
+      return get('bookings').then(function (l) {
+        l = l || [];
+        if (l.some(function (x) { return x.status === 'booked' && x.start < b.end && x.end > b.start; })) { var e = new Error('créneau déjà pris'); e.code = 'taken'; throw e; }
+        var r = { id: 'b' + Date.now().toString(36) + rnd(3), studentId: b.studentId, start: b.start, end: b.end, status: 'booked',
+          note: String(b.note || '').slice(0, 500), by: b.by || 'teacher', createdAt: new Date().toISOString() };
+        l.push(r);
+        return set('bookings', l).then(function () { return r; });
+      });
+    },
+    cancelBooking: function (id, by) {
+      return get('bookings').then(function (l) {
+        l = l || [];
+        var r = l.filter(function (x) { return x.id === id; })[0];
+        if (r) { r.status = 'cancelled'; r.cancelledBy = by || 'teacher'; r.cancelledAt = new Date().toISOString(); }
+        return set('bookings', l);
+      });
+    },
+    agendaState: function (sid, from, to) {
+      return Promise.all([api.getSettings(), api.listBookings()]).then(function (r) {
+        var now = Date.now();
+        return {
+          cfg: HPCal.pub(r[0].agenda), now: now,
+          busy: r[1].filter(function (b) { return b.status === 'booked' && b.end > from && b.start < to; }).map(function (b) { return { s: b.start, e: b.end }; }),
+          mine: r[1].filter(function (b) { return b.studentId === sid && b.start > from; })
+        };
+      });
+    },
+    agendaBook: function (sid, start, minutes, note) {
+      return api.agendaState(sid, start - 864e5, start + 864e5).then(function (st) {
+        var fail = function (code) { var e = new Error(code); e.code = code; throw e; };
+        if (st.cfg.maxUpcoming && st.mine.filter(function (b) { return b.status === 'booked' && b.start > st.now; }).length >= st.cfg.maxUpcoming) fail('max_upcoming');
+        var why = HPCal.check(st.cfg, st.busy, start, minutes, st.now);
+        if (why) fail(why);
+        return api.addBooking({ studentId: sid, start: start, end: start + minutes * 60000, note: note, by: 'student' });
+      });
+    },
+    agendaCancel: function (sid, id) {
+      return Promise.all([api.getSettings(), api.listBookings()]).then(function (r) {
+        var b = r[1].filter(function (x) { return x.id === id && x.studentId === sid && x.status === 'booked'; })[0];
+        var fail = function (code) { var e = new Error(code); e.code = code; throw e; };
+        if (!b) fail('not_found');
+        if (!HPCal.canCancel(r[0].agenda, b.start, Date.now())) fail('too_late');
+        return api.cancelBooking(id, 'student');
+      });
+    },
 
     _set: set, _get: get, _withPassword: withPassword
   };

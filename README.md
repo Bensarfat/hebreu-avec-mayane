@@ -38,3 +38,10 @@ Sans réglage, le site fonctionne en mode démonstration (données dans le navig
 3. Vercel > Settings > Environment Variables : `SUPABASE_URL`, `SUPABASE_ANON_KEY` (clé publique « anon » ou « publishable »), `SUPABASE_SERVICE_ROLE_KEY` (clé secrète « service_role » ou « secret » — ne jamais la partager), puis Redeploy.
 4. À la première ouverture, le site propose de créer le compte de la professeure.
 5. Mises à jour de la base : exécuter dans l'ordre les fichiers `supabase/migration-*.sql` (déjà inclus dans `schema.sql` pour une nouvelle installation).
+
+## Agenda (réservation des cours)
+
+- **Mayane** : onglet « Agenda » — calendrier de la semaine (tous les élèves), « Disponibilités » (heures habituelles par jour, durées proposées — 1 h, 1 h 30, 2 h par défaut, modifiables —, délais, pause entre deux cours, nombre de cours à venir par élève, message aux élèves), fermetures et vacances, ajout ou annulation d'un cours, lien privé à ajouter dans Google Agenda / Apple Calendrier.
+- **Élèves** : bouton « 📅 Mes cours » dans leur espace — leurs cours à venir, les créneaux libres (sans le nom des autres élèves), réservation, annulation (jusqu'au délai fixé par Mayane), ajout à leur agenda (.ics). Horaires affichés à l'heure de leur appareil.
+- **Sécurité** : les élèves réservent via `/api/agenda`, qui revérifie le créneau (`api/_agenda.js`, le même calcul que dans le navigateur) ; la base refuse deux cours qui se chevauchent (contrainte `bookings_no_overlap`).
+- **Installation** : exécuter `supabase/migration-2026-10-20-agenda.sql` dans Supabase > SQL Editor (déjà inclus dans `schema.sql` pour une nouvelle installation).

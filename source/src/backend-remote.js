@@ -28,9 +28,10 @@
   }
   function emailFor(login) { return String(login || '').trim().toLowerCase() + '@' + DOMAIN; }
   function token() { return sbc.auth.getSession().then(function (r) { return r.data && r.data.session ? r.data.session.access_token : null; }); }
-  function admin(body) {
+  function admin(body) { return post('/api/admin', body); }
+  function post(path, body) {
     return token().then(function (t) {
-      return fetch('/api/admin', { method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + (t || '') }, body: JSON.stringify(body) });
+      return fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + (t || '') }, body: JSON.stringify(body) });
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok) { var e = new Error(j.detail || j.error || ('HTTP ' + r.status)); e.code = j.error; throw e; }
@@ -51,6 +52,11 @@
       addedAt: r.added_at, integratedAt: r.integrated_at || undefined
     };
   }
+  function bookingFromRow(r) {
+    return { id: r.id, studentId: r.student_id, start: Date.parse(r.starts_at), end: Date.parse(r.ends_at), status: r.status, note: r.note || '',
+      by: r.created_by, cancelledBy: r.cancelled_by || null, createdAt: r.created_at, cancelledAt: r.cancelled_at || null };
+  }
+  function iso(ms) { return new Date(ms).toISOString(); }
   function safeName(n) { return String(n || 'document').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80); }
 
   var remote = {
@@ -171,7 +177,26 @@
         return r ? q(sbc.storage.from('documents').download(r.path)) : null;
       });
     },
-    reset: function () { return Promise.resolve(); }
+    reset: function () { return Promise.resolve(); },
+
+    /* ---------- agenda ---------- */
+    listBookings: function (from, to) {
+      var qq = sbc.from('bookings').select('*').order('starts_at', { ascending: true }).limit(3000);
+      if (to) qq = qq.lt('starts_at', iso(to));
+      if (from) qq = qq.gt('ends_at', iso(from));
+      return q(qq).then(function (rows) { return rows.map(bookingFromRow); });
+    },
+    addBooking: function (b) {
+      return q(sbc.from('bookings').insert({ student_id: b.studentId, starts_at: iso(b.start), ends_at: iso(b.end), note: String(b.note || '').slice(0, 500), created_by: 'teacher' }).select().single())
+        .then(bookingFromRow, function (e) { if (e.code === '23P01') e.code = 'taken'; throw e; });
+    },
+    cancelBooking: function (id) {
+      return q(sbc.from('bookings').update({ status: 'cancelled', cancelled_by: 'teacher', cancelled_at: new Date().toISOString() }).eq('id', id));
+    },
+    /* côté élève : tout passe par le serveur, qui vérifie le créneau */
+    agendaState: function (sid, from, to) { return post('/api/agenda', { action: 'state', from: from, to: to }); },
+    agendaBook: function (sid, start, minutes, note) { return post('/api/agenda', { action: 'book', start: start, minutes: minutes, note: note }).then(function (r) { return r.booking; }); },
+    agendaCancel: function (sid, id) { return post('/api/agenda', { action: 'cancel', id: id }); }
   };
 
   HPB.remote = false;

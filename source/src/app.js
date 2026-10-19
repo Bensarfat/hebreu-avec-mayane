@@ -12,6 +12,9 @@ var HPApp = (function () {
   var results = {};                          /* analyses terminées pendant que la page affichait autre chose */
   var cache = { students: [], summaries: {}, contents: {}, docs: [] };
   var sortKey = 'xp7', sortDir = -1, pending = {};
+  /* agenda (réservation des cours) : voir agenda-ui.js */
+  var AG = HPAgendaUI({ $: $, $$: $$, esc: esc, cache: cache, modal: modal, toast: toast, busy: busy, errText: errText, fullName: fullName,
+    plural: plural, bindCopy: bindCopy, render: function () { renderTeacher(); } });
 
   /* ---------- session ---------- */
   function sess(v) {
@@ -105,7 +108,7 @@ var HPApp = (function () {
   /* ---------- démarrage ---------- */
   function boot() {
     /* la page d'accueil ne dépend pas du serveur : elle s'affiche tout de suite */
-    if (!sess() && location.hash !== '#/connexion' && !/^#\/(tableau|eleve|documents|reglages)/.test(location.hash)) {
+    if (!sess() && location.hash !== '#/connexion' && !/^#\/(tableau|eleve|documents|agenda|reglages)/.test(location.hash)) {
       HPHome.render(root, function () { location.hash = '#/connexion'; });
     }
     HP.injectCss();
@@ -117,6 +120,9 @@ var HPApp = (function () {
         var known = {}; DEMO.students.forEach(function (d) { known[d[0]] = d[1]; });
         return l.filter(function (x) { return x.demo && !x.pw && known[x.login]; })
           .reduce(function (p, x) { return p.then(function () { x.pw = known[x.login]; return HPB.saveStudent(x); }); }, Promise.resolve());
+      }).then(function () {
+        /* démo créée avant l'agenda : on ajoute des disponibilités et quelques cours fictifs */
+        return HPB.getSettings().then(function (s) { if (!s.agenda) return seedAgenda(); });
       }) : seedDemo();
       });
     }).then(function (r) {
@@ -160,7 +166,7 @@ var HPApp = (function () {
 
   function loadAll() {
     var slow = setTimeout(function () { document.body.classList.add('is-loading'); }, 250);
-    return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings()]).then(function (r) {
+    return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load()]).then(function (r) {
       cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2];
       HPA.setCode(r[2].analyseCode || '');
       if (HPB.me && HPB.me.role === 'teacher') cache.teacherLogin = HPB.me.login;
@@ -217,6 +223,7 @@ var HPApp = (function () {
   }
 
   function logout() {
+    AG.closePane();
     sess(null); route.checked = true; route.verified = false; frame = null;
     pushQueue.then(function () { return HPB.logout ? HPB.logout() : null; }).catch(function () {})
       .then(function () { location.hash = '#/connexion'; renderLogin(); });
@@ -281,11 +288,14 @@ var HPApp = (function () {
       var head = '<script>window.__HP_DATA__=' + JSON.stringify(content).replace(/</g, '\\u003c') +
         ';window.__HP_KEY__=' + JSON.stringify(preview ? 'hp_preview' : 'hp_cache_' + id) +
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
-        ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';<\/script>' +
+        ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
+        /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
+        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d||d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
+        (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
       var html = TPL.replace('<!--HP_HEAD-->', function () { return head; })
@@ -300,15 +310,23 @@ var HPApp = (function () {
       fr.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms allow-downloads');
       root.appendChild(fr);
       frame = { el: fr, id: id, preview: !!preview };
+      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); });
       fr.srcdoc = html;
       document.title = 'Hébreu · ' + st.first;
       });
     }).catch(function (e) { if (!root.querySelector('#student-frame')) renderFatal('Impossible d\'ouvrir l\'espace (' + errText(e) + '). Rechargez la page.'); });
   }
   function HPAstats(c) { return HPA.stats(c); }
+  function sendAgendaInfo(fr, id) {
+    if (!HPB.agendaState) return;
+    AG.barInfo(id).then(function (info) { if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'agenda-info', show: !!info.show, next: info.next }, '*'); });
+  }
   var SBAR_CSS = '.hp-sbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;padding:8px 8px 8px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:14px;color:var(--ink-soft)}' +
     '.hp-sbar .he{font-family:var(--font-he);color:var(--accent);font-weight:700}.hp-sbar b{color:var(--ink)}' +
     '.hp-sbar button{border:1.5px solid var(--line-strong);background:var(--paper);border-radius:999px;padding:6px 14px;font:700 13px var(--font-ui);color:var(--ink-soft);cursor:pointer}' +
+    '.hp-sbar .hp-ag{display:flex;align-items:center;gap:10px;margin-left:auto}.hp-sbar .hp-ag small{font-size:12.5px;color:var(--ink-soft);font-weight:600}' +
+    '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
+    '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
     '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
   function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
 
@@ -319,6 +337,7 @@ var HPApp = (function () {
     var m = e.data;
     if (m.hp === 'logout' && !frame.preview) { frame = null; logout(); return; }
     if (m.hp === 'close' && frame.preview) { closePreview(); return; }
+    if (m.hp === 'agenda' && !frame.preview) { var f0 = frame; AG.openPane(frame.id, function () { if (f0.el.isConnected) sendAgendaInfo(f0.el, f0.id); }); return; }
     if (m.hp === 'progress' && !frame.preview) {
       var sum = cleanSummary(m.summary), storage = m.storage && typeof m.storage === 'object' ? m.storage : null;
       if (sum && storage) queuePush(frame.id, sum, storage);
@@ -361,7 +380,8 @@ var HPApp = (function () {
   /* ================= BACK-OFFICE ================= */
   function nav(cur) {
     var pendingDocs = cache.docs.filter(function (d) { return d.status !== 'done'; }).length;
-    var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
+    var nb = AG.badge();
+    var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
       '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '">' + it[1] + '</a>'; }).join('') +
@@ -375,6 +395,7 @@ var HPApp = (function () {
     if (page === 'eleve' && h[1]) body = studentPage(h[1], h[2] || 'progression');
     else if (page === 'eleves') body = studentsPage();
     else if (page === 'documents') body = docsPage();
+    else if (page === 'agenda') body = AG.page(h[1]);
     else if (page === 'reglages') body = settingsPage();
     else { page = 'tableau'; body = dashboard(); }
     root.innerHTML = nav(page === 'eleve' ? 'eleves' : page) + '<main class="bo-main">' + body + '</main>';
@@ -441,7 +462,7 @@ var HPApp = (function () {
         '<div class="hp-kpi green"><b>' + (avg == null ? '—' : avg + ' %') + '</b><span>réussite moyenne</span></div>' +
         '<div class="hp-kpi rose"><b>' + pend + '</b><span>document' + (pend > 1 ? 's' : '') + ' à intégrer</span></div>' +
       '</div>' +
-      '<div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' +
+      '<div class="dash-grid"><div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' + AG.dashboardCard() + '</div>' +
       '<div class="card"><h3>Activité de la classe <small>XP par jour, 30 jours</small></h3>' + HP.xpBars(classDays, 30, 0) + '</div>' +
       '<div class="card"><h3>À surveiller</h3>' + (alerts.length ? '<div class="alerts">' + alerts.map(function (a) {
         return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '" tabindex="0" role="link"><span class="ic">' + a[1] + '</span><span>' + a[2] + '</span></div>';
@@ -491,8 +512,9 @@ var HPApp = (function () {
     var s = cache.students.filter(function (x) { return x.id === id; })[0];
     if (!s) return '<p>Élève introuvable. <a href="#/eleves">Retour</a></p>';
     var m = metrics(s), L = HP.levelInfo(m.xp), pd = docsFor(id).filter(function (d) { return d.status !== 'done'; }).length;
-    var tabs = [['progression', 'Progression'], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
-    var body = tab === 'documents' ? stDocs(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
+    var nc = AG.upcoming(id).length;
+    var tabs = [['progression', 'Progression'], ['cours', 'Cours' + (nc ? ' (' + nc + ')' : '')], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
+    var body = tab === 'cours' ? AG.studentTab(s) : tab === 'documents' ? stDocs(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
     return '<a class="back" href="#/eleves">← Tous les élèves</a>' +
       '<div class="st-head"><span class="av lg">' + initials(s) + '</span><div style="flex:1;min-width:220px"><h1>' + esc(fullName(s)) +
         (s.active === false ? ' <span class="pill rose">suspendu</span>' : '') + '</h1>' +
@@ -868,6 +890,8 @@ var HPApp = (function () {
       };
     });
     bindCopy(document);
+    if (page === 'agenda') AG.bind(h[1]);
+    if (page === 'tableau' || (page === 'eleve' && h[2] === 'cours')) AG.bindStudentTab();
 
     /* dépôt */
     var drop = $('#drop');
@@ -1034,7 +1058,33 @@ var HPApp = (function () {
         return HPB.pushProgress(st.id, HP.summarize(storage, storage.progress, st.content.VOCAB), storage);
       });
     });
-    return chain;
+    return chain.then(seedAgenda);
+  }
+
+  /* agenda de démonstration : disponibilités habituelles et quelques cours autour d'aujourd'hui */
+  function seedAgenda() {
+    var tz; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+    var cfg = HPCal.norm({ open: true, tz: tz || 'Europe/Paris', durations: [60, 90, 120], step: 30, notice: 12, horizon: 6, buffer: 0, cancel: 24,
+      message: 'Les cours ont lieu en visio (lien envoyé la veille) ou chez Mayane. Pense à apporter ton cahier !',
+      rules: [{ d: 0, from: '10:00', to: '13:00' }, { d: 1, from: '17:00', to: '21:00' }, { d: 2, from: '17:00', to: '21:00' },
+        { d: 3, from: '09:00', to: '12:00' }, { d: 3, from: '17:00', to: '21:00' }, { d: 4, from: '17:00', to: '21:00' }] });
+    var today = HPCal.dayKey(Date.now(), cfg.tz);
+    function next(wd, minDays, h, mi) {
+      var k = HPCal.addDaysKey(today, minDays); while (HPCal.weekdayOfKey(k) !== wd) k = HPCal.addDaysKey(k, 1);
+      var p = k.split('-'); return HPCal.zoned(+p[0], +p[1], +p[2], h, mi, cfg.tz);
+    }
+    var list = [
+      ['demo-lea', next(2, 2, 18, 0), 90, 'student', 'J\'aimerais revoir le passé des verbes en פעל'],
+      ['demo-noam', next(4, 2, 17, 0), 60, 'teacher', ''],
+      ['demo-ben', next(0, 2, 10, 30), 120, 'student', ''],
+      ['demo-lea', next(2, -12, 18, 0), 90, 'student', ''],
+      ['demo-ben', next(3, -10, 9, 0), 120, 'teacher', '']
+    ];
+    return HPB.getSettings().then(function (s) { s.agenda = cfg; return HPB.setSettings(s); }).then(function () {
+      return list.reduce(function (p, b) {
+        return p.then(function () { return HPB.addBooking({ studentId: b[0], start: b[1], end: b[1] + b[2] * 60000, by: b[3], note: b[4] }).catch(function () {}); });
+      }, Promise.resolve());
+    });
   }
 
   /* activité fictive, pour montrer les graphiques de la démo */

@@ -55,10 +55,12 @@ var ASSETS = ${j({ student: studentFile, demo: demoFile })};
 </script>
 <script>
 ${rd('progress.js')}
+${fs.readFileSync(path.join(D, 'api', '_agenda.js'), 'utf8')}
 ${rd('backend.js')}
 ${rd('analyse.js')}
 ${rd('backend-remote.js')}
 ${rd('home.js')}
+${rd('agenda-ui.js')}
 ${rd('app.js')}
 </script>
 </body>

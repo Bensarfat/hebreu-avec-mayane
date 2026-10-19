@@ -102,7 +102,6 @@ var HPHome = (function () {
     document.title = 'Hébreu avec Mayane · cours en français';
     root.innerHTML =
       '<div class="mv">' +
-      (window.HPB && HPB.remote ? '' : '<div class="demo-strip">Version de démonstration — textes et illustration à valider par Mayane.</div>') +
       '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Mayane</a>' +
         '<button class="btn" data-go="login">Mon espace</button></header>' +
       '<section class="mv-hero"><div>' +

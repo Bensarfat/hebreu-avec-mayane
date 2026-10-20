@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
   /* qui a le droit d'analyser : la professeure connectée (mode en ligne), sinon un code obligatoire */
   if (sb.configured()) {
     const me = await sb.caller(req);
-    if (!me || me.role !== 'teacher') { res.status(401).json({ error: 'not_teacher' }); return; }
+    if (!me || !sb.isStaff(me.role)) { res.status(401).json({ error: 'not_teacher' }); return; }
   } else {
     const code = process.env.ANALYSE_CODE;
     if (!code) { res.status(503).json({ error: 'not_configured' }); return; }

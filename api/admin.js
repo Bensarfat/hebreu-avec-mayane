@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
 
     /* ---- le reste : professeure connectée uniquement ---- */
     const me = await sb.caller(req);
-    if (!me || me.role !== 'teacher') { res.status(401).json({ error: 'not_teacher' }); return; }
+    if (!me || !sb.isStaff(me.role)) { res.status(401).json({ error: 'not_teacher' }); return; }
 
     if (b.action === 'save') {
       const s = b.student || {};

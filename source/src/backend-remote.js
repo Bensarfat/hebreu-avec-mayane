@@ -66,11 +66,13 @@
     currentUser: function () {
       return sbc.auth.getSession().then(function (r) {
         var s = r.data && r.data.session; if (!s) return null;
-        return q(sbc.from('profiles').select('id,role,active,login').eq('id', s.user.id).maybeSingle()).then(function (p) {
+        return q(sbc.from('profiles').select('id,role,active,login,first').eq('id', s.user.id).maybeSingle()).then(function (p) {
           if (!p) return null;
           HPB.me = p;
           if (p.role === 'student' && p.active === false) return { role: 'blocked' };
-          return p.role === 'teacher' ? { role: 'teacher' } : { role: 'student', id: p.id };
+          /* administrateur : exactement l'espace de la professeure */
+          if (p.role === 'teacher' || p.role === 'admin') return { role: 'teacher', admin: p.role === 'admin' };
+          return { role: 'student', id: p.id };
         });
       }).catch(function () { return null; });
     },

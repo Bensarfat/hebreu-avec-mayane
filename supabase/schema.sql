@@ -8,7 +8,7 @@
 -- à un compte Supabase Auth (e-mail technique <login>@hebreu-avec-mayane.app).
 create table if not exists public.profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
-  role        text not null check (role in ('teacher', 'student')),
+  role        text not null check (role in ('teacher', 'student', 'admin')),   -- admin : mêmes droits que la professeure
   login       text not null unique,
   first       text not null default '',
   last        text not null default '',
@@ -73,7 +73,7 @@ alter table public.progress add constraint progress_size
 -- ---------------------------------------------------------------------
 create or replace function public.is_teacher() returns boolean
   language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.profiles where id = auth.uid() and role = 'teacher');
+  select exists (select 1 from public.profiles where id = auth.uid() and role in ('teacher', 'admin'));
 $$;
 
 create or replace function public.is_active_student() returns boolean

@@ -59,6 +59,7 @@ jobs:
           name: site
           path: |
             index.html
+            version.json
             assets/
             source/src/original.html
           retention-days: 3
@@ -81,11 +82,12 @@ jobs:
       - name: Publier
         run: |
           cp /tmp/site/index.html index.html
+          cp /tmp/site/version.json version.json
           rm -rf assets && cp -r /tmp/site/assets assets
           cp /tmp/site/source/src/original.html source/src/original.html
           git config user.name "Benjamin Sarfati"
           git config user.email "contact@docteursarfati.com"
-          git add -A index.html assets source/src/original.html
+          git add -A index.html version.json assets source/src/original.html
           git diff --cached --quiet && exit 0
           git commit -m "Synchronisation automatique avec le site de Benjamin"
           git push

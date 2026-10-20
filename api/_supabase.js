@@ -39,9 +39,12 @@ async function caller(req) {
   } catch (e) { return null; }
 }
 
+/* professeure ou administrateur : mêmes droits */
+function isStaff(role) { return role === 'teacher' || role === 'admin'; }
+
 async function hasTeacher() {
   const rows = await call('/rest/v1/profiles?select=id&role=eq.teacher&limit=1');
   return !!(rows && rows.length);
 }
 
-module.exports = { configured, emailFor, validLogin, call, caller, hasTeacher, URL_, ANON };
+module.exports = { configured, emailFor, validLogin, call, caller, hasTeacher, isStaff, URL_, ANON };

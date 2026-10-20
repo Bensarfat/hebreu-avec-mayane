@@ -26,6 +26,9 @@ const demoFile = 'assets/demo.' + hash(demo) + '.json';
 fs.writeFileSync(path.join(D, studentFile), tpl);
 fs.writeFileSync(path.join(D, demoFile), demo);
 
+/* empreinte de cette version (le site propose de recharger quand elle change) */
+const BUILD = hash(tpl + demo + ['progress.js', 'backend.js', 'analyse.js', 'backend-remote.js', 'home.js', 'agenda-ui.js', 'app.js', 'shell.css'].map(rd).join('') + fs.readFileSync(path.join(D, 'api', '_agenda.js'), 'utf8'));
+fs.writeFileSync(path.join(D, 'version.json'), JSON.stringify({ build: BUILD }) + '\n');
 const FONTS = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap';
 const ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7457f5"/><stop offset="1" stop-color="#b86cf2"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#g)"/><text x="32" y="45" text-anchor="middle" font-family="Arial" font-weight="700" font-size="38" fill="#fff">מ</text></svg>');
 
@@ -51,7 +54,7 @@ ${rd('shell.css')}
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = ${j({ student: studentFile, demo: demoFile })};
+var ASSETS = ${j({ student: studentFile, demo: demoFile, build: BUILD })};
 </script>
 <script>
 ${rd('progress.js')}

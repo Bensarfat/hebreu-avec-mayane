@@ -106,6 +106,25 @@ var HPApp = (function () {
   function idle(fn) { (window.requestIdleCallback || function (f) { setTimeout(f, 1500); })(function () { try { fn(); } catch (e) {} }); }
 
   /* ---------- démarrage ---------- */
+  /* une page restée ouverte ne se met pas à jour toute seule : on propose de recharger dès qu'une nouvelle version est en ligne */
+  function checkVersion() {
+    if (!ASSETS.build || location.protocol === 'file:' || document.querySelector('.hp-update')) return;
+    fetch('/version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
+      if (!v || !v.build || v.build === ASSETS.build || document.querySelector('.hp-update')) return;
+      var b = document.createElement('div'); b.className = 'hp-update'; b.setAttribute('role', 'status');
+      b.innerHTML = '<span>✨ Une nouvelle version du site est disponible.</span><button class="btn small primary">Recharger</button>';
+      b.querySelector('button').onclick = function () {
+        if (frame && frame.el && frame.el.contentWindow) try { frame.el.contentWindow.postMessage({ hp: 'flush' }, '*'); } catch (e) {}
+        /* on laisse partir la dernière progression avant de recharger */
+        setTimeout(function () { pushQueue.then(function () { location.reload(); }, function () { location.reload(); }); }, 600);
+      };
+      document.body.appendChild(b);
+    }).catch(function () {});
+  }
+  setInterval(checkVersion, 10 * 60000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkVersion(); });
+  window.addEventListener('focus', checkVersion);
+
   function boot() {
     /* la page d'accueil ne dépend pas du serveur : elle s'affiche tout de suite */
     if (!sess() && location.hash !== '#/connexion' && !/^#\/(tableau|eleve|documents|agenda|reglages)/.test(location.hash)) {
@@ -169,7 +188,7 @@ var HPApp = (function () {
     return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load()]).then(function (r) {
       cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2];
       HPA.setCode(r[2].analyseCode || '');
-      if (HPB.me && HPB.me.role === 'teacher') cache.teacherLogin = HPB.me.login;
+      if (HPB.me && (HPB.me.role === 'teacher' || HPB.me.role === 'admin')) cache.teacherLogin = HPB.me.login;
       var ids = r[0].map(function (s) { return s.id; });
       /* une seule requête par type de données quand le serveur le permet */
       var sums = HPB.getSummaries ? HPB.getSummaries(ids) : Promise.all(ids.map(function (id) { return HPB.getSummary(id); })).then(function (l) { var o = {}; ids.forEach(function (id, i) { o[id] = l[i]; }); return o; });
@@ -290,7 +309,7 @@ var HPApp = (function () {
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
-        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d||d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
+        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
@@ -383,7 +402,7 @@ var HPApp = (function () {
     var nb = AG.badge();
     var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
-      '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane</a>' +
+      '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '">' + it[1] + '</a>'; }).join('') +
       '</nav><button class="btn small" id="lo">Se déconnecter</button></header>';
   }
@@ -452,9 +471,9 @@ var HPApp = (function () {
       if (m.rate7 != null && m.rate7p != null && m.rate7p - m.rate7 >= 10) alerts.push(['warn', '📉', 'Réussite de <b>' + esc(fullName(s)) + '</b> en baisse : ' + m.rate7p + ' % → ' + m.rate7 + ' % cette semaine.', s.id]);
       if (m.active7 >= 5) alerts.push(['good', '🔥', '<b>' + esc(fullName(s)) + '</b> a révisé ' + m.active7 + ' jours sur 7. Bravo !', s.id]);
     });
-    return '<div class="bo-head"><div><h1 class="page-title">Bonjour Mayane <span class="grad">שָׁלוֹם</span></h1>' +
+    return '<div class="bo-head"><div><h1 class="page-title">Bonjour ' + esc((HPB.me && HPB.me.first) || 'Mayane') + ' <span class="grad">שָׁלוֹם</span></h1>' +
         '<p>Vue d\'ensemble de vos élèves sur les 7 derniers jours.</p></div>' +
-        '<div class="row"><button class="btn" data-act="upload">Déposer des documents</button><button class="btn primary" data-act="new">+ Créer un compte élève</button></div></div>' +
+        '<div class="row"><a class="btn" href="#/agenda">📅 Agenda</a><button class="btn" data-act="upload">Déposer des documents</button><button class="btn primary" data-act="new">+ Créer un compte élève</button></div></div>' +
       '<div class="stack">' +
       '<div class="hp-kpis">' +
         '<div class="hp-kpi"><b>' + active + '<small style="font-size:.55em;color:var(--muted)"> / ' + S.length + '</small></b><span>élèves actifs cette semaine</span></div>' +

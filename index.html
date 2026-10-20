@@ -279,7 +279,7 @@
   .login .sub { color: var(--muted); margin: 8px 0 26px; }
   .login form { text-align: left; display: grid; gap: 14px; }
   .login .btn.primary { padding: 15px; font-size: 16px; font-weight: 800; }
-  .err { color: var(--bad); background: var(--bad-tint); border-radius: 12px; padding: 9px 12px; font-size: 13.5px; font-weight: 600; }
+  .err { color: var(--t-warn-ink, var(--bad)); background: var(--bad-tint); border-radius: 12px; padding: 9px 12px; font-size: 13.5px; font-weight: 600; }
   .ok { color: var(--olive); background: var(--mint); border-radius: 12px; padding: 9px 12px; font-size: 13.5px; font-weight: 600; }
   .demo-box { margin-top: 18px; text-align: left; font-size: 13px; color: var(--ink-soft); background: var(--peach); border-radius: 18px; padding: 14px 16px; }
   .demo-box b { color: var(--ink); } .demo-box table { width: 100%; border-collapse: collapse; margin-top: 6px; }
@@ -429,7 +429,7 @@
     /* colonnes secondaires masquées : niveau, série, 14 jours, dernière activité, documents */
     .tbl th:nth-child(2), .tbl td:nth-child(2), .tbl th:nth-child(4), .tbl td:nth-child(4),
     .tbl th:nth-child(7), .tbl td:nth-child(7), .tbl th:nth-child(8), .tbl td:nth-child(8),
-    .tbl th:nth-child(9), .tbl td:nth-child(9) { display: none; }
+    .tbl th:nth-child(9), .tbl td:nth-child(9), .tbl th:nth-child(6), .tbl td:nth-child(6), .tbl th:nth-child(10), .tbl td:nth-child(10) { display: none; }
     .tbl td, .tbl th { padding: 9px 6px; }
     .who small { display: none; }
   }
@@ -461,7 +461,8 @@
   .ag-hours .ag-body { background-image: none; cursor: default; }
   .ag-h { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .ag-h:first-child { transform: none; }
-  .ag-av { position: absolute; left: 0; right: 0; background: var(--accent-tint); opacity: .55; }
+  .ag-av { position: absolute; left: 0; right: 0; background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent-soft); }
+  .ag-col.past .ag-av { opacity: .45; }
   .ag-blk { position: absolute; left: 0; right: 0; border: 0; padding: 4px; cursor: pointer; overflow: hidden; text-align: left;
     background: repeating-linear-gradient(135deg, var(--rose-tint) 0 8px, transparent 8px 14px); color: var(--rose); font: 700 11px var(--font-ui); }
   .ag-bk { position: absolute; left: 3px; right: 3px; border: 0; border-left: 3px solid; border-radius: 8px; padding: 3px 6px; text-align: left; cursor: pointer; overflow: hidden;
@@ -501,7 +502,8 @@
   .ag-range .btn { padding: 4px 8px; }
   @media (max-width: 520px) { .ag-wd { grid-template-columns: 1fr auto; } .ag-wd .ag-ranges { grid-column: 1 / -1; grid-row: 2; } }
   #ag-durs .chip button { all: unset; cursor: pointer; margin-left: 4px; font-weight: 800; padding: 0 2px; }
-  .ag-savebar { position: sticky; bottom: 12px; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--line); box-shadow: var(--shadow-pop); justify-self: start; }
+  .ag-savebar { position: sticky; bottom: 12px; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: 22px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow-pop); justify-self: stretch; bottom: max(12px, env(safe-area-inset-bottom)); }
+  #agf { padding-bottom: 8px; }
   /* panneau élève */
   .ag-pane { position: fixed; inset: 0; z-index: 40; overflow-y: auto; background: var(--bg); background-image: inherit; -webkit-overflow-scrolling: touch; }
   body.ag-open { overflow: hidden; }
@@ -546,12 +548,19 @@
     max-width: calc(100vw - 32px); padding: 10px 12px 10px 18px; border-radius: 22px; background: var(--ink); color: var(--paper); box-shadow: var(--shadow-pop); font-weight: 700; font-size: 14px; }
   .hp-update .btn { padding: 7px 14px; }
 
+  /* revue design : lisibilité, contrastes, espacements */
+  .in { border-color: var(--line-strong); }
+  .tbl th, .small.muted, .hp-empty { color: var(--ink-soft); }
+  .card p + .btn, .card p + .row, .card .small + .btn, .card .row + .small, .card .row + p { margin-top: 12px; }
+  .toast.is-err { background: var(--bad-tint); color: var(--t-warn-ink, var(--bad)); border: 1px solid var(--bad); }
+  .ag-legend + .ag-legend { margin-top: 2px; }
+
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.35969a309a.txt","demo":"assets/demo.b98348612f.json","build":"14bbec8a8f"};
+var ASSETS = {"student":"assets/student.e7af89fa1f.txt","demo":"assets/demo.b98348612f.json","build":"d15ea14342"};
 </script>
 <script>
 /* =====================================================================
@@ -771,6 +780,27 @@ var HP = (function () {
   }
   function fmt(n) { n = +n; return (isFinite(n) ? n : 0).toLocaleString('fr-FR'); }
 
+  /* tableau de données sous chaque graphique (lecteurs d'écran, lecture précise) */
+  function dataTable(caption, head, rows) {
+    if (!rows.length) return '';
+    return '<details class="hp-table"><summary>Voir les données</summary><table><caption>' + esc(caption) + '</caption><thead><tr>' +
+      head.map(function (h) { return '<th scope="col">' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return i ? '<td>' + esc(c) + '</td>' : '<th scope="row">' + esc(c) + '</th>'; }).join('') + '</tr>'; }).join('') +
+      '</tbody></table></details>';
+  }
+  function niceMax(v) {
+    if (v <= 10) return 10;
+    var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  }
+  /* barre arrondie seulement en haut, posée sur la ligne de base */
+  function barPath(x, y, w, h, r) {
+    if (h <= 0) return '';
+    r = Math.min(r, w / 2, h);
+    return '<path d="M' + x.toFixed(1) + ',' + (y + h).toFixed(1) + 'V' + (y + r).toFixed(1) + 'Q' + x.toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + r).toFixed(1) + ',' + y.toFixed(1) +
+      'H' + (x + w - r).toFixed(1) + 'Q' + (x + w).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + w).toFixed(1) + ',' + (y + r).toFixed(1) + 'V' + (y + h).toFixed(1) + 'Z"';
+  }
+
   function levelCard(P, opts) {
     opts = opts || {};
     var L = levelInfo(P.xp), st = streaks(P.days || {}), today = (P.days || {})[dayKey()] || emptyDay();
@@ -781,16 +811,16 @@ var HP = (function () {
       '<div class="hp-level-main">' +
         '<div class="hp-level-top"><strong>Niveau ' + L.level + '</strong>' +
         '<span class="hp-tier">' + L.title + ' · <span class="hp-he">' + L.titleHe + '</span></span></div>' +
-        '<div class="hp-xpbar"><i style="width:' + L.pct + '%"></i></div>' +
+        '<div class="hp-xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + L.pct + '" aria-label="Progression vers le niveau ' + (L.level + 1) + '"><i style="width:' + L.pct + '%"></i></div>' +
         '<div class="hp-level-sub">' + fmt(P.xp) + ' XP au total · encore <b>' + fmt(L.toNext) + ' XP</b> pour le niveau ' + (L.level + 1) + '</div>' +
       '</div>' +
       '<div class="hp-mini">' +
-        '<div class="hp-ring" title="Objectif du jour">' +
-          '<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="' + R + '" class="hp-ring-bg"/>' +
+        '<div class="hp-ring" role="img" aria-label="Objectif du jour : ' + today.xp + ' XP sur ' + goal + '">' +
+          '<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="' + R + '" class="hp-ring-bg"/>' +
           (gp ? '<circle cx="40" cy="40" r="' + R + '" class="hp-ring-fg" stroke-dasharray="' + (C * gp / 100).toFixed(1) + ' ' + C.toFixed(1) + '"/>' : '') + '</svg>' +
-          '<div class="hp-ring-txt"><b>' + today.xp + '</b><span>/ ' + goal + ' XP</span></div>' +
+          '<div class="hp-ring-txt">' + (today.xp >= goal ? '<b>✓</b><span>atteint</span>' : '<b>' + today.xp + '</b><span>/ ' + goal + ' XP</span>') + '</div>' +
         '</div>' +
-        '<div class="hp-streak"><span class="hp-flame">' + (st.cur ? '🔥' : '·') + '</span><b>' + st.cur + '</b><span>jour' + (st.cur > 1 ? 's' : '') + ' d\'affilée</span><em>record ' + st.best + '</em></div>' +
+        '<div class="hp-streak"><span class="hp-flame" aria-hidden="true">' + (st.cur ? '🔥' : '·') + '</span><b>' + st.cur + '</b><span>jour' + (st.cur > 1 ? 's' : '') + ' d\'affilée</span><em>record ' + st.best + '</em></div>' +
       '</div>' +
       (opts.goalPicker ? '<div class="hp-goalpick">Objectif du jour : ' + [30, 60, 100, 150].map(function (g) {
         return '<button type="button" data-goal="' + g + '" class="' + (g === goal ? 'on' : '') + '">' + g + ' XP</button>';
@@ -800,11 +830,12 @@ var HP = (function () {
 
   function heatmap(days, weeks) {
     weeks = weeks || 17;
-    var today = new Date();
+    var today = new Date(), tk = dayKey(today);
     var end = addDays(today, 6 - ((today.getDay() + 6) % 7));        // dimanche de cette semaine
     var start = addDays(end, -(weeks * 7) + 1);
-    var max = 1;
-    Object.keys(days || {}).forEach(function (k) { if (days[k].xp > max) max = days[k].xp; });
+    var vis = [], max = 1, active = 0;
+    for (var j = 0; j < weeks * 7; j++) { var dd = addDays(start, j); if (dd > today) break; var vv = days && days[dayKey(dd)] ? +days[dayKey(dd)].xp || 0 : 0; vis.push([dd, vv]); if (vv > max) max = vv; if (vv) active++; }
+    var q = function (l) { return Math.max(1, Math.round(max * l / 4)); };
     var cols = '', months = '', lastM = -1, lastCol = -9;
     for (var w = 0; w < weeks; w++) {
       var cells = '';
@@ -814,64 +845,91 @@ var HP = (function () {
         lastM = wkStart.getMonth(); lastCol = w;
       }
       for (var i = 0; i < 7; i++) {
-        var d = addDays(start, w * 7 + i), k = dayKey(d), v = days && days[k] ? days[k].xp : 0;
+        var d = addDays(start, w * 7 + i), k = dayKey(d), v = days && days[k] ? +days[k].xp || 0 : 0;
         var lvl = d > today ? 'f' : (v ? Math.min(4, 1 + Math.floor(3.999 * v / max)) : 0);
-        cells += '<i class="h' + lvl + '" title="' + shortDate(d) + ' : ' + v + ' XP"></i>';
+        cells += '<i class="h' + lvl + (k === tk ? ' today' : '') + '"' + (d > today ? '' : ' data-tip="' + v + ' XP|' + shortDate(d) + '"') + '></i>';
       }
       cols += '<div class="hp-hcol">' + cells + '</div>';
     }
-    return '<div class="hp-heat"><div class="hp-heat-days"><span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span></div>' +
-      '<div class="hp-heat-body"><div class="hp-heat-months" style="grid-template-columns:repeat(' + weeks + ',17px)">' + months + '</div>' +
+    return '<div class="hp-heat" role="img" aria-label="Régularité : ' + active + ' jours actifs sur les ' + weeks + ' dernières semaines">' +
+      '<div class="hp-heat-days" aria-hidden="true"><span></span><span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span></div>' +
+      '<div class="hp-heat-body" aria-hidden="true"><div class="hp-heat-months" style="grid-template-columns:repeat(' + weeks + ',17px)">' + months + '</div>' +
       '<div class="hp-heat-grid">' + cols + '</div></div></div>' +
-      '<div class="hp-legend">Moins <i class="h0"></i><i class="h1"></i><i class="h2"></i><i class="h3"></i><i class="h4"></i> Plus</div>';
+      '<div class="hp-legend">Moins <i class="h0" title="aucune activité"></i><i class="h1" title="1 à ' + q(1) + ' XP"></i><i class="h2" title="' + (q(1) + 1) + ' à ' + q(2) + ' XP"></i>' +
+      '<i class="h3" title="' + (q(2) + 1) + ' à ' + q(3) + ' XP"></i><i class="h4" title="plus de ' + q(3) + ' XP"></i> Plus</div>' +
+      dataTable('XP par jour, jours actifs', ['Jour', 'XP'], vis.filter(function (x) { return x[1]; }).reverse().slice(0, 60).map(function (x) { return [shortDate(x[0]), fmt(x[1])]; }));
   }
 
   function xpBars(days, n, goal) {
     n = n || 30;
-    var W = 620, H = 170, padB = 22, padT = 10, today = new Date(), vals = [], max = goal || 10;
+    var W = 620, H = 180, padB = 22, padT = 16, padL = 36, padR = goal ? 74 : 10, today = new Date(), vals = [], top = goal || 10;
     for (var i = n - 1; i >= 0; i--) {
-      var d = addDays(today, -i), v = days && days[dayKey(d)] ? days[dayKey(d)].xp : 0;
-      vals.push({ d: d, v: v }); if (v > max) max = v;
+      var d = addDays(today, -i), v = days && days[dayKey(d)] ? +days[dayKey(d)].xp || 0 : 0;
+      vals.push({ d: d, v: v }); if (v > top) top = v;
     }
-    var bw = W / n, svg = '';
-    vals.forEach(function (o, i) {
-      var h = Math.round((H - padB - padT) * o.v / max), x = i * bw + bw * 0.18, y = H - padB - h;
-      svg += '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + Math.max(h, o.v ? 2 : 0) +
-        '" rx="3" class="' + (goal && o.v >= goal ? 'hp-bar-hit' : 'hp-bar') + '"><title>' + shortDate(o.d) + ' : ' + o.v + ' XP</title></rect>';
-      if (i % 7 === (n - 1) % 7) svg += '<text x="' + (i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" class="hp-axis" text-anchor="middle">' + shortDate(o.d) + '</text>';
+    var max = niceMax(top), ph = H - padB - padT, pw = W - padL - padR, bw = pw / n, base = H - padB, svg = '';
+    var Y = function (v) { return base - ph * v / max; };
+    [0, max / 2, max].forEach(function (g) {
+      svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + Y(g).toFixed(1) + '" y2="' + Y(g).toFixed(1) + '" class="' + (g ? 'hp-grid' : 'hp-base') + '"/>' +
+        '<text x="' + (padL - 6) + '" y="' + (Y(g) + 4).toFixed(1) + '" class="hp-axis" text-anchor="end">' + fmt(g) + '</text>';
     });
+    vals.forEach(function (o, i) {
+      var h = ph * o.v / max, x = padL + i * bw + bw * 0.18;
+      if (o.v) svg += barPath(x, base - Math.max(h, 2), bw * 0.64, Math.max(h, 2), 3) + ' class="' + (!goal || o.v >= goal ? 'hp-bar-hit' : 'hp-bar') + '"/>';
+      svg += '<rect class="hp-hit" x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + ph + '" data-tip="' + o.v + ' XP|' + shortDate(o.d) + '"/>';
+      if (i % 7 === (n - 1) % 7) {
+        var tx = padL + i * bw + bw / 2;
+        svg += '<text x="' + tx.toFixed(1) + '" y="' + (H - 6) + '" class="hp-axis" text-anchor="' + (tx > W - padR - 24 ? 'end' : 'middle') + '">' + shortDate(o.d) + '</text>';
+      }
+    });
+    var last = vals[vals.length - 1];
+    if (last.v) svg += '<text x="' + (padL + (n - 0.5) * bw).toFixed(1) + '" y="' + (Y(last.v) - 5).toFixed(1) + '" class="hp-val" text-anchor="middle">' + last.v + '</text>';
     if (goal) {
-      var gy = H - padB - Math.round((H - padB - padT) * goal / max);
-      svg += '<line x1="0" x2="' + W + '" y1="' + gy + '" y2="' + gy + '" class="hp-goal-line"/>' +
-             '<text x="' + (W - 4) + '" y="' + (gy - 5) + '" class="hp-axis hp-goal-txt" text-anchor="end">objectif ' + goal + ' XP</text>';
+      var gy = Y(goal);
+      svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '" class="hp-goal-line"/>' +
+             '<text x="' + (W - padR + 6) + '" y="' + (gy - 2).toFixed(1) + '" class="hp-axis hp-goal-txt">objectif</text>' +
+             '<text x="' + (W - padR + 6) + '" y="' + (gy + 11).toFixed(1) + '" class="hp-axis hp-goal-txt">' + goal + ' XP</text>';
     }
-    return '<div class="hp-chart-wrap"><svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="XP par jour">' + svg + '</svg></div>';
+    var hit = vals.filter(function (o) { return goal && o.v >= goal; }).length, act = vals.filter(function (o) { return o.v; }).length;
+    return '<div class="hp-chart-wrap" data-end="1"><svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="XP par jour sur ' + n + ' jours : ' + act + ' jours actifs' + (goal ? ', objectif atteint ' + hit + ' fois' : '') + '">' + svg + '</svg></div>' +
+      (goal ? '<div class="hp-legend2"><i class="hit"></i> objectif atteint <i class="below"></i> en dessous</div>' : '') +
+      dataTable('XP par jour', ['Jour', 'XP'], vals.slice().reverse().map(function (o) { return [shortDate(o.d), fmt(o.v)]; }));
   }
 
   function rateLine(days, weeks) {
-    var data = weekly(days || {}, weeks || 8), W = 620, H = 170, padB = 22, padT = 14, padX = 24;
-    var pts = [], svg = '';
-    [50, 75, 100].forEach(function (g) {
-      var y = H - padB - (H - padB - padT) * g / 100;
-      svg += '<line x1="' + padX + '" x2="' + (W - padX) + '" y1="' + y + '" y2="' + y + '" class="hp-grid"/>' +
-             '<text x="2" y="' + (y + 4) + '" class="hp-axis">' + g + '%</text>';
+    var data = weekly(days || {}, weeks || 8), W = 620, H = 180, padB = 22, padT = 18, padL = 42, padR = 18;
+    var rated = data.filter(function (w) { return w.rate != null; });
+    var lo = rated.length ? Math.min(50, Math.floor(Math.min.apply(null, rated.map(function (w) { return w.rate; })) / 10) * 10) : 50;
+    var ph = H - padB - padT, Y = function (r) { return H - padB - ph * (r - lo) / (100 - lo); };
+    var svg = '';
+    [lo, Math.round((lo + 100) / 2), 100].forEach(function (g) {
+      svg += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + Y(g).toFixed(1) + '" y2="' + Y(g).toFixed(1) + '" class="' + (g === lo ? 'hp-base' : 'hp-grid') + '"/>' +
+             '<text x="' + (padL - 8) + '" y="' + (Y(g) + 4).toFixed(1) + '" class="hp-axis" text-anchor="end">' + g + ' %</text>';
     });
-    var step = (W - 2 * padX) / Math.max(1, data.length - 1);
+    var step = (W - padL - padR) / Math.max(1, data.length - 1), seg = [], segs = [];
     data.forEach(function (w, i) {
-      var x = padX + i * step;
-      svg += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" class="hp-axis" text-anchor="middle">' + shortDate(w.start) + '</text>';
-      if (w.rate == null) return;
-      var y = H - padB - (H - padB - padT) * w.rate / 100;
-      pts.push([x, y, w]);
+      var x = padL + i * step;
+      svg += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" class="hp-axis" text-anchor="' + (i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle') + '">' + shortDate(w.start) + '</text>';
+      if (w.rate == null) { if (seg.length) segs.push(seg); seg = []; return; }
+      seg.push([x, Y(w.rate), w]);
     });
-    if (pts.length > 1) svg += '<polyline class="hp-line" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
-    pts.forEach(function (p) {
-      svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4.5" class="hp-dot"><title>Semaine du ' +
-        shortDate(p[2].start) + ' : ' + p[2].rate + ' % de réussite sur ' + p[2].answers + ' réponses</title></circle>' +
-        '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 9).toFixed(1) + '" class="hp-val" text-anchor="middle">' + p[2].rate + '%</text>';
+    if (seg.length) segs.push(seg);
+    segs.forEach(function (sg) {
+      if (sg.length > 1) svg += '<polyline class="hp-line" points="' + sg.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
+    });
+    var pts = [].concat.apply([], segs);
+    pts.forEach(function (p) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4" class="hp-dot"/>'; });
+    if (pts.length) {
+      var lp = pts[pts.length - 1];
+      svg += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] - 10).toFixed(1) + '" class="hp-val" text-anchor="' + (lp[0] > W - padR - 20 ? 'end' : 'middle') + '">' + lp[2].rate + ' %</text>';
+    }
+    data.forEach(function (w, i) {
+      svg += '<rect class="hp-hit" x="' + (padL + i * step - step / 2).toFixed(1) + '" y="' + padT + '" width="' + step.toFixed(1) + '" height="' + ph +
+        '" data-tip="' + (w.rate == null ? 'pas de réponse' : w.rate + ' % de réussite') + '|semaine du ' + shortDate(w.start) + (w.answers ? ' · ' + w.answers + ' réponses' : '') + '"/>';
     });
     if (!pts.length) svg += '<text x="' + W / 2 + '" y="' + H / 2 + '" class="hp-axis" text-anchor="middle">Pas encore de réponses enregistrées</text>';
-    return '<div class="hp-chart-wrap"><svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Taux de réussite par semaine">' + svg + '</svg></div>';
+    return '<div class="hp-chart-wrap" data-end="1"><svg class="hp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Taux de réussite par semaine' + (pts.length ? ', dernière semaine ' + pts[pts.length - 1][2].rate + ' %' : '') + '">' + svg + '</svg></div>' +
+      dataTable('Taux de réussite par semaine', ['Semaine du', 'Réussite', 'Réponses'], data.slice().reverse().map(function (w) { return [shortDate(w.start), w.rate == null ? '—' : w.rate + ' %', fmt(w.answers)]; }));
   }
 
   function themeBars(themes, opts) {
@@ -881,11 +939,12 @@ var HP = (function () {
     if (!list.length) return '<p class="hp-empty">Aucun thème pour le moment.</p>';
     return '<div class="hp-themes">' + list.map(function (t) {
       var seenPct = t.n ? Math.round(100 * t.seen / t.n) : 0;
-      return '<div class="hp-theme"><div class="hp-theme-name">' + esc(t.theme) +
+      return '<div class="hp-theme"><div class="hp-theme-name" title="' + esc(t.theme) + '">' + esc(t.theme) +
         (t.runs ? ' <span class="hp-runs" title="Série de flashcards du thème terminée ' + t.runs + ' fois">✓ ' + t.runs + '×</span>' : '') + '</div>' +
-        '<div class="hp-theme-bar" title="' + t.m + ' maîtrisés, ' + t.seen + ' vus sur ' + t.n + '"><i class="seen" style="width:' + seenPct + '%"></i><i class="m" style="width:' + t.pct + '%"></i></div>' +
+        '<div class="hp-theme-bar" data-tip="' + t.m + ' maîtrisés sur ' + t.n + '|' + esc(t.theme) + ' · ' + t.seen + ' déjà vus"><i class="seen" style="width:' + seenPct + '%"></i><i class="m" style="width:' + t.pct + '%"></i></div>' +
         '<div class="hp-theme-num">' + t.m + '/' + t.n + '</div></div>';
-    }).join('') + '</div><div class="hp-legend2"><i class="m"></i> maîtrisés <i class="seen"></i> déjà vus</div>';
+    }).join('') + '</div><div class="hp-legend2"><i class="m"></i> maîtrisés <i class="seen"></i> déjà vus</div>' +
+      dataTable('Maîtrise par thème', ['Thème', 'Maîtrisés', 'Déjà vus', 'Mots', 'Séries faites'], list.map(function (t) { return [t.theme, fmt(t.m), fmt(t.seen), fmt(t.n), fmt(t.runs || 0)]; }));
   }
 
   function badgesGrid(earned) {
@@ -893,21 +952,55 @@ var HP = (function () {
     return '<div class="hp-badges">' + BADGES.map(function (b) {
       var on = earned[b.id];
       return '<div class="hp-badge' + (on ? ' on' : '') + '" title="' + esc(b.desc) + (on ? ' — obtenu le ' + shortDate(parseDay(on)) : '') + '">' +
-        '<span class="hp-badge-ic">' + b.icon + '</span><b>' + esc(b.name) + '</b><small>' + (on ? 'Obtenu le ' + shortDate(parseDay(on)) : esc(b.desc)) + '</small></div>';
+        '<span class="hp-badge-ic" aria-hidden="true">' + b.icon + '</span><b>' + esc(b.name) + '</b><small>' + (on ? 'Obtenu le ' + shortDate(parseDay(on)) : esc(b.desc)) + '</small></div>';
     }).join('') + '</div>';
   }
 
-  function sparkline(days, n) {
+  /* maxOverride : même échelle pour tous les élèves du tableau (comparaison juste) */
+  function sparkline(days, n, maxOverride) {
     n = n || 14;
-    var vals = [], max = 1, today = new Date();
+    var vals = [], max = 1, tot = 0, act = 0, today = new Date();
     for (var i = n - 1; i >= 0; i--) {
-      var d = days && days[dayKey(addDays(today, -i))]; var v = d ? d.xp : 0; vals.push(v); if (v > max) max = v;
+      var d = days && days[dayKey(addDays(today, -i))]; var v = d ? +d.xp || 0 : 0; vals.push(v); tot += v; if (v) act++; if (v > max) max = v;
     }
+    if (maxOverride > max) max = maxOverride;
     var W = 120, H = 30, bw = W / n;
-    return '<svg class="hp-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + vals.map(function (v, i) {
+    return '<svg class="hp-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="XP sur ' + n + ' jours : ' + fmt(tot) + ' au total, ' + act + ' jours actifs">' +
+      '<title>' + fmt(tot) + ' XP sur ' + n + ' jours · ' + act + ' jours actifs</title>' + vals.map(function (v, i) {
       var h = Math.round((H - 2) * v / max);
-      return '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (H - Math.max(h, 1)) + '" width="' + (bw - 2).toFixed(1) + '" height="' + Math.max(h, 1) + '" rx="1.5" class="' + (v ? 'hp-bar' : 'hp-bar0') + '"/>';
+      return '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (H - Math.max(h, 1)) + '" width="' + (bw - 2).toFixed(1) + '" height="' + Math.max(h, 1) + '" class="' + (!v ? 'hp-bar0' : i === n - 1 ? 'hp-bar-hit' : 'hp-spark-bar') + '"/>';
     }).join('') + '</svg>';
+  }
+
+  /* infobulle commune : survol à la souris, toucher sur téléphone ; texte « valeur|détail » */
+  function installTip() {
+    if (window.__hpTip || !document.body) return;
+    var tip = document.createElement('div'); tip.className = 'hp-tip'; tip.setAttribute('role', 'tooltip'); tip.hidden = true;
+    document.body.appendChild(tip); window.__hpTip = tip;
+    function show(el, x, y) {
+      var t = String(el.getAttribute('data-tip') || '').split('|');
+      tip.textContent = ''; var b = document.createElement('b'); b.textContent = t[0]; tip.appendChild(b);
+      if (t[1]) { var s = document.createElement('span'); s.textContent = t[1]; tip.appendChild(s); }
+      tip.hidden = false;
+      var w = tip.offsetWidth, h = tip.offsetHeight, vw = document.documentElement.clientWidth;
+      tip.style.left = Math.max(6, Math.min(vw - w - 6, x - w / 2)) + 'px';
+      tip.style.top = Math.max(6, y - h - 12) + 'px';
+    }
+    document.addEventListener('pointermove', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (el) show(el, e.clientX, e.clientY); else tip.hidden = true;
+    }, { passive: true });
+    document.addEventListener('pointerdown', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (el) show(el, e.clientX, e.clientY); else tip.hidden = true;
+    }, { passive: true });
+    document.addEventListener('scroll', function () { tip.hidden = true; }, { passive: true, capture: true });
+    /* sur téléphone, les graphiques qui défilent s'ouvrent sur les jours les plus récents */
+    new MutationObserver(function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.hp-chart-wrap[data-end="1"]'), function (w) {
+        if (w.scrollWidth > w.clientWidth) w.scrollLeft = w.scrollWidth; w.removeAttribute('data-end');
+      });
+    }).observe(document.body, { childList: true, subtree: true });
   }
 
   var CSS = '' +
@@ -939,33 +1032,43 @@ var HP = (function () {
     '.hp-heat-grid{display:flex;gap:3px}.hp-hcol{display:grid;grid-template-rows:repeat(7,14px);gap:3px}' +
     '.hp-hcol i{display:block;width:14px;height:14px;border-radius:4px}.hp-legend i{display:block;width:11px;height:11px;border-radius:3px}' +
     '.h0{background:var(--line)}.hf{background:transparent}' +
-    '.h1{background:color-mix(in srgb,var(--accent) 28%,var(--paper))}.h2{background:color-mix(in srgb,var(--accent) 52%,var(--paper))}' +
-    '.h3{background:color-mix(in srgb,var(--accent) 76%,var(--paper))}.h4{background:var(--accent)}' +
+    '.h1{background:color-mix(in srgb,var(--accent) 50%,var(--paper))}.h2{background:color-mix(in srgb,var(--accent) 75%,var(--paper))}' +
+    '.h3{background:var(--accent)}.h4{background:var(--he)}.hp-hcol i.today{outline:2px solid var(--ink-soft);outline-offset:1px}' +
+    '.hp-heat-months{margin-bottom:3px}' +
     '.hp-legend{display:flex;align-items:center;justify-content:flex-start;gap:4px;font-size:11px;color:var(--muted);margin-top:8px}' +
-    '.hp-chart-wrap{overflow-x:auto;overflow-y:hidden}' +
+    '.hp-chart-wrap{overflow-x:auto;overflow-y:hidden;max-width:100%;min-width:0}' +
     '.hp-chart{width:100%;height:auto;max-height:230px;display:block;overflow:visible}' +
-    '@media (max-width:640px){.hp-chart{min-width:520px}}' +
-    '.hp-goal-txt{paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;font-weight:800;fill:var(--olive)}' +
-    '.hp-bar{fill:color-mix(in srgb,var(--accent) 55%,var(--paper))}.hp-bar-hit{fill:var(--accent)}.hp-bar0{fill:var(--line)}' +
-    '.hp-axis{fill:var(--muted);font:600 10.5px var(--font-ui)}.hp-val{fill:var(--ink-soft);font:800 11px var(--font-ui)}' +
-    '.hp-goal-line{stroke:var(--olive);stroke-width:1.5;stroke-dasharray:5 5}.hp-grid{stroke:var(--line);stroke-width:1}' +
-    '.hp-line{fill:none;stroke:var(--accent);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}.hp-dot{fill:var(--paper);stroke:var(--accent);stroke-width:3}' +
+    '@media (max-width:640px){.hp-chart{min-width:520px}.hp-theme{grid-template-columns:1fr auto}.hp-theme-bar{grid-column:1/-1;order:3}}' +
+    '.hp-goal-txt{font-weight:800;fill:var(--olive)}' +
+    '.hp-bar{fill:color-mix(in srgb,var(--accent) 75%,var(--paper))}.hp-bar-hit{fill:var(--he)}.hp-bar0{fill:var(--line)}.hp-spark-bar{fill:color-mix(in srgb,var(--accent) 75%,var(--paper))}' +
+    '.hp-axis{fill:color-mix(in srgb,var(--muted) 70%,var(--ink-soft));font:600 10.5px var(--font-ui)}.hp-val{fill:var(--ink);font:800 11px var(--font-ui)}' +
+    '.hp-goal-line{stroke:var(--olive);stroke-width:1.5;stroke-dasharray:5 5}.hp-grid{stroke:var(--line);stroke-width:1}.hp-base{stroke:var(--line-strong);stroke-width:1}' +
+    '.hp-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.hp-dot{fill:var(--accent);stroke:var(--paper);stroke-width:2}' +
+    '.hp-hit{fill:transparent;cursor:crosshair}.hp-hit:hover{fill:color-mix(in srgb,var(--accent) 8%,transparent)}' +
+    '.hp-tip{position:fixed;z-index:10001;pointer-events:none;background:var(--ink);color:var(--paper);border-radius:10px;padding:6px 10px;font:600 12px var(--font-ui);box-shadow:var(--shadow-pop);display:grid;gap:1px;max-width:240px}' +
+    '.hp-tip b{font:800 13px var(--font-ui)}.hp-tip span{opacity:.8}.hp-tip[hidden]{display:none}' +
+    '.hp-table{margin-top:8px}.hp-table summary{font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer;width:max-content}' +
+    '.hp-table table{border-collapse:collapse;font-size:12.5px;margin-top:6px;max-height:260px}.hp-table caption{text-align:left;font-weight:700;color:var(--muted);padding:2px 0 4px}' +
+    '.hp-table th,.hp-table td{padding:3px 12px 3px 0;text-align:left;border-bottom:1px solid var(--line)}.hp-table td{font-variant-numeric:tabular-nums}.hp-table thead th{color:var(--muted)}' +
     '.hp-spark{width:120px;height:30px;display:block}' +
     '.hp-themes{display:grid;gap:9px}.hp-theme{display:grid;grid-template-columns:minmax(110px,190px) 1fr 54px;gap:10px;align-items:center;font-size:13.5px}' +
     '.hp-theme-name{font-weight:600;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.hp-runs{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:var(--mint);color:var(--olive);font-size:11px;font-weight:800;vertical-align:1px}' +
     '.hp-theme-bar{position:relative;height:10px;border-radius:99px;background:var(--line);overflow:hidden}' +
-    '.hp-theme-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}.hp-theme-bar .seen{background:color-mix(in srgb,var(--accent) 25%,var(--paper))}' +
-    '.hp-theme-bar .m{background:var(--olive)}.hp-theme-num{text-align:right;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}' +
+    '.hp-theme-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}.hp-theme-bar .seen{background:color-mix(in srgb,var(--olive) 55%,var(--paper))}' +
+    '.hp-theme-bar .m{background:var(--olive);box-shadow:2px 0 0 var(--paper)}.hp-theme-bar .solid{background:var(--accent)}.hp-theme-num{text-align:right;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}' +
     '.hp-legend2{display:flex;gap:6px 12px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:10px}' +
-    '.hp-legend2 i{display:inline-block;width:12px;height:8px;border-radius:9px}.hp-legend2 .m{background:var(--olive)}.hp-legend2 .seen{background:color-mix(in srgb,var(--accent) 25%,var(--paper))}' +
+    '.hp-legend2 i{display:inline-block;width:12px;height:8px;border-radius:9px}.hp-legend2 .m{background:var(--olive)}.hp-legend2 .seen{background:color-mix(in srgb,var(--olive) 55%,var(--paper))}' +
+    '.hp-legend2 .hit{background:var(--he)}.hp-legend2 .below{background:color-mix(in srgb,var(--accent) 75%,var(--paper))}' +
     '.hp-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}' +
-    '.hp-badge{display:grid;justify-items:center;text-align:center;gap:3px;padding:14px 8px;border-radius:18px;background:var(--zebra);border:1px dashed var(--line-strong);opacity:.62}' +
+    '.hp-badge{display:grid;justify-items:center;text-align:center;gap:3px;padding:14px 8px;border-radius:18px;background:var(--zebra);border:1px dashed var(--line-strong)}.hp-badge:not(.on) .hp-badge-ic{opacity:.5}' +
     '.hp-badge .hp-badge-ic{font-size:28px;filter:grayscale(1)}.hp-badge b{font:800 13px var(--font-display);color:var(--ink-soft)}.hp-badge small{font-size:11px;color:var(--muted);line-height:1.3}' +
     '.hp-badge.on{opacity:1;background:var(--accent-tint);border:1px solid var(--accent-soft)}.hp-badge.on .hp-badge-ic{filter:none}.hp-badge.on b{color:var(--accent)}' +
     '.hp-empty{color:var(--muted);font-style:italic;font-size:14px}' +
     '.hp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px}' +
-    '.hp-kpi{border-radius:18px;padding:14px 12px;background:var(--accent-tint)}.hp-kpi b{display:block;font:900 24px/1.1 var(--font-display);color:var(--accent);font-variant-numeric:tabular-nums}' +
+    '.hp-kpi{border-radius:18px;padding:14px 12px;background:var(--accent-tint)}.hp-kpi b{display:block;font:900 24px/1.1 var(--font-display);color:var(--accent)}' +
+    '.hp-delta{font:800 11px var(--font-ui);color:var(--ink-soft);vertical-align:middle;white-space:nowrap}.hp-delta i{font-style:normal}.hp-delta.up i{color:var(--olive)}.hp-delta.down i{color:var(--rose)}' +
+    '.hp-of{font-size:.55em;color:var(--ink-soft);font-weight:700}' +
     '.hp-kpi span{font-size:12px;font-weight:700;color:var(--ink-soft)}.hp-kpi.green{background:var(--mint)}.hp-kpi.green b{color:var(--olive)}' +
     '.hp-kpi.gold{background:var(--peach)}.hp-kpi.gold b{color:var(--gold)}.hp-kpi.rose{background:var(--rose-tint)}.hp-kpi.rose b{color:var(--rose)}' +
     '.hp-kpi.sky{background:var(--sky-tint)}.hp-kpi.sky b{color:var(--sky)}' +
@@ -976,6 +1079,7 @@ var HP = (function () {
     if (document.getElementById('hp-css')) return;
     var s = document.createElement('style'); s.id = 'hp-css'; s.textContent = CSS;
     document.head.appendChild(s);
+    if (document.body) installTip(); else document.addEventListener('DOMContentLoaded', installTip);
   }
 
   return {
@@ -1139,7 +1243,7 @@ var HP = (function () {
   function canCancel(c, start, now) { c = norm(c); return start - now >= c.cancel * HOUR; }
 
   /* ---------- textes ---------- */
-  function durLabel(m) { m = +m; var h = Math.floor(m / 60), r = m % 60; return h ? h + ' h' + (r ? ' ' + pad(r) : '') : r + ' min'; }
+  function durLabel(m) { m = +m; var h = Math.floor(m / 60), r = m % 60; return h ? h + '\u00a0h' + (r ? '\u00a0' + pad(r) : '') : r + '\u00a0min'; }
   function tzCity(tz) { return String(tz || '').split('/').pop().replace(/_/g, ' '); }
 
   /* ---------- fichier d'agenda (.ics) ---------- */
@@ -2112,7 +2216,7 @@ var HPHome = (function () {
     '.mv{min-height:100vh}' +
     '.mv-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:0 auto;padding:18px 16px}' +
     '.mv-hero{max-width:1120px;margin:0 auto;padding:24px 16px 56px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}' +
-    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;max-width:300px;margin:0 auto}}' +
+    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;max-width:220px;margin:0 auto}.mv-b2{top:64%;right:-14%}}' +
     '.mv-hero h1{font:900 clamp(36px,6vw,62px)/1.04 var(--font-display);letter-spacing:-.025em;margin:14px 0 0;text-wrap:balance}' +
     '.mv-hero h1 .grad{display:inline-block}' +
     '.mv-lead{font-size:clamp(16px,2vw,19px);color:var(--ink-soft);margin:18px 0 26px;max-width:560px}' +
@@ -2188,7 +2292,7 @@ var HPHome = (function () {
       '</div>';
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
     var a = root.querySelector('a[href="#comment"]');
-    if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: 'smooth' }); });
+    if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
     window.scrollTo(0, 0);
   }
   return { render: render };
@@ -2287,7 +2391,7 @@ var HPAgendaUI = function (X) {
     var head = '<div class="bo-head"><div><h1 class="page-title">Agenda</h1><p>' +
       (c.open ? '<span class="pill green">Réservation en ligne ouverte</span>' : '<span class="pill grey">Réservation en ligne fermée</span>') +
       (c.tz !== LOCAL_TZ ? ' <span class="small muted">Horaires à l\'heure de ' + esc(C.tzCity(c.tz)) + '</span>' : '') + '</p></div>' +
-      '<div class="row"><a class="btn" href="#/agenda/disponibilites">⚙️ Disponibilités</a><button class="btn primary" data-ag="add">+ Ajouter</button></div></div>';
+      '<div class="row"><a class="btn" href="#/agenda/disponibilites">⚙️ Disponibilités</a><button class="btn primary" data-ag="add">+ Ajouter un cours</button></div></div>';
     var warn = cache.bkError ? '<div class="card" style="background:var(--rose-tint);border-color:transparent"><b>L\'agenda n\'est pas encore activé sur le serveur.</b> <span class="small">Benjamin doit lancer la mise à jour de la base de données (fichier supabase/migration-2026-10-20-agenda.sql).</span></div>' : '';
     var intro = setup ? '<div class="card ag-intro"><div class="big">🗓️</div><div><h3>Ouvrez vos créneaux</h3><p class="muted small">Indiquez vos heures de cours habituelles et les durées proposées (1 h, 1 h 30, 2 h…). Vos élèves pourront alors réserver eux-mêmes un créneau libre depuis leur espace.</p>' +
       '<a class="btn primary" href="#/agenda/disponibilites">Définir mes disponibilités</a></div></div>' : '';
@@ -2333,7 +2437,7 @@ var HPAgendaUI = function (X) {
         '<div class="ag-body" data-day="' + k + '" data-lo="' + lo + '" style="height:' + H + 'px">' + av + bl + bk + nowLine + '</div></div>';
     }).join('');
     return '<div class="ag-grid"><div class="ag-hours"><div class="ag-dh"></div><div class="ag-body" style="height:' + H + 'px">' + hours + '</div></div>' + cols + '</div>' +
-      '<p class="small muted ag-legend"><span class="ag-sw av"></span>vos disponibilités <span class="ag-sw blk"></span>fermé — cliquez sur une case pour ajouter un cours.</p>';
+      '<p class="small muted ag-legend"><span class="ag-sw av"></span>Vos disponibilités <span class="ag-sw blk"></span>Fermé</p><p class="small muted ag-legend">Cliquez sur une case vide pour ajouter un cours.</p>';
   }
   /* liste par jour (téléphone) */
   function dayList(c, days, list, today) {
@@ -2342,9 +2446,9 @@ var HPAgendaUI = function (X) {
       var l = list.filter(function (b) { return b.start < d1 && b.end > d0; });
       var w = C.windows(c, k), bl = c.blocks.filter(function (b) { return Date.parse(b.e) > d0 && Date.parse(b.s) < d1; });
       return '<div class="ag-ld' + (k === today ? ' today' : '') + '"><div class="ag-ldh"><b>' + esc(cap(fDay(d0 + 12 * HOUR, c.tz))) + '</b>' +
-        (bl.length ? '<span class="pill rose">' + esc(bl[0].note || 'Fermé') + '</span>' : w.length ? '<span class="small muted">' + w.map(function (x) { return fTime(x.s, c.tz) + '–' + fTime(x.e, c.tz); }).join(', ') + '</span>' : '') + '</div>' +
+        (bl.length ? '<span class="pill rose">' + esc(bl[0].note || 'Fermé') + '</span>' : w.length ? '<span class="small muted">Disponible ' + w.map(function (x) { return fTime(x.s, c.tz) + '–' + fTime(x.e, c.tz); }).join(', ') + '</span>' : '') + '</div>' +
         (l.length ? l.map(function (b) { var t = tone(b.studentId); return '<button type="button" class="ag-li" data-bk="' + b.id + '" style="border-color:' + t[1] + ';background:' + t[0] + '"><b>' + range(b, c.tz) + '</b><span>' + esc(sName(b.studentId)) + ' · ' + dur(b) + '</span></button>'; }).join('') : '<div class="small muted">Aucun cours</div>') +
-        '<button type="button" class="btn small ghost" data-ag="addday" data-day="' + k + '">+ Ajouter</button></div>';
+        '<button type="button" class="btn small ghost" data-ag="addday" data-day="' + k + '">+ Ajouter un cours</button></div>';
     }).join('') + '</div>';
   }
 
@@ -2355,7 +2459,7 @@ var HPAgendaUI = function (X) {
     var key = opt.day || C.dayKey(now + DAY, c.tz), time = opt.time != null ? C.hmStr(opt.time) : '18:00';
     var durs = c.durations.slice(); [30, 45, 60, 90, 120, 150, 180].forEach(function (d) { if (durs.indexOf(d) < 0) durs.push(d); }); durs.sort(function (a, b) { return a - b; });
     var S = cache.students.filter(function (s) { return s.active !== false; });
-    var m = X.modal('<h2>Ajouter au calendrier</h2>' +
+    var m = X.modal('<h2>Ajouter un cours</h2>' +
       '<div class="seg" role="tablist"><button type="button" class="on" data-kind="course">Un cours</button><button type="button" data-kind="block">Une indisponibilité</button></div>' +
       '<form id="agadd" class="stack" style="gap:12px;margin-top:14px">' +
         '<div data-for="course" class="stack" style="gap:12px">' +
@@ -2372,7 +2476,7 @@ var HPAgendaUI = function (X) {
           '<p class="small muted" style="margin:0">Aucun élève ne pourra réserver pendant cette période. Pour des vacances de plusieurs jours, utilisez « Fermetures » dans Disponibilités.</p>' +
         '</div>' +
         '<div id="agadd-msg"></div>' +
-        '<div class="row"><button class="btn primary" type="submit">Ajouter</button>' + (c.tz !== LOCAL_TZ ? '<span class="small muted">Heure de ' + esc(C.tzCity(c.tz)) + '</span>' : '') + '</div>' +
+        '<div class="row"><button class="btn primary" type="submit" id="agadd-go">Ajouter le cours</button>' + (c.tz !== LOCAL_TZ ? '<span class="small muted">Heure de ' + esc(C.tzCity(c.tz)) + '</span>' : '') + '</div>' +
       '</form>');
     var f = $('#agadd', m), kind = 'course';
     $$('.seg button', m).forEach(function (b) {
@@ -2380,6 +2484,8 @@ var HPAgendaUI = function (X) {
         kind = b.dataset.kind;
         $$('.seg button', m).forEach(function (x) { x.classList.toggle('on', x === b); });
         $$('[data-for]', m).forEach(function (x) { x.hidden = x.dataset.for !== kind; });
+        $('#agadd-go', m).textContent = kind === 'course' ? 'Ajouter le cours' : 'Bloquer ce créneau';
+        $('h2', m).textContent = kind === 'course' ? 'Ajouter un cours' : 'Bloquer un créneau';
         hint();
       };
     });
@@ -2528,8 +2634,8 @@ var HPAgendaUI = function (X) {
         (rs.length ? rs.map(function (x) {
           return '<span class="ag-range"><input class="in" type="time" step="900" value="' + x[0].from + '" data-ri="' + x[1] + '" data-k="from" aria-label="Début">' +
             '<span>–</span><input class="in" type="time" step="900" value="' + (x[0].to === '24:00' ? '23:59' : x[0].to) + '" data-ri="' + x[1] + '" data-k="to" aria-label="Fin">' +
-            '<button type="button" class="btn small ghost" data-rmr="' + x[1] + '" aria-label="Retirer">×</button></span>';
-        }).join('') : '<span class="small muted">pas de cours</span>') +
+            '<button type="button" class="btn small ghost" data-rmr="' + x[1] + '" aria-label="Retirer la plage ' + x[0].from + '–' + x[0].to + '">×</button></span>';
+        }).join('') : '<span class="small muted">Fermé</span>') +
         '</div><button type="button" class="btn small" data-addr="' + d + '">+ plage</button></div>';
     }).join('');
   }
@@ -2717,7 +2823,7 @@ var HPAgendaUI = function (X) {
       return '<li><div class="ag-date"><span>' + esc(fm(tz, { weekday: 'short' }).format(b.start)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(b.start)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(b.start)) + '</span></div>' +
         '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Mayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
         '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) +
-        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
+        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler ce cours</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
     }).join('') + '</ul>' : '<p class="hp-empty">Aucun cours prévu pour l\'instant.</p>') + '</section>';
     if (c.open) {
       var all = C.slots(c, st.busy, now, now + c.horizon * 7 * DAY, P.dur, now);
@@ -2732,7 +2838,7 @@ var HPAgendaUI = function (X) {
         '<p class="small muted" style="margin:0 0 8px">1. Durée du cours</p><div class="ag-durs">' + c.durations.map(function (d) { return '<button type="button" class="chip' + (d === P.dur ? ' on' : '') + '" data-dur="' + d + '" aria-pressed="' + (d === P.dur) + '">' + C.durLabel(d) + '</button>'; }).join('') + '</div>' +
         (order.length ? '<p class="small muted" style="margin:16px 0 8px">2. Jour</p><div class="ag-days" role="group" aria-label="Jours disponibles">' + order.map(function (k) {
           var t = byDay[k][0];
-          return '<button type="button" class="ag-day' + (k === P.day ? ' on' : '') + '" data-day="' + k + '" aria-pressed="' + (k === P.day) + '"><span>' + esc(fm(tz, { weekday: 'short' }).format(t)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(t)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(t)) + '</span><small title="' + X.plural(byDay[k].length, 'créneau libre', 'créneaux libres') + '">' + byDay[k].length + '</small></button>';
+          return '<button type="button" class="ag-day' + (k === P.day ? ' on' : '') + '" data-day="' + k + '" aria-pressed="' + (k === P.day) + '"><span>' + esc(fm(tz, { weekday: 'short' }).format(t)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(t)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(t)) + '</span><small title="' + X.plural(byDay[k].length, 'créneau libre', 'créneaux libres') + '">' + byDay[k].length + ' libre' + (byDay[k].length > 1 ? 's' : '') + '</small></button>';
         }).join('') + '</div>' +
         '<p class="small muted" style="margin:16px 0 8px">3. Heure — ' + esc(fDay(byDay[P.day][0], tz)) + '</p><div class="ag-slots">' + byDay[P.day].map(function (t) {
           return '<button type="button" class="ag-slot" data-slot="' + t + '">' + fTime(t, tz) + '</button>';
@@ -2849,7 +2955,8 @@ var HPApp = (function () {
     } catch (e) { if (v !== undefined) window.__hpSess = v; return window.__hpSess || null; }
   }
   function toast(msg, long) {
-    var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+    var bad = /impossible|n'a pas abouti|échec|erreur|expiré|interrompue/i.test(msg);
+    var t = document.createElement('div'); t.className = 'toast' + (bad ? ' is-err' : ''); t.setAttribute('role', bad ? 'alert' : 'status'); t.setAttribute('aria-live', bad ? 'assertive' : 'polite');
     t.textContent = msg; document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, long ? 6000 : 2600);
   }
@@ -2871,7 +2978,11 @@ var HPApp = (function () {
     if (c === 'login_taken') return 'cet identifiant est déjà utilisé';
     if (c === 'not_teacher') return 'votre session a expiré, reconnectez-vous';
     if (e && /fetch|network|Failed/i.test(e.message || '')) return 'connexion internet interrompue';
-    return (e && e.message) || 'erreur inconnue';
+    var msg = (e && e.message) || '';
+    if (/password/i.test(msg)) return 'le mot de passe doit contenir au moins 6 caractères';
+    /* message technique (anglais, code, JSON) : on l'écrit en clair pour Mayane */
+    if (!msg || /^(HTTP|\d{3}\b)|[{}_<>]|violates|duplicate|null value|JWT|PGRST|undefined|unexpected|status/i.test(msg)) return 'le serveur n\'a pas répondu comme prévu, réessayez dans un instant';
+    return msg;
   }
   window.addEventListener('unhandledrejection', function (e) {
     console.error(e.reason);
@@ -3034,7 +3145,7 @@ var HPApp = (function () {
         '<a class="back" href="#">← Accueil</a><br>' +
         '<span class="kicker">Espace de révision</span>' +
         '<h1>Hébreu avec Mayane <span class="grad">עִבְרִית</span></h1>' +
-        '<p class="sub">Élèves : connectez-vous avec l\'identifiant et le mot de passe donnés par Mayane.</p>' +
+        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Mayane t\'a envoyés.</p>' +
         '<div class="card"><form id="lf" autocomplete="on">' +
           '<label class="f">Identifiant<input class="in" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required value="' + esc(loginValue || '') + '"></label>' +
           '<label class="f">Mot de passe<input class="in" name="pw" type="password" autocomplete="current-password" required></label>' +
@@ -3059,7 +3170,7 @@ var HPApp = (function () {
       busy(btn, HPB.login(f.login.value, f.pw.value), 'Connexion impossible').then(function (r) {
         if (!r) { renderLogin('Identifiant ou mot de passe incorrect.', f.login.value); var pw = $('#lf [name=pw]'); if (pw) pw.focus(); return; }
         route.verified = true;
-        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contactez Mayane.');
+        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Mayane.');
         sess(r); if (r.role === 'teacher') location.hash = '#/tableau'; else history.replaceState(null, '', location.pathname + location.search); route();
       }).catch(function () {});
     });
@@ -3170,7 +3281,8 @@ var HPApp = (function () {
     '.hp-sbar .hp-ag{display:flex;align-items:center;gap:10px;margin-left:auto}.hp-sbar .hp-ag small{font-size:12.5px;color:var(--ink-soft);font-weight:600}' +
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
-    '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
+    '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar button.ag:hover{color:var(--on-accent);border-color:transparent;filter:brightness(1.06)}' +
+    '@media(max-width:420px){.hp-sbar{flex-wrap:nowrap;gap:8px;padding-left:12px}.hp-sbar .hi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp-sbar button{white-space:nowrap;padding:6px 10px}}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
   function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
 
   /* messages venant de l'espace élève : la page décide elle-même de quel élève il s'agit */
@@ -3227,7 +3339,7 @@ var HPApp = (function () {
     var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
       '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
-      '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '">' + it[1] + '</a>'; }).join('') +
+      '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '"' + (cur === it[0] ? ' aria-current="page"' : '') + '>' + it[1] + '</a>'; }).join('') +
       '</nav><button class="btn small" id="lo">Se déconnecter</button></header>';
   }
   function renderTeacher() {
@@ -3265,7 +3377,7 @@ var HPApp = (function () {
   function docsFor(id) { return cache.docs.filter(function (d) { return (d.students || []).indexOf(id) >= 0; }); }
   function deltaHtml(a, b) {
     if (a == null || b == null || a === b) return '';
-    return ' <small class="hp-delta ' + (a > b ? 'up' : 'down') + '" style="font:800 11px var(--font-ui);color:var(' + (a > b ? '--olive' : '--rose') + ')">' + (a > b ? '▲' : '▼') + Math.abs(a - b) + '</small>';
+    return ' <small class="hp-delta ' + (a > b ? 'up' : 'down') + '" aria-label="' + (a > b ? '+' : '−') + Math.abs(a - b) + ' par rapport à la semaine précédente"><i aria-hidden="true">' + (a > b ? '▲' : '▼') + '</i>' + Math.abs(a - b) + '</small>';
   }
 
   /* ---------- tableau de bord ---------- */
@@ -3275,7 +3387,7 @@ var HPApp = (function () {
     var active = S.filter(function (s) { return M[s.id].active7 > 0; }).length;
     var xp7 = S.reduce(function (a, s) { return a + M[s.id].xp7; }, 0);
     var rates = S.map(function (s) { return M[s.id].rate7; }).filter(function (r) { return r != null; });
-    var avg = rates.length ? Math.round(rates.reduce(function (a, b) { return a + b; }, 0) / rates.length) : null;
+    var avg = null;   /* calculée plus bas sur toutes les réponses de la classe (pondérée) */
     var pend = cache.docs.filter(function (d) { return d.status !== 'done'; }).length;
     var classDays = {};
     S.forEach(function (s) {
@@ -3285,12 +3397,13 @@ var HPApp = (function () {
         for (var f in c) c[f] += d[k][f] || 0;
       });
     });
+    avg = HP.rate(HP.rangeSum(classDays, HP.addDays(new Date(), -6), 7));
     /* alertes */
     var alerts = [];
     S.forEach(function (s) {
       var m = M[s.id], n = m.last ? Math.round((HP.parseDay(HP.dayKey()) - HP.parseDay(m.last)) / 864e5) : null;
-      if (!m.words) alerts.push(['', '📥', '<b>' + esc(fullName(s)) + '</b> n\'a encore aucun contenu : déposez ses premiers cours.', s.id, 'documents']);
-      else if (n == null) alerts.push(['', '👋', '<b>' + esc(fullName(s)) + '</b> ne s\'est pas encore entraîné(e).', s.id]);
+      if (!m.words) alerts.push(['', '📥', '<b>' + esc(fullName(s)) + '</b> n\'a encore aucun contenu : déposez ses premiers documents.', s.id, 'documents']);
+      else if (n == null) alerts.push(['', '👋', '<b>' + esc(fullName(s)) + '</b> n\'a pas encore révisé.', s.id]);
       else if (n >= 7) alerts.push(['warn', '⏰', '<b>' + esc(fullName(s)) + '</b> n\'a pas révisé depuis ' + n + ' jours.', s.id]);
       if (m.rate7 != null && m.rate7p != null && m.rate7p - m.rate7 >= 10) alerts.push(['warn', '📉', 'Réussite de <b>' + esc(fullName(s)) + '</b> en baisse : ' + m.rate7p + ' % → ' + m.rate7 + ' % cette semaine.', s.id]);
       if (m.active7 >= 5) alerts.push(['good', '🔥', '<b>' + esc(fullName(s)) + '</b> a révisé ' + m.active7 + ' jours sur 7. Bravo !', s.id]);
@@ -3300,22 +3413,25 @@ var HPApp = (function () {
         '<div class="row"><a class="btn" href="#/agenda">📅 Agenda</a><button class="btn" data-act="upload">Déposer des documents</button><button class="btn primary" data-act="new">+ Créer un compte élève</button></div></div>' +
       '<div class="stack">' +
       '<div class="hp-kpis">' +
-        '<div class="hp-kpi"><b>' + active + '<small style="font-size:.55em;color:var(--muted)"> / ' + S.length + '</small></b><span>élèves actifs cette semaine</span></div>' +
+        '<div class="hp-kpi"><b>' + active + '<small class="hp-of"> / ' + S.length + '</small></b><span>élèves actifs cette semaine</span></div>' +
         '<div class="hp-kpi gold"><b>' + fmt(xp7) + '</b><span>XP gagnés par la classe</span></div>' +
         '<div class="hp-kpi green"><b>' + (avg == null ? '—' : avg + ' %') + '</b><span>réussite moyenne</span></div>' +
-        '<div class="hp-kpi rose"><b>' + pend + '</b><span>document' + (pend > 1 ? 's' : '') + ' à intégrer</span></div>' +
+        '<div class="hp-kpi' + (pend ? ' rose' : '') + '"><b>' + pend + '</b><span>document' + (pend > 1 ? 's' : '') + ' à intégrer</span></div>' +
       '</div>' +
-      '<div class="dash-grid"><div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' + AG.dashboardCard() + '</div>' +
+      '<div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' +
+      '<div class="dash-grid"><div class="card"><h3>À surveiller</h3>' + (alerts.length ? '<div class="alerts">' + alerts.map(function (a) {
+        return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '" tabindex="0" role="link"><span class="ic" aria-hidden="true">' + a[1] + '</span><span>' + a[2] + '</span></div>';
+      }).join('') + '</div>' : '<p class="hp-empty">Rien à signaler.</p>') + '</div>' + AG.dashboardCard() + '</div>' +
       '<div class="card"><h3>Activité de la classe <small>XP par jour, 30 jours</small></h3>' + HP.xpBars(classDays, 30, 0) + '</div>' +
-      '<div class="card"><h3>À surveiller</h3>' + (alerts.length ? '<div class="alerts">' + alerts.map(function (a) {
-        return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '" tabindex="0" role="link"><span class="ic">' + a[1] + '</span><span>' + a[2] + '</span></div>';
-      }).join('') + '</div>' : '<p class="hp-empty">Rien à signaler.</p>') + '</div>' +
       '</div>';
   }
   function studentsTable(S, M, manage) {
     if (!S.length) return '<div class="empty-state"><div class="big">🎒</div><p class="muted">Aucun élève pour l\'instant.</p><button class="btn primary" data-act="new">+ Créer un compte élève</button></div>';
     var cols = [['name', 'Élève'], ['level', 'Niveau'], ['xp7', 'XP 7 j'], ['streak', 'Série'], ['rate7', 'Réussite 7 j'], ['mastered', 'Mots maîtrisés'], ['spark', '14 derniers jours'], ['last', 'Dernière activité'], ['docs', 'Docs']];
     if (manage) cols.push(['spark', '']);
+    /* même échelle pour toutes les mini-courbes : les élèves se comparent d'un coup d'œil */
+    var sparkMax = 1;
+    S.forEach(function (s) { for (var i = 0; i < 14; i++) { var d = (M[s.id].days || {})[HP.dayKey(HP.addDays(new Date(), -i))]; if (d && d.xp > sparkMax) sparkMax = d.xp; } });
     var list = S.slice().sort(function (a, b) {
       var x, y;
       if (sortKey === 'name') { x = fullName(a).toLowerCase(); y = fullName(b).toLowerCase(); return x < y ? -sortDir : x > y ? sortDir : 0; }
@@ -3334,10 +3450,10 @@ var HPApp = (function () {
         '<td class="num">' + (m.streak ? '🔥 ' + m.streak : '—') + '</td>' +
         '<td class="num">' + (m.rate7 == null ? '—' : m.rate7 + ' %' + deltaHtml(m.rate7, m.rate7p)) + '</td>' +
         '<td class="num">' + fmt(m.mastered) + '<span class="muted" style="font-weight:500"> / ' + fmt(m.words) + '</span></td>' +
-        '<td>' + HP.sparkline(m.days, 14) + '</td>' +
+        '<td>' + HP.sparkline(m.days, 14, sparkMax) + '</td>' +
         '<td>' + ago(m.last) + '</td>' +
         '<td>' + (pd ? '<span class="pill rose">' + pd + ' à intégrer</span>' : '<span class="pill grey">' + docsFor(s.id).length + '</span>') + '</td>' +
-        (manage ? '<td style="text-align:right"><button class="btn small ghost" data-delst="' + s.id + '" title="Supprimer ce compte">🗑 Supprimer</button></td>' : '') + '</tr>';
+        (manage ? '<td style="text-align:right"><button class="btn small ghost" data-delst="' + s.id + '" title="Supprimer le compte" aria-label="Supprimer le compte de ' + esc(fullName(s)) + '">🗑</button></td>' : '') + '</tr>';
     }).join('') + '</tbody></table></div>';
   }
 
@@ -3364,7 +3480,7 @@ var HPApp = (function () {
         '<div class="meta"><span class="mono">' + esc(s.login) + '</span>' + (s.email ? '<span>✉️ ' + esc(s.email) + '</span>' : '') + (s.phone ? '<span>📱 ' + esc(s.phone) + '</span>' : '') +
         '<span>Niveau ' + L.level + ' · ' + L.title + '</span><span>Dernière activité : ' + ago(m.last) + '</span></div></div>' +
         '<button class="btn" data-act="preview" data-id="' + id + '">👁 Voir son espace</button></div>' +
-      '<nav class="st-tabs">' + tabs.map(function (t) { return '<a href="#/eleve/' + id + '/' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + '</nav>' +
+      '<nav class="st-tabs">' + tabs.map(function (t) { return '<a href="#/eleve/' + id + '/' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"' + (tab === t[0] ? ' aria-current="page"' : '') + '>' + t[1] + '</a>'; }).join('') + '</nav>' +
       body;
   }
 
@@ -3385,28 +3501,28 @@ var HPApp = (function () {
         '<div class="hp-kpi green"><b>' + (m.rate7 == null ? '—' : m.rate7 + ' %') + deltaHtml(m.rate7, m.rate7p) + '</b><span>réussite sur 7 jours</span></div>' +
         '<div class="hp-kpi gold"><b>' + active30 + '/30</b><span>jours actifs</span></div>' +
         '<div class="hp-kpi sky"><b>' + goalDays + '</b><span>objectifs du jour atteints (30 j)</span></div>' +
-        '<div class="hp-kpi green"><b>' + fmt(t.mastered) + '<small style="font-size:.55em;color:var(--muted)"> / ' + fmt(m.words) + '</small></b><span>mots maîtrisés</span></div>' +
-        '<div class="hp-kpi rose"><b>' + (fl ? Math.round(100 * (t.fK || 0) / fl) + ' %' : '—') + '</b><span>flashcards sues (total)</span></div>' +
+        '<div class="hp-kpi green"><b>' + fmt(t.mastered) + '<small class="hp-of"> / ' + fmt(m.words) + '</small></b><span>mots maîtrisés</span></div>' +
+        '<div class="hp-kpi sky"><b>' + (fl ? Math.round(100 * (t.fK || 0) / fl) + ' %' : '—') + '</b><span>flashcards sues (total)</span></div>' +
       '</div>' +
       '<div class="two">' +
         '<div class="card"><h3>Taux de réussite par semaine</h3>' + HP.rateLine(d, 8) + '</div>' +
         '<div class="card"><h3>XP par jour <small>30 jours</small></h3>' + HP.xpBars(d, 30, sum.goal) + '</div>' +
       '</div>' +
-      '<div class="card"><h3>Régularité</h3>' + HP.heatmap(d, 17) + '</div>' +
       '<div class="two">' +
-        '<div class="card"><h3>Maîtrise par thème</h3>' + HP.themeBars(sum.themes) + '</div>' +
-        '<div class="stack" style="gap:18px">' +
+        '<div class="card"><h3>Régularité</h3>' + HP.heatmap(d, 17) + '</div>' +
           '<div class="card"><h3>Activités <small>30 jours</small></h3>' + mix.map(function (r) {
-            return '<div class="hp-theme" style="margin-bottom:8px"><div class="hp-theme-name">' + r[0] + '</div><div class="hp-theme-bar"><i class="seen" style="width:' + Math.round(100 * r[1] / mixMax) + '%"></i></div><div class="hp-theme-num">' + fmt(r[1]) + '</div></div>' +
+            return '<div class="hp-theme" style="margin-bottom:8px"><div class="hp-theme-name">' + r[0] + '</div><div class="hp-theme-bar"><i class="solid" style="width:' + Math.round(100 * r[1] / mixMax) + '%"></i></div><div class="hp-theme-num">' + fmt(r[1]) + '</div></div>' +
               (r[1] ? '<div class="small muted" style="margin:-4px 0 10px">réussite ' + r[2] + ' %</div>' : '');
           }).join('') + '</div>' +
+      '</div>' +
+      '<div class="two">' +
+        '<div class="card"><h3>Maîtrise par thème</h3>' + HP.themeBars(sum.themes) + '</div>' +
           '<div class="card"><h3>Mots les plus difficiles</h3>' + (sum.weak && sum.weak.length ? '<ul class="hp-weak">' + sum.weak.map(function (w) {
-            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + plural(w.bad, 'erreur') + ' / ' + w.seen + '</small></li>';
+            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + plural(w.bad, 'erreur') + ' sur ' + w.seen + '</small></li>';
           }).join('') + '</ul>' : '<p class="hp-empty">Aucun mot raté pour l\'instant.</p>') + '</div>' +
-        '</div>' +
       '</div>' +
       '<div class="card"><h3>Badges <small>' + Object.keys(sum.badges || {}).length + ' / ' + HP.BADGES.length + '</small></h3>' + HP.badgesGrid(sum.badges) + '</div>' +
-      '<p class="small muted">Dernière synchronisation : ' + (sum.updatedAt ? new Date(sum.updatedAt).toLocaleString('fr-FR') : '—') + '. Record de série : ' + m.best + ' jours · meilleur combo : ' + (sum.bestCombo || 0) + ' bonnes réponses d\'affilée.</p>' +
+      '<p class="small muted">Dernière révision enregistrée : ' + (sum.updatedAt ? new Date(sum.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) : '—') + '. Record de série : ' + m.best + ' jours · meilleur combo : ' + (sum.bestCombo || 0) + ' bonnes réponses d\'affilée.</p>' +
     '</div>';
   }
 
@@ -3439,14 +3555,14 @@ var HPApp = (function () {
   }
   function stDocs(s) {
     var docs = docsFor(s.id);
-    return '<div class="stack"><div class="card"><h3>Ajouter des cours pour ' + esc(s.first) + '</h3>' + dropZone(s.id) +
+    return '<div class="stack"><div class="card"><h3>Déposer des documents pour ' + esc(s.first) + '</h3>' + dropZone(s.id) +
       '<p class="small muted" style="margin:12px 0 0">Après le dépôt, cliquez sur « Analyser et intégrer » : Claude lit le document, en extrait le vocabulaire et la grammaire, puis vous montre ce qui sera ajouté à l\'espace de ' + esc(s.first) + '. Rien n\'est ajouté sans votre validation, et uniquement à partir de vos documents.</p></div>' +
       '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3>' + analyseAllBtn(docs) + '</div>' +
       (docs.length ? '<div class="docs">' + docs.map(function (d) { return docRow(d); }).join('') + '</div>' : '<p class="hp-empty">Aucun document pour l\'instant.</p>') + '</div></div>';
   }
   function docsPage() {
     var docs = cache.docs, pend = docs.filter(function (d) { return d.status !== 'done'; });
-    return '<div class="bo-head"><div><h1 class="page-title">Documents</h1><p>Déposez un cours une seule fois et attribuez-le à un ou plusieurs élèves.</p></div></div>' +
+    return '<div class="bo-head"><div><h1 class="page-title">Documents</h1><p>Déposez un document une seule fois et attribuez-le à un ou plusieurs élèves.</p></div></div>' +
       '<div class="stack"><div class="card"><h3>Nouveau dépôt</h3><p class="small muted" style="margin:-6px 0 10px">1. Choisissez les élèves concernés</p>' +
       '<div class="chips" id="targets" role="group" aria-label="Élèves concernés">' + cache.students.map(function (s) { return '<button type="button" class="chip" aria-pressed="false" data-sid="' + s.id + '">' + esc(fullName(s)) + '</button>'; }).join('') +
         (cache.students.length > 1 ? '<button type="button" class="chip" aria-pressed="false" data-sid="*" style="border-style:dashed">Toute la classe</button>' : '') + '</div>' +
@@ -3466,7 +3582,7 @@ var HPApp = (function () {
         return '<li><span>' + esc(t) + '</span><span class="row"><span class="pill grey">' + c.VOCAB[t].length + ' mots</span><button class="btn small ghost" data-rmtheme="' + esc(t) + '" title="Retirer ce thème">🗑</button></span></li>';
       }).join('') + '</ul>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
       (st.tenses ? '<p class="small muted" style="margin-top:12px">+ le cours « Passé &amp; futur ».</p>' : '') +
-      (c && c.updatedAt ? '<p class="small muted">Dernière mise à jour : ' + new Date(c.updatedAt).toLocaleString('fr-FR') + '</p>' : '') + '</div>' +
+      (c && c.updatedAt ? '<p class="small muted">Dernière mise à jour : ' + new Date(c.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) + '</p>' : '') + '</div>' +
       '<div class="card"><h3>Sources</h3>' + (c && c.sources && c.sources.length ? '<ul class="content-list">' + c.sources.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p class="hp-empty">—</p>') +
       '<h3 style="margin-top:22px">Importer un contenu préparé</h3><p class="small muted">Si un document a été analysé dans une conversation avec Claude, importez ici le fichier .json qu\'il vous a remis : vous pourrez le relire avant de l\'ajouter.</p>' +
       '<label class="btn small">Choisir un fichier .json<input type="file" accept=".json,application/json" id="imp" hidden></label><div id="rv-import"></div></div></div>';
@@ -3480,7 +3596,7 @@ var HPApp = (function () {
       '<label class="f">Adresse e-mail<input class="in" name="email" type="email" value="' + esc(s.email || '') + '" autocomplete="off"></label>' +
       '<label class="f">Téléphone<input class="in" name="phone" type="tel" value="' + esc(s.phone || '') + '" autocomplete="off"></label>' +
       '<label class="f">Identifiant<input class="in mono" name="login" value="' + esc(s.login || '') + '" autocapitalize="none" spellcheck="false" required></label>' +
-      (s.id ? '' : '<label class="f">Mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" value="' + HPB.genPassword() + '" required minlength="6"><button type="button" class="btn small" data-gen>↻</button></span></label>') +
+      (s.id ? '' : '<label class="f">Mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" value="' + HPB.genPassword() + '" required minlength="6"><button type="button" class="btn small" data-gen aria-label="Proposer un mot de passe" title="Proposer un mot de passe">↻</button></span></label>') +
       '</div>';
   }
   function stAccess(s) {
@@ -3492,14 +3608,14 @@ var HPApp = (function () {
         '<div class="row" style="margin-top:10px"><button class="btn" type="submit">Enregistrer le nouveau mot de passe</button></div></form></div>' +
       '<div class="card"><h3>Accès</h3><div class="row">' +
         (s.active === false ? '<button class="btn" data-act="activate">Réactiver le compte</button>' : '<button class="btn" data-act="suspend">Suspendre le compte</button>') +
-        '<button class="btn danger" data-act="delete">Supprimer l\'élève</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
+        '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
   }
   function accessCard(s, pw) {
     var site = (cache.settings && cache.settings.siteUrl) || (HPB.remote ? location.origin : '');
     var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMayane';
     return '<div class="access"><div><div class="k">Identifiant</div><div class="v">' + esc(s.login) + '</div></div>' +
       '<div><div class="k">Mot de passe</div><div class="v">' + esc(pw) + '</div></div>' +
-      '<div class="small muted">Vous le retrouverez à tout moment dans la fiche de l\'élève, onglet « Compte & accès ».</div>' +
+      (location.hash.indexOf('/acces') < 0 ? '<div class="small muted">Vous le retrouverez à tout moment dans la fiche de l\'élève, onglet « Compte & accès ».</div>' : '') +
       '<div class="row"><button class="btn small" data-copy="' + esc(msg) + '">Copier le message</button>' +
       (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Tes accès — hébreu avec Mayane') + '&body=' + encodeURIComponent(msg) + '">✉️ Envoyer par e-mail</a>' : '') +
       (s.phone ? '<a class="btn small" href="sms:' + encodeURIComponent(s.phone.replace(/\s/g, '')) + '?&body=' + encodeURIComponent(msg) + '">📱 Envoyer par SMS</a>' : '') +
@@ -3563,7 +3679,7 @@ var HPApp = (function () {
         }).then(function () {
           cache.students.push(s);
           $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>Compte créé 🎉</h2><p class="muted">Transmettez ces accès à ' + esc(s.first) + '.</p>' + accessCard(s, pw) +
-            '<div class="row" style="margin-top:16px"><a class="btn primary" href="#/eleve/' + s.id + '/documents">Déposer ses premiers cours →</a></div>';
+            '<div class="row" style="margin-top:16px"><a class="btn primary" href="#/eleve/' + s.id + '/documents">Déposer ses premiers documents</a></div>';
           bindCopy(m);
           $('.btn.primary', m).addEventListener('click', function () { m.remove(); });
           if (/eleves|tableau/.test(location.hash) || !location.hash) renderTeacher();

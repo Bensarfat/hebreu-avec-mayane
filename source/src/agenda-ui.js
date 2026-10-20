@@ -91,7 +91,7 @@ var HPAgendaUI = function (X) {
     var head = '<div class="bo-head"><div><h1 class="page-title">Agenda</h1><p>' +
       (c.open ? '<span class="pill green">Réservation en ligne ouverte</span>' : '<span class="pill grey">Réservation en ligne fermée</span>') +
       (c.tz !== LOCAL_TZ ? ' <span class="small muted">Horaires à l\'heure de ' + esc(C.tzCity(c.tz)) + '</span>' : '') + '</p></div>' +
-      '<div class="row"><a class="btn" href="#/agenda/disponibilites">⚙️ Disponibilités</a><button class="btn primary" data-ag="add">+ Ajouter</button></div></div>';
+      '<div class="row"><a class="btn" href="#/agenda/disponibilites">⚙️ Disponibilités</a><button class="btn primary" data-ag="add">+ Ajouter un cours</button></div></div>';
     var warn = cache.bkError ? '<div class="card" style="background:var(--rose-tint);border-color:transparent"><b>L\'agenda n\'est pas encore activé sur le serveur.</b> <span class="small">Benjamin doit lancer la mise à jour de la base de données (fichier supabase/migration-2026-10-20-agenda.sql).</span></div>' : '';
     var intro = setup ? '<div class="card ag-intro"><div class="big">🗓️</div><div><h3>Ouvrez vos créneaux</h3><p class="muted small">Indiquez vos heures de cours habituelles et les durées proposées (1 h, 1 h 30, 2 h…). Vos élèves pourront alors réserver eux-mêmes un créneau libre depuis leur espace.</p>' +
       '<a class="btn primary" href="#/agenda/disponibilites">Définir mes disponibilités</a></div></div>' : '';
@@ -137,7 +137,7 @@ var HPAgendaUI = function (X) {
         '<div class="ag-body" data-day="' + k + '" data-lo="' + lo + '" style="height:' + H + 'px">' + av + bl + bk + nowLine + '</div></div>';
     }).join('');
     return '<div class="ag-grid"><div class="ag-hours"><div class="ag-dh"></div><div class="ag-body" style="height:' + H + 'px">' + hours + '</div></div>' + cols + '</div>' +
-      '<p class="small muted ag-legend"><span class="ag-sw av"></span>vos disponibilités <span class="ag-sw blk"></span>fermé — cliquez sur une case pour ajouter un cours.</p>';
+      '<p class="small muted ag-legend"><span class="ag-sw av"></span>Vos disponibilités <span class="ag-sw blk"></span>Fermé</p><p class="small muted ag-legend">Cliquez sur une case vide pour ajouter un cours.</p>';
   }
   /* liste par jour (téléphone) */
   function dayList(c, days, list, today) {
@@ -146,9 +146,9 @@ var HPAgendaUI = function (X) {
       var l = list.filter(function (b) { return b.start < d1 && b.end > d0; });
       var w = C.windows(c, k), bl = c.blocks.filter(function (b) { return Date.parse(b.e) > d0 && Date.parse(b.s) < d1; });
       return '<div class="ag-ld' + (k === today ? ' today' : '') + '"><div class="ag-ldh"><b>' + esc(cap(fDay(d0 + 12 * HOUR, c.tz))) + '</b>' +
-        (bl.length ? '<span class="pill rose">' + esc(bl[0].note || 'Fermé') + '</span>' : w.length ? '<span class="small muted">' + w.map(function (x) { return fTime(x.s, c.tz) + '–' + fTime(x.e, c.tz); }).join(', ') + '</span>' : '') + '</div>' +
+        (bl.length ? '<span class="pill rose">' + esc(bl[0].note || 'Fermé') + '</span>' : w.length ? '<span class="small muted">Disponible ' + w.map(function (x) { return fTime(x.s, c.tz) + '–' + fTime(x.e, c.tz); }).join(', ') + '</span>' : '') + '</div>' +
         (l.length ? l.map(function (b) { var t = tone(b.studentId); return '<button type="button" class="ag-li" data-bk="' + b.id + '" style="border-color:' + t[1] + ';background:' + t[0] + '"><b>' + range(b, c.tz) + '</b><span>' + esc(sName(b.studentId)) + ' · ' + dur(b) + '</span></button>'; }).join('') : '<div class="small muted">Aucun cours</div>') +
-        '<button type="button" class="btn small ghost" data-ag="addday" data-day="' + k + '">+ Ajouter</button></div>';
+        '<button type="button" class="btn small ghost" data-ag="addday" data-day="' + k + '">+ Ajouter un cours</button></div>';
     }).join('') + '</div>';
   }
 
@@ -159,7 +159,7 @@ var HPAgendaUI = function (X) {
     var key = opt.day || C.dayKey(now + DAY, c.tz), time = opt.time != null ? C.hmStr(opt.time) : '18:00';
     var durs = c.durations.slice(); [30, 45, 60, 90, 120, 150, 180].forEach(function (d) { if (durs.indexOf(d) < 0) durs.push(d); }); durs.sort(function (a, b) { return a - b; });
     var S = cache.students.filter(function (s) { return s.active !== false; });
-    var m = X.modal('<h2>Ajouter au calendrier</h2>' +
+    var m = X.modal('<h2>Ajouter un cours</h2>' +
       '<div class="seg" role="tablist"><button type="button" class="on" data-kind="course">Un cours</button><button type="button" data-kind="block">Une indisponibilité</button></div>' +
       '<form id="agadd" class="stack" style="gap:12px;margin-top:14px">' +
         '<div data-for="course" class="stack" style="gap:12px">' +
@@ -176,7 +176,7 @@ var HPAgendaUI = function (X) {
           '<p class="small muted" style="margin:0">Aucun élève ne pourra réserver pendant cette période. Pour des vacances de plusieurs jours, utilisez « Fermetures » dans Disponibilités.</p>' +
         '</div>' +
         '<div id="agadd-msg"></div>' +
-        '<div class="row"><button class="btn primary" type="submit">Ajouter</button>' + (c.tz !== LOCAL_TZ ? '<span class="small muted">Heure de ' + esc(C.tzCity(c.tz)) + '</span>' : '') + '</div>' +
+        '<div class="row"><button class="btn primary" type="submit" id="agadd-go">Ajouter le cours</button>' + (c.tz !== LOCAL_TZ ? '<span class="small muted">Heure de ' + esc(C.tzCity(c.tz)) + '</span>' : '') + '</div>' +
       '</form>');
     var f = $('#agadd', m), kind = 'course';
     $$('.seg button', m).forEach(function (b) {
@@ -184,6 +184,8 @@ var HPAgendaUI = function (X) {
         kind = b.dataset.kind;
         $$('.seg button', m).forEach(function (x) { x.classList.toggle('on', x === b); });
         $$('[data-for]', m).forEach(function (x) { x.hidden = x.dataset.for !== kind; });
+        $('#agadd-go', m).textContent = kind === 'course' ? 'Ajouter le cours' : 'Bloquer ce créneau';
+        $('h2', m).textContent = kind === 'course' ? 'Ajouter un cours' : 'Bloquer un créneau';
         hint();
       };
     });
@@ -332,8 +334,8 @@ var HPAgendaUI = function (X) {
         (rs.length ? rs.map(function (x) {
           return '<span class="ag-range"><input class="in" type="time" step="900" value="' + x[0].from + '" data-ri="' + x[1] + '" data-k="from" aria-label="Début">' +
             '<span>–</span><input class="in" type="time" step="900" value="' + (x[0].to === '24:00' ? '23:59' : x[0].to) + '" data-ri="' + x[1] + '" data-k="to" aria-label="Fin">' +
-            '<button type="button" class="btn small ghost" data-rmr="' + x[1] + '" aria-label="Retirer">×</button></span>';
-        }).join('') : '<span class="small muted">pas de cours</span>') +
+            '<button type="button" class="btn small ghost" data-rmr="' + x[1] + '" aria-label="Retirer la plage ' + x[0].from + '–' + x[0].to + '">×</button></span>';
+        }).join('') : '<span class="small muted">Fermé</span>') +
         '</div><button type="button" class="btn small" data-addr="' + d + '">+ plage</button></div>';
     }).join('');
   }
@@ -521,7 +523,7 @@ var HPAgendaUI = function (X) {
       return '<li><div class="ag-date"><span>' + esc(fm(tz, { weekday: 'short' }).format(b.start)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(b.start)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(b.start)) + '</span></div>' +
         '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Mayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
         '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) +
-        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
+        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler ce cours</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
     }).join('') + '</ul>' : '<p class="hp-empty">Aucun cours prévu pour l\'instant.</p>') + '</section>';
     if (c.open) {
       var all = C.slots(c, st.busy, now, now + c.horizon * 7 * DAY, P.dur, now);
@@ -536,7 +538,7 @@ var HPAgendaUI = function (X) {
         '<p class="small muted" style="margin:0 0 8px">1. Durée du cours</p><div class="ag-durs">' + c.durations.map(function (d) { return '<button type="button" class="chip' + (d === P.dur ? ' on' : '') + '" data-dur="' + d + '" aria-pressed="' + (d === P.dur) + '">' + C.durLabel(d) + '</button>'; }).join('') + '</div>' +
         (order.length ? '<p class="small muted" style="margin:16px 0 8px">2. Jour</p><div class="ag-days" role="group" aria-label="Jours disponibles">' + order.map(function (k) {
           var t = byDay[k][0];
-          return '<button type="button" class="ag-day' + (k === P.day ? ' on' : '') + '" data-day="' + k + '" aria-pressed="' + (k === P.day) + '"><span>' + esc(fm(tz, { weekday: 'short' }).format(t)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(t)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(t)) + '</span><small title="' + X.plural(byDay[k].length, 'créneau libre', 'créneaux libres') + '">' + byDay[k].length + '</small></button>';
+          return '<button type="button" class="ag-day' + (k === P.day ? ' on' : '') + '" data-day="' + k + '" aria-pressed="' + (k === P.day) + '"><span>' + esc(fm(tz, { weekday: 'short' }).format(t)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(t)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(t)) + '</span><small title="' + X.plural(byDay[k].length, 'créneau libre', 'créneaux libres') + '">' + byDay[k].length + ' libre' + (byDay[k].length > 1 ? 's' : '') + '</small></button>';
         }).join('') + '</div>' +
         '<p class="small muted" style="margin:16px 0 8px">3. Heure — ' + esc(fDay(byDay[P.day][0], tz)) + '</p><div class="ag-slots">' + byDay[P.day].map(function (t) {
           return '<button type="button" class="ag-slot" data-slot="' + t + '">' + fTime(t, tz) + '</button>';

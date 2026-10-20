@@ -25,7 +25,8 @@ var HPApp = (function () {
     } catch (e) { if (v !== undefined) window.__hpSess = v; return window.__hpSess || null; }
   }
   function toast(msg, long) {
-    var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+    var bad = /impossible|n'a pas abouti|échec|erreur|expiré|interrompue/i.test(msg);
+    var t = document.createElement('div'); t.className = 'toast' + (bad ? ' is-err' : ''); t.setAttribute('role', bad ? 'alert' : 'status'); t.setAttribute('aria-live', bad ? 'assertive' : 'polite');
     t.textContent = msg; document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, long ? 6000 : 2600);
   }
@@ -47,7 +48,11 @@ var HPApp = (function () {
     if (c === 'login_taken') return 'cet identifiant est déjà utilisé';
     if (c === 'not_teacher') return 'votre session a expiré, reconnectez-vous';
     if (e && /fetch|network|Failed/i.test(e.message || '')) return 'connexion internet interrompue';
-    return (e && e.message) || 'erreur inconnue';
+    var msg = (e && e.message) || '';
+    if (/password/i.test(msg)) return 'le mot de passe doit contenir au moins 6 caractères';
+    /* message technique (anglais, code, JSON) : on l'écrit en clair pour Mayane */
+    if (!msg || /^(HTTP|\d{3}\b)|[{}_<>]|violates|duplicate|null value|JWT|PGRST|undefined|unexpected|status/i.test(msg)) return 'le serveur n\'a pas répondu comme prévu, réessayez dans un instant';
+    return msg;
   }
   window.addEventListener('unhandledrejection', function (e) {
     console.error(e.reason);
@@ -210,7 +215,7 @@ var HPApp = (function () {
         '<a class="back" href="#">← Accueil</a><br>' +
         '<span class="kicker">Espace de révision</span>' +
         '<h1>Hébreu avec Mayane <span class="grad">עִבְרִית</span></h1>' +
-        '<p class="sub">Élèves : connectez-vous avec l\'identifiant et le mot de passe donnés par Mayane.</p>' +
+        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Mayane t\'a envoyés.</p>' +
         '<div class="card"><form id="lf" autocomplete="on">' +
           '<label class="f">Identifiant<input class="in" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required value="' + esc(loginValue || '') + '"></label>' +
           '<label class="f">Mot de passe<input class="in" name="pw" type="password" autocomplete="current-password" required></label>' +
@@ -235,7 +240,7 @@ var HPApp = (function () {
       busy(btn, HPB.login(f.login.value, f.pw.value), 'Connexion impossible').then(function (r) {
         if (!r) { renderLogin('Identifiant ou mot de passe incorrect.', f.login.value); var pw = $('#lf [name=pw]'); if (pw) pw.focus(); return; }
         route.verified = true;
-        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contactez Mayane.');
+        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Mayane.');
         sess(r); if (r.role === 'teacher') location.hash = '#/tableau'; else history.replaceState(null, '', location.pathname + location.search); route();
       }).catch(function () {});
     });
@@ -346,7 +351,8 @@ var HPApp = (function () {
     '.hp-sbar .hp-ag{display:flex;align-items:center;gap:10px;margin-left:auto}.hp-sbar .hp-ag small{font-size:12.5px;color:var(--ink-soft);font-weight:600}' +
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
-    '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
+    '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar button.ag:hover{color:var(--on-accent);border-color:transparent;filter:brightness(1.06)}' +
+    '@media(max-width:420px){.hp-sbar{flex-wrap:nowrap;gap:8px;padding-left:12px}.hp-sbar .hi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp-sbar button{white-space:nowrap;padding:6px 10px}}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
   function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
 
   /* messages venant de l'espace élève : la page décide elle-même de quel élève il s'agit */
@@ -403,7 +409,7 @@ var HPApp = (function () {
     var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
       '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
-      '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '">' + it[1] + '</a>'; }).join('') +
+      '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '"' + (cur === it[0] ? ' aria-current="page"' : '') + '>' + it[1] + '</a>'; }).join('') +
       '</nav><button class="btn small" id="lo">Se déconnecter</button></header>';
   }
   function renderTeacher() {
@@ -441,7 +447,7 @@ var HPApp = (function () {
   function docsFor(id) { return cache.docs.filter(function (d) { return (d.students || []).indexOf(id) >= 0; }); }
   function deltaHtml(a, b) {
     if (a == null || b == null || a === b) return '';
-    return ' <small class="hp-delta ' + (a > b ? 'up' : 'down') + '" style="font:800 11px var(--font-ui);color:var(' + (a > b ? '--olive' : '--rose') + ')">' + (a > b ? '▲' : '▼') + Math.abs(a - b) + '</small>';
+    return ' <small class="hp-delta ' + (a > b ? 'up' : 'down') + '" aria-label="' + (a > b ? '+' : '−') + Math.abs(a - b) + ' par rapport à la semaine précédente"><i aria-hidden="true">' + (a > b ? '▲' : '▼') + '</i>' + Math.abs(a - b) + '</small>';
   }
 
   /* ---------- tableau de bord ---------- */
@@ -451,7 +457,7 @@ var HPApp = (function () {
     var active = S.filter(function (s) { return M[s.id].active7 > 0; }).length;
     var xp7 = S.reduce(function (a, s) { return a + M[s.id].xp7; }, 0);
     var rates = S.map(function (s) { return M[s.id].rate7; }).filter(function (r) { return r != null; });
-    var avg = rates.length ? Math.round(rates.reduce(function (a, b) { return a + b; }, 0) / rates.length) : null;
+    var avg = null;   /* calculée plus bas sur toutes les réponses de la classe (pondérée) */
     var pend = cache.docs.filter(function (d) { return d.status !== 'done'; }).length;
     var classDays = {};
     S.forEach(function (s) {
@@ -461,12 +467,13 @@ var HPApp = (function () {
         for (var f in c) c[f] += d[k][f] || 0;
       });
     });
+    avg = HP.rate(HP.rangeSum(classDays, HP.addDays(new Date(), -6), 7));
     /* alertes */
     var alerts = [];
     S.forEach(function (s) {
       var m = M[s.id], n = m.last ? Math.round((HP.parseDay(HP.dayKey()) - HP.parseDay(m.last)) / 864e5) : null;
-      if (!m.words) alerts.push(['', '📥', '<b>' + esc(fullName(s)) + '</b> n\'a encore aucun contenu : déposez ses premiers cours.', s.id, 'documents']);
-      else if (n == null) alerts.push(['', '👋', '<b>' + esc(fullName(s)) + '</b> ne s\'est pas encore entraîné(e).', s.id]);
+      if (!m.words) alerts.push(['', '📥', '<b>' + esc(fullName(s)) + '</b> n\'a encore aucun contenu : déposez ses premiers documents.', s.id, 'documents']);
+      else if (n == null) alerts.push(['', '👋', '<b>' + esc(fullName(s)) + '</b> n\'a pas encore révisé.', s.id]);
       else if (n >= 7) alerts.push(['warn', '⏰', '<b>' + esc(fullName(s)) + '</b> n\'a pas révisé depuis ' + n + ' jours.', s.id]);
       if (m.rate7 != null && m.rate7p != null && m.rate7p - m.rate7 >= 10) alerts.push(['warn', '📉', 'Réussite de <b>' + esc(fullName(s)) + '</b> en baisse : ' + m.rate7p + ' % → ' + m.rate7 + ' % cette semaine.', s.id]);
       if (m.active7 >= 5) alerts.push(['good', '🔥', '<b>' + esc(fullName(s)) + '</b> a révisé ' + m.active7 + ' jours sur 7. Bravo !', s.id]);
@@ -476,22 +483,25 @@ var HPApp = (function () {
         '<div class="row"><a class="btn" href="#/agenda">📅 Agenda</a><button class="btn" data-act="upload">Déposer des documents</button><button class="btn primary" data-act="new">+ Créer un compte élève</button></div></div>' +
       '<div class="stack">' +
       '<div class="hp-kpis">' +
-        '<div class="hp-kpi"><b>' + active + '<small style="font-size:.55em;color:var(--muted)"> / ' + S.length + '</small></b><span>élèves actifs cette semaine</span></div>' +
+        '<div class="hp-kpi"><b>' + active + '<small class="hp-of"> / ' + S.length + '</small></b><span>élèves actifs cette semaine</span></div>' +
         '<div class="hp-kpi gold"><b>' + fmt(xp7) + '</b><span>XP gagnés par la classe</span></div>' +
         '<div class="hp-kpi green"><b>' + (avg == null ? '—' : avg + ' %') + '</b><span>réussite moyenne</span></div>' +
-        '<div class="hp-kpi rose"><b>' + pend + '</b><span>document' + (pend > 1 ? 's' : '') + ' à intégrer</span></div>' +
+        '<div class="hp-kpi' + (pend ? ' rose' : '') + '"><b>' + pend + '</b><span>document' + (pend > 1 ? 's' : '') + ' à intégrer</span></div>' +
       '</div>' +
-      '<div class="dash-grid"><div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' + AG.dashboardCard() + '</div>' +
+      '<div class="card"><h3>Vos élèves</h3>' + studentsTable(S, M) + '</div>' +
+      '<div class="dash-grid"><div class="card"><h3>À surveiller</h3>' + (alerts.length ? '<div class="alerts">' + alerts.map(function (a) {
+        return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '" tabindex="0" role="link"><span class="ic" aria-hidden="true">' + a[1] + '</span><span>' + a[2] + '</span></div>';
+      }).join('') + '</div>' : '<p class="hp-empty">Rien à signaler.</p>') + '</div>' + AG.dashboardCard() + '</div>' +
       '<div class="card"><h3>Activité de la classe <small>XP par jour, 30 jours</small></h3>' + HP.xpBars(classDays, 30, 0) + '</div>' +
-      '<div class="card"><h3>À surveiller</h3>' + (alerts.length ? '<div class="alerts">' + alerts.map(function (a) {
-        return '<div class="alert ' + a[0] + '" data-open="' + a[3] + '" data-tab="' + (a[4] || 'progression') + '" tabindex="0" role="link"><span class="ic">' + a[1] + '</span><span>' + a[2] + '</span></div>';
-      }).join('') + '</div>' : '<p class="hp-empty">Rien à signaler.</p>') + '</div>' +
       '</div>';
   }
   function studentsTable(S, M, manage) {
     if (!S.length) return '<div class="empty-state"><div class="big">🎒</div><p class="muted">Aucun élève pour l\'instant.</p><button class="btn primary" data-act="new">+ Créer un compte élève</button></div>';
     var cols = [['name', 'Élève'], ['level', 'Niveau'], ['xp7', 'XP 7 j'], ['streak', 'Série'], ['rate7', 'Réussite 7 j'], ['mastered', 'Mots maîtrisés'], ['spark', '14 derniers jours'], ['last', 'Dernière activité'], ['docs', 'Docs']];
     if (manage) cols.push(['spark', '']);
+    /* même échelle pour toutes les mini-courbes : les élèves se comparent d'un coup d'œil */
+    var sparkMax = 1;
+    S.forEach(function (s) { for (var i = 0; i < 14; i++) { var d = (M[s.id].days || {})[HP.dayKey(HP.addDays(new Date(), -i))]; if (d && d.xp > sparkMax) sparkMax = d.xp; } });
     var list = S.slice().sort(function (a, b) {
       var x, y;
       if (sortKey === 'name') { x = fullName(a).toLowerCase(); y = fullName(b).toLowerCase(); return x < y ? -sortDir : x > y ? sortDir : 0; }
@@ -510,10 +520,10 @@ var HPApp = (function () {
         '<td class="num">' + (m.streak ? '🔥 ' + m.streak : '—') + '</td>' +
         '<td class="num">' + (m.rate7 == null ? '—' : m.rate7 + ' %' + deltaHtml(m.rate7, m.rate7p)) + '</td>' +
         '<td class="num">' + fmt(m.mastered) + '<span class="muted" style="font-weight:500"> / ' + fmt(m.words) + '</span></td>' +
-        '<td>' + HP.sparkline(m.days, 14) + '</td>' +
+        '<td>' + HP.sparkline(m.days, 14, sparkMax) + '</td>' +
         '<td>' + ago(m.last) + '</td>' +
         '<td>' + (pd ? '<span class="pill rose">' + pd + ' à intégrer</span>' : '<span class="pill grey">' + docsFor(s.id).length + '</span>') + '</td>' +
-        (manage ? '<td style="text-align:right"><button class="btn small ghost" data-delst="' + s.id + '" title="Supprimer ce compte">🗑 Supprimer</button></td>' : '') + '</tr>';
+        (manage ? '<td style="text-align:right"><button class="btn small ghost" data-delst="' + s.id + '" title="Supprimer le compte" aria-label="Supprimer le compte de ' + esc(fullName(s)) + '">🗑</button></td>' : '') + '</tr>';
     }).join('') + '</tbody></table></div>';
   }
 
@@ -540,7 +550,7 @@ var HPApp = (function () {
         '<div class="meta"><span class="mono">' + esc(s.login) + '</span>' + (s.email ? '<span>✉️ ' + esc(s.email) + '</span>' : '') + (s.phone ? '<span>📱 ' + esc(s.phone) + '</span>' : '') +
         '<span>Niveau ' + L.level + ' · ' + L.title + '</span><span>Dernière activité : ' + ago(m.last) + '</span></div></div>' +
         '<button class="btn" data-act="preview" data-id="' + id + '">👁 Voir son espace</button></div>' +
-      '<nav class="st-tabs">' + tabs.map(function (t) { return '<a href="#/eleve/' + id + '/' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + '</nav>' +
+      '<nav class="st-tabs">' + tabs.map(function (t) { return '<a href="#/eleve/' + id + '/' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"' + (tab === t[0] ? ' aria-current="page"' : '') + '>' + t[1] + '</a>'; }).join('') + '</nav>' +
       body;
   }
 
@@ -561,28 +571,28 @@ var HPApp = (function () {
         '<div class="hp-kpi green"><b>' + (m.rate7 == null ? '—' : m.rate7 + ' %') + deltaHtml(m.rate7, m.rate7p) + '</b><span>réussite sur 7 jours</span></div>' +
         '<div class="hp-kpi gold"><b>' + active30 + '/30</b><span>jours actifs</span></div>' +
         '<div class="hp-kpi sky"><b>' + goalDays + '</b><span>objectifs du jour atteints (30 j)</span></div>' +
-        '<div class="hp-kpi green"><b>' + fmt(t.mastered) + '<small style="font-size:.55em;color:var(--muted)"> / ' + fmt(m.words) + '</small></b><span>mots maîtrisés</span></div>' +
-        '<div class="hp-kpi rose"><b>' + (fl ? Math.round(100 * (t.fK || 0) / fl) + ' %' : '—') + '</b><span>flashcards sues (total)</span></div>' +
+        '<div class="hp-kpi green"><b>' + fmt(t.mastered) + '<small class="hp-of"> / ' + fmt(m.words) + '</small></b><span>mots maîtrisés</span></div>' +
+        '<div class="hp-kpi sky"><b>' + (fl ? Math.round(100 * (t.fK || 0) / fl) + ' %' : '—') + '</b><span>flashcards sues (total)</span></div>' +
       '</div>' +
       '<div class="two">' +
         '<div class="card"><h3>Taux de réussite par semaine</h3>' + HP.rateLine(d, 8) + '</div>' +
         '<div class="card"><h3>XP par jour <small>30 jours</small></h3>' + HP.xpBars(d, 30, sum.goal) + '</div>' +
       '</div>' +
-      '<div class="card"><h3>Régularité</h3>' + HP.heatmap(d, 17) + '</div>' +
       '<div class="two">' +
-        '<div class="card"><h3>Maîtrise par thème</h3>' + HP.themeBars(sum.themes) + '</div>' +
-        '<div class="stack" style="gap:18px">' +
+        '<div class="card"><h3>Régularité</h3>' + HP.heatmap(d, 17) + '</div>' +
           '<div class="card"><h3>Activités <small>30 jours</small></h3>' + mix.map(function (r) {
-            return '<div class="hp-theme" style="margin-bottom:8px"><div class="hp-theme-name">' + r[0] + '</div><div class="hp-theme-bar"><i class="seen" style="width:' + Math.round(100 * r[1] / mixMax) + '%"></i></div><div class="hp-theme-num">' + fmt(r[1]) + '</div></div>' +
+            return '<div class="hp-theme" style="margin-bottom:8px"><div class="hp-theme-name">' + r[0] + '</div><div class="hp-theme-bar"><i class="solid" style="width:' + Math.round(100 * r[1] / mixMax) + '%"></i></div><div class="hp-theme-num">' + fmt(r[1]) + '</div></div>' +
               (r[1] ? '<div class="small muted" style="margin:-4px 0 10px">réussite ' + r[2] + ' %</div>' : '');
           }).join('') + '</div>' +
+      '</div>' +
+      '<div class="two">' +
+        '<div class="card"><h3>Maîtrise par thème</h3>' + HP.themeBars(sum.themes) + '</div>' +
           '<div class="card"><h3>Mots les plus difficiles</h3>' + (sum.weak && sum.weak.length ? '<ul class="hp-weak">' + sum.weak.map(function (w) {
-            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + plural(w.bad, 'erreur') + ' / ' + w.seen + '</small></li>';
+            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + plural(w.bad, 'erreur') + ' sur ' + w.seen + '</small></li>';
           }).join('') + '</ul>' : '<p class="hp-empty">Aucun mot raté pour l\'instant.</p>') + '</div>' +
-        '</div>' +
       '</div>' +
       '<div class="card"><h3>Badges <small>' + Object.keys(sum.badges || {}).length + ' / ' + HP.BADGES.length + '</small></h3>' + HP.badgesGrid(sum.badges) + '</div>' +
-      '<p class="small muted">Dernière synchronisation : ' + (sum.updatedAt ? new Date(sum.updatedAt).toLocaleString('fr-FR') : '—') + '. Record de série : ' + m.best + ' jours · meilleur combo : ' + (sum.bestCombo || 0) + ' bonnes réponses d\'affilée.</p>' +
+      '<p class="small muted">Dernière révision enregistrée : ' + (sum.updatedAt ? new Date(sum.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) : '—') + '. Record de série : ' + m.best + ' jours · meilleur combo : ' + (sum.bestCombo || 0) + ' bonnes réponses d\'affilée.</p>' +
     '</div>';
   }
 
@@ -615,14 +625,14 @@ var HPApp = (function () {
   }
   function stDocs(s) {
     var docs = docsFor(s.id);
-    return '<div class="stack"><div class="card"><h3>Ajouter des cours pour ' + esc(s.first) + '</h3>' + dropZone(s.id) +
+    return '<div class="stack"><div class="card"><h3>Déposer des documents pour ' + esc(s.first) + '</h3>' + dropZone(s.id) +
       '<p class="small muted" style="margin:12px 0 0">Après le dépôt, cliquez sur « Analyser et intégrer » : Claude lit le document, en extrait le vocabulaire et la grammaire, puis vous montre ce qui sera ajouté à l\'espace de ' + esc(s.first) + '. Rien n\'est ajouté sans votre validation, et uniquement à partir de vos documents.</p></div>' +
       '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3>' + analyseAllBtn(docs) + '</div>' +
       (docs.length ? '<div class="docs">' + docs.map(function (d) { return docRow(d); }).join('') + '</div>' : '<p class="hp-empty">Aucun document pour l\'instant.</p>') + '</div></div>';
   }
   function docsPage() {
     var docs = cache.docs, pend = docs.filter(function (d) { return d.status !== 'done'; });
-    return '<div class="bo-head"><div><h1 class="page-title">Documents</h1><p>Déposez un cours une seule fois et attribuez-le à un ou plusieurs élèves.</p></div></div>' +
+    return '<div class="bo-head"><div><h1 class="page-title">Documents</h1><p>Déposez un document une seule fois et attribuez-le à un ou plusieurs élèves.</p></div></div>' +
       '<div class="stack"><div class="card"><h3>Nouveau dépôt</h3><p class="small muted" style="margin:-6px 0 10px">1. Choisissez les élèves concernés</p>' +
       '<div class="chips" id="targets" role="group" aria-label="Élèves concernés">' + cache.students.map(function (s) { return '<button type="button" class="chip" aria-pressed="false" data-sid="' + s.id + '">' + esc(fullName(s)) + '</button>'; }).join('') +
         (cache.students.length > 1 ? '<button type="button" class="chip" aria-pressed="false" data-sid="*" style="border-style:dashed">Toute la classe</button>' : '') + '</div>' +
@@ -642,7 +652,7 @@ var HPApp = (function () {
         return '<li><span>' + esc(t) + '</span><span class="row"><span class="pill grey">' + c.VOCAB[t].length + ' mots</span><button class="btn small ghost" data-rmtheme="' + esc(t) + '" title="Retirer ce thème">🗑</button></span></li>';
       }).join('') + '</ul>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
       (st.tenses ? '<p class="small muted" style="margin-top:12px">+ le cours « Passé &amp; futur ».</p>' : '') +
-      (c && c.updatedAt ? '<p class="small muted">Dernière mise à jour : ' + new Date(c.updatedAt).toLocaleString('fr-FR') + '</p>' : '') + '</div>' +
+      (c && c.updatedAt ? '<p class="small muted">Dernière mise à jour : ' + new Date(c.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) + '</p>' : '') + '</div>' +
       '<div class="card"><h3>Sources</h3>' + (c && c.sources && c.sources.length ? '<ul class="content-list">' + c.sources.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p class="hp-empty">—</p>') +
       '<h3 style="margin-top:22px">Importer un contenu préparé</h3><p class="small muted">Si un document a été analysé dans une conversation avec Claude, importez ici le fichier .json qu\'il vous a remis : vous pourrez le relire avant de l\'ajouter.</p>' +
       '<label class="btn small">Choisir un fichier .json<input type="file" accept=".json,application/json" id="imp" hidden></label><div id="rv-import"></div></div></div>';
@@ -656,7 +666,7 @@ var HPApp = (function () {
       '<label class="f">Adresse e-mail<input class="in" name="email" type="email" value="' + esc(s.email || '') + '" autocomplete="off"></label>' +
       '<label class="f">Téléphone<input class="in" name="phone" type="tel" value="' + esc(s.phone || '') + '" autocomplete="off"></label>' +
       '<label class="f">Identifiant<input class="in mono" name="login" value="' + esc(s.login || '') + '" autocapitalize="none" spellcheck="false" required></label>' +
-      (s.id ? '' : '<label class="f">Mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" value="' + HPB.genPassword() + '" required minlength="6"><button type="button" class="btn small" data-gen>↻</button></span></label>') +
+      (s.id ? '' : '<label class="f">Mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" value="' + HPB.genPassword() + '" required minlength="6"><button type="button" class="btn small" data-gen aria-label="Proposer un mot de passe" title="Proposer un mot de passe">↻</button></span></label>') +
       '</div>';
   }
   function stAccess(s) {
@@ -668,14 +678,14 @@ var HPApp = (function () {
         '<div class="row" style="margin-top:10px"><button class="btn" type="submit">Enregistrer le nouveau mot de passe</button></div></form></div>' +
       '<div class="card"><h3>Accès</h3><div class="row">' +
         (s.active === false ? '<button class="btn" data-act="activate">Réactiver le compte</button>' : '<button class="btn" data-act="suspend">Suspendre le compte</button>') +
-        '<button class="btn danger" data-act="delete">Supprimer l\'élève</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
+        '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
   }
   function accessCard(s, pw) {
     var site = (cache.settings && cache.settings.siteUrl) || (HPB.remote ? location.origin : '');
     var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMayane';
     return '<div class="access"><div><div class="k">Identifiant</div><div class="v">' + esc(s.login) + '</div></div>' +
       '<div><div class="k">Mot de passe</div><div class="v">' + esc(pw) + '</div></div>' +
-      '<div class="small muted">Vous le retrouverez à tout moment dans la fiche de l\'élève, onglet « Compte & accès ».</div>' +
+      (location.hash.indexOf('/acces') < 0 ? '<div class="small muted">Vous le retrouverez à tout moment dans la fiche de l\'élève, onglet « Compte & accès ».</div>' : '') +
       '<div class="row"><button class="btn small" data-copy="' + esc(msg) + '">Copier le message</button>' +
       (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Tes accès — hébreu avec Mayane') + '&body=' + encodeURIComponent(msg) + '">✉️ Envoyer par e-mail</a>' : '') +
       (s.phone ? '<a class="btn small" href="sms:' + encodeURIComponent(s.phone.replace(/\s/g, '')) + '?&body=' + encodeURIComponent(msg) + '">📱 Envoyer par SMS</a>' : '') +
@@ -739,7 +749,7 @@ var HPApp = (function () {
         }).then(function () {
           cache.students.push(s);
           $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>Compte créé 🎉</h2><p class="muted">Transmettez ces accès à ' + esc(s.first) + '.</p>' + accessCard(s, pw) +
-            '<div class="row" style="margin-top:16px"><a class="btn primary" href="#/eleve/' + s.id + '/documents">Déposer ses premiers cours →</a></div>';
+            '<div class="row" style="margin-top:16px"><a class="btn primary" href="#/eleve/' + s.id + '/documents">Déposer ses premiers documents</a></div>';
           bindCopy(m);
           $('.btn.primary', m).addEventListener('click', function () { m.remove(); });
           if (/eleves|tableau/.test(location.hash) || !location.hash) renderTeacher();

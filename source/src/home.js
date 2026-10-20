@@ -65,7 +65,7 @@ var HPHome = (function () {
     '.mv{min-height:100vh}' +
     '.mv-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:0 auto;padding:18px 16px}' +
     '.mv-hero{max-width:1120px;margin:0 auto;padding:24px 16px 56px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}' +
-    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;max-width:300px;margin:0 auto}}' +
+    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;max-width:220px;margin:0 auto}.mv-b2{top:64%;right:-14%}}' +
     '.mv-hero h1{font:900 clamp(36px,6vw,62px)/1.04 var(--font-display);letter-spacing:-.025em;margin:14px 0 0;text-wrap:balance}' +
     '.mv-hero h1 .grad{display:inline-block}' +
     '.mv-lead{font-size:clamp(16px,2vw,19px);color:var(--ink-soft);margin:18px 0 26px;max-width:560px}' +
@@ -141,7 +141,7 @@ var HPHome = (function () {
       '</div>';
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
     var a = root.querySelector('a[href="#comment"]');
-    if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: 'smooth' }); });
+    if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
     window.scrollTo(0, 0);
   }
   return { render: render };

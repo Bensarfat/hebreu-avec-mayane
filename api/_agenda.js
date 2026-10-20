@@ -149,7 +149,7 @@
   function canCancel(c, start, now) { c = norm(c); return start - now >= c.cancel * HOUR; }
 
   /* ---------- textes ---------- */
-  function durLabel(m) { m = +m; var h = Math.floor(m / 60), r = m % 60; return h ? h + ' h' + (r ? ' ' + pad(r) : '') : r + ' min'; }
+  function durLabel(m) { m = +m; var h = Math.floor(m / 60), r = m % 60; return h ? h + '\u00a0h' + (r ? '\u00a0' + pad(r) : '') : r + '\u00a0min'; }
   function tzCity(tz) { return String(tz || '').split('/').pop().replace(/_/g, ' '); }
 
   /* ---------- fichier d'agenda (.ics) ---------- */

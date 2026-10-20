@@ -181,8 +181,8 @@ var HPG = (function () {
   function kpi(cls, val, lbl) { return '<div class="hp-kpi ' + cls + '"><b>' + val + '</b><span>' + lbl + '</span></div>'; }
   function delta(a, b) {
     if (a == null || b == null) return '';
-    var d = a - b; if (!d) return ' <small class="hp-delta">=</small>';
-    return ' <small class="hp-delta ' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '▲' : '▼') + Math.abs(d) + '</small>';
+    var d = a - b; if (!d) return ' <small class="hp-delta" aria-label="stable">=</small>';
+    return ' <small class="hp-delta ' + (d > 0 ? 'up' : 'down') + '" aria-label="' + (d > 0 ? '+' : '−') + Math.abs(d) + ' par rapport à la semaine précédente"><i aria-hidden="true">' + (d > 0 ? '▲' : '▼') + '</i>' + Math.abs(d) + '</small>';
   }
   function renderStats() {
     var root = document.getElementById('hp-progress');
@@ -240,9 +240,8 @@ var HPG = (function () {
     '@keyframes hpPop{from{transform:scale(.7);opacity:0}}' +
     '.hp-confetti i{position:absolute;top:-12px;width:9px;height:14px;border-radius:3px;animation:hpFall 1.8s ease-in forwards}' +
     '@keyframes hpFall{to{transform:translateY(105vh) rotate(540deg);opacity:.6}}' +
-    '#hp-progress{display:grid;gap:18px;margin-bottom:18px}#hp-progress .stats-card{margin:0}' +
-    '.hp-note{font-size:12px;color:var(--muted);font-style:italic;margin-top:12px}.hp-of{font-size:.55em;color:var(--muted);font-weight:700}' +
-    '.hp-delta{font:800 11px var(--font-ui);vertical-align:middle}.hp-delta.up{color:var(--olive)}.hp-delta.down{color:var(--rose)}' +
+    '#hp-progress{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-bottom:18px}#hp-progress .stats-card{margin:0;min-width:0}' +
+    '.hp-note{font-size:12px;color:var(--muted);font-style:italic;margin-top:12px}' +
     '.hp-rules ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px;color:var(--ink-soft)}.hp-rules b{color:var(--accent)}' +
     '.hp-sep{font:800 13px var(--font-ui);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;margin:8px 0 14px}' +
     '@media (prefers-reduced-motion:reduce){.hp-toast,.hp-cele-card,.hp-confetti i{animation:none}}';

@@ -239,9 +239,11 @@ var HPAgendaUI = function (X) {
       (s && !past && b.status === 'booked' && (s.phone || s.email) ? '<p class="small muted" style="margin:14px 0 6px">Envoyer un rappel</p><div class="row">' +
         (s.phone ? '<a class="btn small" target="_blank" rel="noopener" href="https://wa.me/' + s.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(msg) + '">WhatsApp</a><a class="btn small" href="sms:' + encodeURIComponent(s.phone.replace(/\s/g, '')) + '?&body=' + encodeURIComponent(msg) + '">SMS</a>' : '') +
         (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Rappel — cours d\'hébreu') + '&body=' + encodeURIComponent(msg) + '">E-mail</a>' : '') + '</div>' : '') +
-      '<div class="row" style="margin-top:18px">' + (s ? '<a class="btn small" href="#/eleve/' + s.id + '/cours">Fiche de ' + esc(s.first) + '</a>' : '') +
+      '<div class="row" style="margin-top:18px">' + (b.status === 'booked' && !past ? calMenu(b, 'Hébreu · ' + sName(b.studentId), [b.note ? 'Note : ' + b.note : '', s && s.phone ? 'Tél. : ' + s.phone : ''].filter(Boolean).join('\n')) : '') +
+        (s ? '<a class="btn small" href="#/eleve/' + s.id + '/cours">Fiche de ' + esc(s.first) + '</a>' : '') +
         (b.status === 'booked' ? '<button class="btn small danger" data-cancel>' + (past ? 'Retirer de l\'historique' : 'Annuler ce cours') + '</button>' : '') + '</div>');
     $$('a[href^="#/"]', m).forEach(function (a) { a.addEventListener('click', function () { m.remove(); }); });
+    bindCalMenus(m);
     var cb = $('[data-cancel]', m);
     if (cb) cb.onclick = function () {
       if (!cb.dataset.armed) { cb.dataset.armed = 1; cb.textContent = 'Confirmer l\'annulation'; return; }
@@ -518,7 +520,7 @@ var HPAgendaUI = function (X) {
       var can = C.canCancel(c, b.start, now);
       return '<li><div class="ag-date"><span>' + esc(fm(tz, { weekday: 'short' }).format(b.start)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(b.start)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(b.start)) + '</span></div>' +
         '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Mayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
-        '<div class="ag-acts"><button class="btn small" data-ics="' + b.id + '">📅 Ajouter à mon agenda</button>' +
+        '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) +
         (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
     }).join('') + '</ul>' : '<p class="hp-empty">Aucun cours prévu pour l\'instant.</p>') + '</section>';
     if (c.open) {
@@ -549,10 +551,38 @@ var HPAgendaUI = function (X) {
     $$('[data-dur]', P.el).forEach(function (b) { b.onclick = function () { P.dur = +b.dataset.dur; P.day = null; drawPane(); }; });
     $$('[data-day]', P.el).forEach(function (b) { b.onclick = function () { P.day = b.dataset.day; drawPane(); var s = $('.ag-slots', P.el); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }; });
     $$('[data-slot]', P.el).forEach(function (b) { b.onclick = function () { confirmBook(+b.dataset.slot); }; });
-    $$('[data-ics]', P.el).forEach(function (b) { b.onclick = function () { var x = st.mine.filter(function (y) { return y.id === b.dataset.ics; })[0]; if (x) icsDownload(x, c); }; });
+    bindCalMenus(P.el);
     $$('[data-cancel]', P.el).forEach(function (b) { b.onclick = function () { var x = st.mine.filter(function (y) { return y.id === b.dataset.cancel; })[0]; if (x) confirmCancel(x); }; });
     var day = $('.ag-day.on', P.el); if (day && day.scrollIntoView) day.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
+  /* menu « Ajouter à mon agenda » : Google, Apple (iPhone, Mac), Outlook, Yahoo, ou fichier .ics pour tout autre agenda */
+  function calMenu(b, title, desc, label) {
+    var enc = encodeURIComponent, z = function (ms) { return new Date(ms).toISOString().replace(/[-:]|\.\d{3}/g, ''); };
+    var S = z(b.start), E = z(b.end), iS = new Date(b.start).toISOString(), iE = new Date(b.end).toISOString();
+    var ol = function (host) { return 'https://' + host + '/calendar/0/action/compose?rru=addevent&path=%2Fcalendar%2Faction%2Fcompose&subject=' + enc(title) + '&startdt=' + enc(iS) + '&enddt=' + enc(iE) + '&body=' + enc(desc || ''); };
+    var ics = 'data:text/calendar;charset=utf-8,' + enc(C.ics([{ uid: b.id, s: b.start, e: b.end, title: title, desc: desc }]));
+    var file = 'cours-hebreu-' + C.dayKey(b.start, LOCAL_TZ) + '.ics';
+    var links = [
+      ['Google Agenda', 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + enc(title) + '&dates=' + S + '/' + E + '&details=' + enc(desc || ''), 'g'],
+      ['Apple Calendrier (iPhone, iPad, Mac)', ics, 'a'],
+      ['Outlook.com · Hotmail', ol('outlook.live.com'), 'o'],
+      ['Outlook (Microsoft 365, pro)', ol('outlook.office.com'), 'o'],
+      ['Yahoo Agenda', 'https://calendar.yahoo.com/?v=60&title=' + enc(title) + '&st=' + S + '&et=' + E + '&desc=' + enc(desc || ''), 'y'],
+      ['Autre agenda (fichier .ics)', ics, 'f']
+    ];
+    return '<details class="ag-addcal"><summary class="btn small">📅 ' + esc(label || 'Ajouter à mon agenda') + '</summary><div class="ag-calmenu" role="menu">' +
+      links.map(function (l) {
+        return '<a role="menuitem" class="ag-cal-' + l[2] + '" href="' + esc(l[1]) + '"' + (l[1].indexOf('data:') === 0 ? ' download="' + file + '"' : ' target="_blank" rel="noopener"') + '>' + esc(l[0]) + '</a>';
+      }).join('') + '</div></details>';
+  }
+  function bindCalMenus(root) {
+    $$('.ag-addcal', root).forEach(function (d) {
+      d.addEventListener('toggle', function () { if (d.open) $$('.ag-addcal[open]').forEach(function (x) { if (x !== d) x.open = false; }); });
+      $$('a', d).forEach(function (a) { a.addEventListener('click', function () { setTimeout(function () { d.open = false; }, 50); }); });
+    });
+  }
+  function studentDesc(b, c) { return [b.note ? 'Note : ' + b.note : '', c && c.message].filter(Boolean).join('\n\n'); }
+
   function linkify(s) { return s.replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>'; }); }
   function confirmBook(t) {
     var c = P.st.cfg, e = t + P.dur * MIN, minutes = P.dur;
@@ -566,8 +596,8 @@ var HPAgendaUI = function (X) {
       btn.disabled = true; btn.textContent = 'Réservation…';
       HPB.agendaBook(P.sid, t, minutes, $('textarea', m).value.trim()).then(function (b) {
         $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>C\'est réservé ! 🎉</h2><p>' + esc(cap(fDay(b.start))) + ', ' + range(b) + '</p>' +
-          '<p class="small muted">Mayane voit ton cours dans son agenda.</p><div class="row"><button class="btn" data-ics>📅 Ajouter à mon agenda</button><button class="btn primary" data-ok>Parfait</button></div>';
-        $('[data-ics]', m).onclick = function () { icsDownload(b, c); };
+          '<p class="small muted">Mayane voit ton cours dans son agenda. Ajoute-le aussi au tien :</p><div class="row">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) + '<button class="btn primary" data-ok>Parfait</button></div>';
+        bindCalMenus(m);
         $('[data-ok]', m).onclick = function () { m.remove(); };
         refresh();
       }, function (er) {
@@ -587,13 +617,6 @@ var HPAgendaUI = function (X) {
         btn.disabled = false; $('#cc-msg', m).innerHTML = '<div class="err">' + esc(err(er && er.code, er)) + '</div>';
       });
     };
-  }
-  function icsDownload(b, c) {
-    var txt = C.ics([{ uid: b.id, s: b.start, e: b.end, title: 'Cours d\'hébreu avec Mayane', desc: [b.note, c && c.message].filter(Boolean).join('\n\n') }]);
-    var blob = new Blob([txt], { type: 'text/calendar;charset=utf-8' }), u = URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = u; a.download = 'cours-hebreu-' + C.dayKey(b.start, LOCAL_TZ) + '.ics';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(u); }, 30000);
   }
   function closePane() { if (P && P.el) { P.el.remove(); document.body.classList.remove('ag-open'); P = null; } }
 

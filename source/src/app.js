@@ -86,7 +86,7 @@ var HPApp = (function () {
     var t = s.totals && typeof s.totals === 'object' ? s.totals : {};
     ['qOk', 'qKo', 'fK', 'fA', 'fS', 'cK', 'cA', 'cS', 'mastered'].forEach(function (k) { o.totals[k] = num(t[k]); });
     (Array.isArray(s.themes) ? s.themes : []).slice(0, 300).forEach(function (x) {
-      if (x && typeof x === 'object') o.themes.push({ theme: txt(x.theme), n: num(x.n), m: num(x.m), seen: num(x.seen), pct: Math.max(0, Math.min(100, num(x.pct))) });
+      if (x && typeof x === 'object') o.themes.push({ theme: txt(x.theme), n: num(x.n), m: num(x.m), seen: num(x.seen), pct: Math.max(0, Math.min(100, num(x.pct))), runs: num(x.runs) });
     });
     (Array.isArray(s.weak) ? s.weak : []).slice(0, 15).forEach(function (x) {
       if (x && typeof x === 'object') o.weak.push({ he: txt(x.he, 80), fr: txt(x.fr, 160), bad: num(x.bad), seen: num(x.seen) });

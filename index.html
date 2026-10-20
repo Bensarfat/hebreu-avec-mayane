@@ -526,13 +526,26 @@
   .ag-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
   .ag-slot { border: 1.5px solid var(--accent-soft); background: var(--paper); color: var(--accent); border-radius: 12px; padding: 10px 0; font: 800 15px var(--font-ui); cursor: pointer; font-variant-numeric: tabular-nums; }
   .ag-slot:hover, .ag-slot:focus-visible { background: var(--accent); color: var(--on-accent); }
+  /* menu « Ajouter à mon agenda » */
+  .ag-addcal { position: relative; display: inline-block; }
+  .ag-addcal > summary { list-style: none; cursor: pointer; }
+  .ag-addcal > summary::-webkit-details-marker { display: none; }
+  .ag-addcal > summary::after { content: "▾"; margin-left: 2px; font-size: 11px; }
+  .ag-calmenu { position: absolute; z-index: 70; top: calc(100% + 6px); left: 0; min-width: 250px; display: grid; padding: 6px; border-radius: 16px;
+    background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow-pop); }
+  .ag-calmenu a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .ag-calmenu a:hover, .ag-calmenu a:focus-visible { background: var(--accent-tint); color: var(--accent); }
+  .ag-calmenu a::before { content: ""; width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--muted); }
+  .ag-calmenu .ag-cal-g::before { background: #4285f4; } .ag-calmenu .ag-cal-a::before { background: #ff3b30; }
+  .ag-calmenu .ag-cal-o::before { background: #0a64ad; } .ag-calmenu .ag-cal-y::before { background: #6001d2; }
+  @media (max-width: 560px) { .ag-calmenu { position: static; margin-top: 6px; min-width: 0; box-shadow: none; } .ag-calmenu a { white-space: normal; } }
 
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.9d3ecd0e19.txt","demo":"assets/demo.b98348612f.json"};
+var ASSETS = {"student":"assets/student.78cab9699b.txt","demo":"assets/demo.b98348612f.json"};
 </script>
 <script>
 /* =====================================================================
@@ -654,7 +667,8 @@ var HP = (function () {
         if ((q && q.seen) || (f && f.seen)) seen++;
         if (wordMastered(storage, key)) m++;
       });
-      return { theme: th, n: n, m: m, seen: seen, pct: n ? Math.round(100 * m / n) : 0 };
+      var run = storage.themeRuns && storage.themeRuns[th];
+      return { theme: th, n: n, m: m, seen: seen, pct: n ? Math.round(100 * m / n) : 0, runs: run ? +run.n || 0 : 0 };
     });
   }
 
@@ -861,7 +875,8 @@ var HP = (function () {
     if (!list.length) return '<p class="hp-empty">Aucun thème pour le moment.</p>';
     return '<div class="hp-themes">' + list.map(function (t) {
       var seenPct = t.n ? Math.round(100 * t.seen / t.n) : 0;
-      return '<div class="hp-theme"><div class="hp-theme-name">' + esc(t.theme) + '</div>' +
+      return '<div class="hp-theme"><div class="hp-theme-name">' + esc(t.theme) +
+        (t.runs ? ' <span class="hp-runs" title="Série de flashcards du thème terminée ' + t.runs + ' fois">✓ ' + t.runs + '×</span>' : '') + '</div>' +
         '<div class="hp-theme-bar" title="' + t.m + ' maîtrisés, ' + t.seen + ' vus sur ' + t.n + '"><i class="seen" style="width:' + seenPct + '%"></i><i class="m" style="width:' + t.pct + '%"></i></div>' +
         '<div class="hp-theme-num">' + t.m + '/' + t.n + '</div></div>';
     }).join('') + '</div><div class="hp-legend2"><i class="m"></i> maîtrisés <i class="seen"></i> déjà vus</div>';
@@ -932,6 +947,7 @@ var HP = (function () {
     '.hp-spark{width:120px;height:30px;display:block}' +
     '.hp-themes{display:grid;gap:9px}.hp-theme{display:grid;grid-template-columns:minmax(110px,190px) 1fr 54px;gap:10px;align-items:center;font-size:13.5px}' +
     '.hp-theme-name{font-weight:600;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.hp-runs{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:var(--mint);color:var(--olive);font-size:11px;font-weight:800;vertical-align:1px}' +
     '.hp-theme-bar{position:relative;height:10px;border-radius:99px;background:var(--line);overflow:hidden}' +
     '.hp-theme-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}.hp-theme-bar .seen{background:color-mix(in srgb,var(--accent) 25%,var(--paper))}' +
     '.hp-theme-bar .m{background:var(--olive)}.hp-theme-num{text-align:right;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}' +
@@ -2355,9 +2371,11 @@ var HPAgendaUI = function (X) {
       (s && !past && b.status === 'booked' && (s.phone || s.email) ? '<p class="small muted" style="margin:14px 0 6px">Envoyer un rappel</p><div class="row">' +
         (s.phone ? '<a class="btn small" target="_blank" rel="noopener" href="https://wa.me/' + s.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(msg) + '">WhatsApp</a><a class="btn small" href="sms:' + encodeURIComponent(s.phone.replace(/\s/g, '')) + '?&body=' + encodeURIComponent(msg) + '">SMS</a>' : '') +
         (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Rappel — cours d\'hébreu') + '&body=' + encodeURIComponent(msg) + '">E-mail</a>' : '') + '</div>' : '') +
-      '<div class="row" style="margin-top:18px">' + (s ? '<a class="btn small" href="#/eleve/' + s.id + '/cours">Fiche de ' + esc(s.first) + '</a>' : '') +
+      '<div class="row" style="margin-top:18px">' + (b.status === 'booked' && !past ? calMenu(b, 'Hébreu · ' + sName(b.studentId), [b.note ? 'Note : ' + b.note : '', s && s.phone ? 'Tél. : ' + s.phone : ''].filter(Boolean).join('\n')) : '') +
+        (s ? '<a class="btn small" href="#/eleve/' + s.id + '/cours">Fiche de ' + esc(s.first) + '</a>' : '') +
         (b.status === 'booked' ? '<button class="btn small danger" data-cancel>' + (past ? 'Retirer de l\'historique' : 'Annuler ce cours') + '</button>' : '') + '</div>');
     $$('a[href^="#/"]', m).forEach(function (a) { a.addEventListener('click', function () { m.remove(); }); });
+    bindCalMenus(m);
     var cb = $('[data-cancel]', m);
     if (cb) cb.onclick = function () {
       if (!cb.dataset.armed) { cb.dataset.armed = 1; cb.textContent = 'Confirmer l\'annulation'; return; }
@@ -2634,7 +2652,7 @@ var HPAgendaUI = function (X) {
       var can = C.canCancel(c, b.start, now);
       return '<li><div class="ag-date"><span>' + esc(fm(tz, { weekday: 'short' }).format(b.start)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(b.start)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(b.start)) + '</span></div>' +
         '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Mayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
-        '<div class="ag-acts"><button class="btn small" data-ics="' + b.id + '">📅 Ajouter à mon agenda</button>' +
+        '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) +
         (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
     }).join('') + '</ul>' : '<p class="hp-empty">Aucun cours prévu pour l\'instant.</p>') + '</section>';
     if (c.open) {
@@ -2665,10 +2683,38 @@ var HPAgendaUI = function (X) {
     $$('[data-dur]', P.el).forEach(function (b) { b.onclick = function () { P.dur = +b.dataset.dur; P.day = null; drawPane(); }; });
     $$('[data-day]', P.el).forEach(function (b) { b.onclick = function () { P.day = b.dataset.day; drawPane(); var s = $('.ag-slots', P.el); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }; });
     $$('[data-slot]', P.el).forEach(function (b) { b.onclick = function () { confirmBook(+b.dataset.slot); }; });
-    $$('[data-ics]', P.el).forEach(function (b) { b.onclick = function () { var x = st.mine.filter(function (y) { return y.id === b.dataset.ics; })[0]; if (x) icsDownload(x, c); }; });
+    bindCalMenus(P.el);
     $$('[data-cancel]', P.el).forEach(function (b) { b.onclick = function () { var x = st.mine.filter(function (y) { return y.id === b.dataset.cancel; })[0]; if (x) confirmCancel(x); }; });
     var day = $('.ag-day.on', P.el); if (day && day.scrollIntoView) day.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
+  /* menu « Ajouter à mon agenda » : Google, Apple (iPhone, Mac), Outlook, Yahoo, ou fichier .ics pour tout autre agenda */
+  function calMenu(b, title, desc, label) {
+    var enc = encodeURIComponent, z = function (ms) { return new Date(ms).toISOString().replace(/[-:]|\.\d{3}/g, ''); };
+    var S = z(b.start), E = z(b.end), iS = new Date(b.start).toISOString(), iE = new Date(b.end).toISOString();
+    var ol = function (host) { return 'https://' + host + '/calendar/0/action/compose?rru=addevent&path=%2Fcalendar%2Faction%2Fcompose&subject=' + enc(title) + '&startdt=' + enc(iS) + '&enddt=' + enc(iE) + '&body=' + enc(desc || ''); };
+    var ics = 'data:text/calendar;charset=utf-8,' + enc(C.ics([{ uid: b.id, s: b.start, e: b.end, title: title, desc: desc }]));
+    var file = 'cours-hebreu-' + C.dayKey(b.start, LOCAL_TZ) + '.ics';
+    var links = [
+      ['Google Agenda', 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + enc(title) + '&dates=' + S + '/' + E + '&details=' + enc(desc || ''), 'g'],
+      ['Apple Calendrier (iPhone, iPad, Mac)', ics, 'a'],
+      ['Outlook.com · Hotmail', ol('outlook.live.com'), 'o'],
+      ['Outlook (Microsoft 365, pro)', ol('outlook.office.com'), 'o'],
+      ['Yahoo Agenda', 'https://calendar.yahoo.com/?v=60&title=' + enc(title) + '&st=' + S + '&et=' + E + '&desc=' + enc(desc || ''), 'y'],
+      ['Autre agenda (fichier .ics)', ics, 'f']
+    ];
+    return '<details class="ag-addcal"><summary class="btn small">📅 ' + esc(label || 'Ajouter à mon agenda') + '</summary><div class="ag-calmenu" role="menu">' +
+      links.map(function (l) {
+        return '<a role="menuitem" class="ag-cal-' + l[2] + '" href="' + esc(l[1]) + '"' + (l[1].indexOf('data:') === 0 ? ' download="' + file + '"' : ' target="_blank" rel="noopener"') + '>' + esc(l[0]) + '</a>';
+      }).join('') + '</div></details>';
+  }
+  function bindCalMenus(root) {
+    $$('.ag-addcal', root).forEach(function (d) {
+      d.addEventListener('toggle', function () { if (d.open) $$('.ag-addcal[open]').forEach(function (x) { if (x !== d) x.open = false; }); });
+      $$('a', d).forEach(function (a) { a.addEventListener('click', function () { setTimeout(function () { d.open = false; }, 50); }); });
+    });
+  }
+  function studentDesc(b, c) { return [b.note ? 'Note : ' + b.note : '', c && c.message].filter(Boolean).join('\n\n'); }
+
   function linkify(s) { return s.replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>'; }); }
   function confirmBook(t) {
     var c = P.st.cfg, e = t + P.dur * MIN, minutes = P.dur;
@@ -2682,8 +2728,8 @@ var HPAgendaUI = function (X) {
       btn.disabled = true; btn.textContent = 'Réservation…';
       HPB.agendaBook(P.sid, t, minutes, $('textarea', m).value.trim()).then(function (b) {
         $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>C\'est réservé ! 🎉</h2><p>' + esc(cap(fDay(b.start))) + ', ' + range(b) + '</p>' +
-          '<p class="small muted">Mayane voit ton cours dans son agenda.</p><div class="row"><button class="btn" data-ics>📅 Ajouter à mon agenda</button><button class="btn primary" data-ok>Parfait</button></div>';
-        $('[data-ics]', m).onclick = function () { icsDownload(b, c); };
+          '<p class="small muted">Mayane voit ton cours dans son agenda. Ajoute-le aussi au tien :</p><div class="row">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) + '<button class="btn primary" data-ok>Parfait</button></div>';
+        bindCalMenus(m);
         $('[data-ok]', m).onclick = function () { m.remove(); };
         refresh();
       }, function (er) {
@@ -2703,13 +2749,6 @@ var HPAgendaUI = function (X) {
         btn.disabled = false; $('#cc-msg', m).innerHTML = '<div class="err">' + esc(err(er && er.code, er)) + '</div>';
       });
     };
-  }
-  function icsDownload(b, c) {
-    var txt = C.ics([{ uid: b.id, s: b.start, e: b.end, title: 'Cours d\'hébreu avec Mayane', desc: [b.note, c && c.message].filter(Boolean).join('\n\n') }]);
-    var blob = new Blob([txt], { type: 'text/calendar;charset=utf-8' }), u = URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = u; a.download = 'cours-hebreu-' + C.dayKey(b.start, LOCAL_TZ) + '.ics';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(u); }, 30000);
   }
   function closePane() { if (P && P.el) { P.el.remove(); document.body.classList.remove('ag-open'); P = null; } }
 
@@ -2807,7 +2846,7 @@ var HPApp = (function () {
     var t = s.totals && typeof s.totals === 'object' ? s.totals : {};
     ['qOk', 'qKo', 'fK', 'fA', 'fS', 'cK', 'cA', 'cS', 'mastered'].forEach(function (k) { o.totals[k] = num(t[k]); });
     (Array.isArray(s.themes) ? s.themes : []).slice(0, 300).forEach(function (x) {
-      if (x && typeof x === 'object') o.themes.push({ theme: txt(x.theme), n: num(x.n), m: num(x.m), seen: num(x.seen), pct: Math.max(0, Math.min(100, num(x.pct))) });
+      if (x && typeof x === 'object') o.themes.push({ theme: txt(x.theme), n: num(x.n), m: num(x.m), seen: num(x.seen), pct: Math.max(0, Math.min(100, num(x.pct))), runs: num(x.runs) });
     });
     (Array.isArray(s.weak) ? s.weak : []).slice(0, 15).forEach(function (x) {
       if (x && typeof x === 'object') o.weak.push({ he: txt(x.he, 80), fr: txt(x.fr, 160), bad: num(x.bad), seen: num(x.seen) });

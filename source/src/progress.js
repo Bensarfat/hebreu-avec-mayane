@@ -117,7 +117,8 @@ var HP = (function () {
         if ((q && q.seen) || (f && f.seen)) seen++;
         if (wordMastered(storage, key)) m++;
       });
-      return { theme: th, n: n, m: m, seen: seen, pct: n ? Math.round(100 * m / n) : 0 };
+      var run = storage.themeRuns && storage.themeRuns[th];
+      return { theme: th, n: n, m: m, seen: seen, pct: n ? Math.round(100 * m / n) : 0, runs: run ? +run.n || 0 : 0 };
     });
   }
 
@@ -324,7 +325,8 @@ var HP = (function () {
     if (!list.length) return '<p class="hp-empty">Aucun thème pour le moment.</p>';
     return '<div class="hp-themes">' + list.map(function (t) {
       var seenPct = t.n ? Math.round(100 * t.seen / t.n) : 0;
-      return '<div class="hp-theme"><div class="hp-theme-name">' + esc(t.theme) + '</div>' +
+      return '<div class="hp-theme"><div class="hp-theme-name">' + esc(t.theme) +
+        (t.runs ? ' <span class="hp-runs" title="Série de flashcards du thème terminée ' + t.runs + ' fois">✓ ' + t.runs + '×</span>' : '') + '</div>' +
         '<div class="hp-theme-bar" title="' + t.m + ' maîtrisés, ' + t.seen + ' vus sur ' + t.n + '"><i class="seen" style="width:' + seenPct + '%"></i><i class="m" style="width:' + t.pct + '%"></i></div>' +
         '<div class="hp-theme-num">' + t.m + '/' + t.n + '</div></div>';
     }).join('') + '</div><div class="hp-legend2"><i class="m"></i> maîtrisés <i class="seen"></i> déjà vus</div>';
@@ -395,6 +397,7 @@ var HP = (function () {
     '.hp-spark{width:120px;height:30px;display:block}' +
     '.hp-themes{display:grid;gap:9px}.hp-theme{display:grid;grid-template-columns:minmax(110px,190px) 1fr 54px;gap:10px;align-items:center;font-size:13.5px}' +
     '.hp-theme-name{font-weight:600;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.hp-runs{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:var(--mint);color:var(--olive);font-size:11px;font-weight:800;vertical-align:1px}' +
     '.hp-theme-bar{position:relative;height:10px;border-radius:99px;background:var(--line);overflow:hidden}' +
     '.hp-theme-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}.hp-theme-bar .seen{background:color-mix(in srgb,var(--accent) 25%,var(--paper))}' +
     '.hp-theme-bar .m{background:var(--olive)}.hp-theme-num{text-align:right;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}' +

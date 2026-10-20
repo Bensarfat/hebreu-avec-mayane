@@ -308,3 +308,16 @@
   .ag-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
   .ag-slot { border: 1.5px solid var(--accent-soft); background: var(--paper); color: var(--accent); border-radius: 12px; padding: 10px 0; font: 800 15px var(--font-ui); cursor: pointer; font-variant-numeric: tabular-nums; }
   .ag-slot:hover, .ag-slot:focus-visible { background: var(--accent); color: var(--on-accent); }
+  /* menu « Ajouter à mon agenda » */
+  .ag-addcal { position: relative; display: inline-block; }
+  .ag-addcal > summary { list-style: none; cursor: pointer; }
+  .ag-addcal > summary::-webkit-details-marker { display: none; }
+  .ag-addcal > summary::after { content: "▾"; margin-left: 2px; font-size: 11px; }
+  .ag-calmenu { position: absolute; z-index: 70; top: calc(100% + 6px); left: 0; min-width: 250px; display: grid; padding: 6px; border-radius: 16px;
+    background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow-pop); }
+  .ag-calmenu a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .ag-calmenu a:hover, .ag-calmenu a:focus-visible { background: var(--accent-tint); color: var(--accent); }
+  .ag-calmenu a::before { content: ""; width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--muted); }
+  .ag-calmenu .ag-cal-g::before { background: #4285f4; } .ag-calmenu .ag-cal-a::before { background: #ff3b30; }
+  .ag-calmenu .ag-cal-o::before { background: #0a64ad; } .ag-calmenu .ag-cal-y::before { background: #6001d2; }
+  @media (max-width: 560px) { .ag-calmenu { position: static; margin-top: 6px; min-width: 0; box-shadow: none; } .ag-calmenu a { white-space: normal; } }

@@ -551,7 +551,7 @@
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.35969a309a.txt","demo":"assets/demo.b98348612f.json","build":"914b2b267d"};
+var ASSETS = {"student":"assets/student.35969a309a.txt","demo":"assets/demo.b98348612f.json","build":"14bbec8a8f"};
 </script>
 <script>
 /* =====================================================================
@@ -1509,17 +1509,23 @@ var HPA = (function () {
 
   /* ---------- consigne envoyée à Claude ---------- */
   var SCHEMA = '{\n' +
-    '  "themes": [ { "name": "Nom du thème en français", "words": [ { "he": "mot sans nikoud", "he_nikud": "mot avec nikoud", "fr": "traduction française", "nature": "n" } ] } ],\n' +
+    '  "themes": [ { "name": "Nom du thème en français", "words": [ { "he_nikud": "mot avec nikoud", "fr": "traduction française", "nature": "n" } ] } ],\n' +
     '  "grammar": [ { "category": "Catégorie", "title": "Titre de la fiche", "he": "titre en hébreu", "html": "<p>…</p>" } ],\n' +
     '  "summary": "une phrase qui résume le contenu du document"\n}';
-  function instructions(existingThemes, docName) {
-    return 'Tu prépares le contenu de révision d\'un élève de Mayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé (« ' + docName + ' »).\n\n' +
+  /* consigne fixe (identique pour tous les morceaux d'un document : mise en cache par l'API) */
+  function rules() {
+    return 'Tu prépares le contenu de révision d\'un élève de Mayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
-      'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he" = sans voyelles (nikoud), "he_nikud" = avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
-      'Regroupe les mots en thèmes en français. Réutilise exactement un de ces thèmes existants s\'il convient : ' + (existingThemes.length ? existingThemes.join(' ; ') : '(aucun pour l\'instant)') + '.\n\n' +
+      'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
+      'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +
       'Grammaire : une fiche par règle expliquée dans le document, en français, comme une fiche de révision claire : "html" n\'utilise que <p>, <ul>, <li>, <strong>, <em>, <br> et <div class="example"> pour les exemples, avec l\'hébreu dans <span class="he-inline">…</span>. Reprends les exemples du document.\n\n' +
       'Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
   }
+  /* partie propre au document : son nom et les thèmes déjà présents */
+  function context(existingThemes, docName) {
+    return 'Document : « ' + docName + ' ».\nThèmes existants à réutiliser s\'ils conviennent : ' + (existingThemes && existingThemes.length ? existingThemes.join(' ; ') : '(aucun pour l\'instant)') + '.';
+  }
+  function instructions(existingThemes, docName) { return rules() + '\n\n' + context(existingThemes || [], docName); }
 
   function sampleFn() {
     try { return (window.claude && window.claude.use) ? window.claude.use('sample') : Promise.resolve(null); }
@@ -1559,24 +1565,25 @@ var HPA = (function () {
   function viaServer(ex, prompt, signal, onStep) {
     var imgs = ex.images.slice(0, 6);
     return Promise.all([Promise.all(imgs.map(function (b) { return toJpeg(b).then(b64); })), authFn ? authFn() : null]).then(function (r) {
-      var list = [], total = prompt.length;
+      var list = [], total = prompt.system.length + prompt.prompt.length;
       r[0].forEach(function (x) { if (total + x.length < MAX_BODY) { list.push(x); total += x.length; } });
       if (r[0].length && !list.length) { var big = new Error('too_large'); big.code = 'too_large'; throw big; }
       onStep && onStep('Analyse par Claude… (souvent moins d\'une minute)');
       var h = { 'content-type': 'application/json' };
       if (serverCode) h['x-analyse-code'] = serverCode;
       if (r[1]) h.Authorization = 'Bearer ' + r[1];
-      return fetch('/api/analyse', { method: 'POST', headers: h, body: JSON.stringify({ prompt: prompt, images: list }), signal: signal });
+      return fetch('/api/analyse', { method: 'POST', headers: h, body: JSON.stringify({ system: prompt.system, prompt: prompt.prompt, images: list }), signal: signal });
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
-        if (r.ok && j.text) {
+        if (r.ok) {
+          /* d'abord « réponse coupée » : une réponse coupée peut être vide */
           if (j.truncated) { var t = new Error('truncated'); t.code = 'truncated'; throw t; }
-          return parseJson(j.text);
+          if (j.text) return parseJson(j.text);
         }
         var e = new Error(j.detail || j.error || ('HTTP ' + r.status));
         e.code = r.status === 404 || r.status === 405 || j.error === 'no_key' || j.error === 'not_configured' ? 'no_server'
           : r.status === 413 ? 'too_large' : r.status === 504 || j.error === 'timeout' ? 'timeout'
-          : r.status === 429 ? 'busy' : r.status === 401 && j.error === 'not_teacher' ? 'not_teacher'
+          : r.status === 402 || j.error === 'spend_limit' ? 'spend_limit' : r.status === 429 ? 'busy' : r.status === 401 && j.error === 'not_teacher' ? 'not_teacher'
           : j.error === 'bad_code' ? 'bad_code' : 'server_error';
         throw e;
       });
@@ -1588,8 +1595,8 @@ var HPA = (function () {
   }
   function buildPrompt(ex, existingThemes, docName) {
     var text = ex.text.length > 180000 ? ex.text.slice(0, 180000) : ex.text;
-    return instructions(existingThemes, docName) +
-      (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).');
+    return { system: rules(), prompt: context(existingThemes, docName) +
+      (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).') };
   }
 
   /* Un document long est analysé en plusieurs fois : la réponse de Claude a une longueur maximale
@@ -1638,7 +1645,7 @@ var HPA = (function () {
     /* file d'attente des morceaux : texte d'abord, puis les pages scannées par paquets */
     var queue = [];
     (ex.text.trim() ? chunks(ex.text) : []).forEach(function (t) { queue.push({ text: t, images: [], depth: 0 }); });
-    for (var i = 0; i < ex.images.length; i += IMG_BATCH) queue.push({ text: queue.length ? '' : '', images: ex.images.slice(i, i + IMG_BATCH), depth: 0 });
+    for (var i = 0; i < ex.images.length; i += IMG_BATCH) queue.push({ text: '', images: ex.images.slice(i, i + IMG_BATCH), depth: 0 });
     if (!queue.length) queue.push({ text: '', images: [], depth: 0 });
     var results = [], done = 0, themesSoFar = (existingThemes || []).slice();
     function label(t) {
@@ -1653,7 +1660,8 @@ var HPA = (function () {
         n.themes.forEach(function (t) { if (themesSoFar.indexOf(t.name) < 0) themesSoFar.push(t.name); });   /* mêmes noms de thèmes d'un morceau à l'autre */
         return next();
       }, function (e) {
-        if (e.code !== 'truncated' || part.depth >= 6) throw e;
+        /* réponse coupée ou trop longue à produire : on redivise ce morceau */
+        if ((e.code !== 'truncated' && e.code !== 'timeout') || part.depth >= 6) throw e;
         /* réponse trop longue : on redivise ce morceau et on recommence */
         if (part.images.length > 1) {
           var h = Math.ceil(part.images.length / 2);
@@ -1810,7 +1818,7 @@ var HPA = (function () {
 
   return {
     kind: kind, extract: extract, analyse: analyse, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
-    stats: stats, emptyContent: emptyContent, instructions: instructions, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
+    stats: stats, emptyContent: emptyContent, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();
 
@@ -3614,6 +3622,7 @@ var HPApp = (function () {
       if (e && e.code === 'no_sample') { if (el) showManual(el, d, e.extracted); return; }
       var msg = e && (e.code === 'rate_limited' || e.code === 'busy') ? 'Claude est très sollicité en ce moment : réessayez dans quelques minutes.'
         : e && e.code === 'invalid_json' ? 'La réponse de Claude n\'était pas exploitable. Réessayez.'
+        : e && e.code === 'spend_limit' ? 'Le budget mensuel de l\'analyse automatique est atteint. Benjamin peut le relever sur platform.claude.com (Settings › Limits), puis relancez l\'analyse.'
         : e && e.code === 'truncated' ? 'Une page de ce document contient trop de vocabulaire pour être analysée, même seule. Réessayez ; si l\'erreur revient, envoyez cette page en image ou en fichier séparé.'
         : e && e.code === 'timeout' ? 'L\'analyse a pris trop de temps. Réessayez, ou découpez le document.'
         : e && e.code === 'too_large' ? 'Les images de ce document sont trop lourdes : réduisez le nombre de pages ou de photos.'

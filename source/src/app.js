@@ -798,6 +798,7 @@ var HPApp = (function () {
       if (e && e.code === 'no_sample') { if (el) showManual(el, d, e.extracted); return; }
       var msg = e && (e.code === 'rate_limited' || e.code === 'busy') ? 'Claude est très sollicité en ce moment : réessayez dans quelques minutes.'
         : e && e.code === 'invalid_json' ? 'La réponse de Claude n\'était pas exploitable. Réessayez.'
+        : e && e.code === 'spend_limit' ? 'Le budget mensuel de l\'analyse automatique est atteint. Benjamin peut le relever sur platform.claude.com (Settings › Limits), puis relancez l\'analyse.'
         : e && e.code === 'truncated' ? 'Une page de ce document contient trop de vocabulaire pour être analysée, même seule. Réessayez ; si l\'erreur revient, envoyez cette page en image ou en fichier séparé.'
         : e && e.code === 'timeout' ? 'L\'analyse a pris trop de temps. Réessayez, ou découpez le document.'
         : e && e.code === 'too_large' ? 'Les images de ce document sont trop lourdes : réduisez le nombre de pages ou de photos.'

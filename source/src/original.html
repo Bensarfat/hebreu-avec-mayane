@@ -7110,6 +7110,26 @@ let storage = loadData();
     tr[n] = { n: (+a.n || 0) + (+b.n || 0), last: (a.last || '') > (b.last || '') ? a.last : b.last, best: Math.max(+a.best || 0, +b.best || 0), lastPct: (a.last || '') > (b.last || '') ? a.lastPct : b.lastPct };
     delete tr[o];
   });
+  /* Séries faites avant l'arrivée du compteur : estimation à partir de l'historique des flashcards.
+     Un thème dont chaque mot a été vu au moins N fois en flashcards a été fait environ N fois.
+     Faite une seule fois ; les séries terminées ensuite s'ajoutent normalement. */
+  if (!storage.themeRunsEstimated) {
+    var fl = storage.flash || {}, runs = storage.themeRuns || {};
+    Object.keys(VOCAB).forEach(function (t) {
+      var min = Infinity, vu = {};
+      (VOCAB[t] || []).forEach(function (e) {
+        var k = e[0] + '|' + e[1]; if (vu[k]) return; vu[k] = 1;
+        var f = fl[k]; min = Math.min(min, f ? +f.seen || 0 : 0);
+      });
+      if (!isFinite(min) || min < 1) return;
+      var r = runs[t] || { n: 0 };
+      if (min > (+r.n || 0)) { r.est = min - (+r.n || 0); r.n = min; }   /* les séries d'aujourd'hui sont déjà dans l'historique */
+      runs[t] = r;
+    });
+    storage.themeRuns = runs;
+    storage.themeRunsEstimated = new Date().toISOString().slice(0, 10);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(storage)); } catch (e) {}
+  }
 })();
 
 const state = {
@@ -7771,10 +7791,12 @@ refreshGlobalStatsDisplay();
   function runsBadge(theme) {
     var r = storage.themeRuns && storage.themeRuns[theme], n = r ? +r.n || 0 : 0;
     if (!n) return '<span class="cours-runs zero" title="Série de flashcards jamais terminée sur ce thème">pas encore fait</span>';
-    var d = r.last ? new Date(r.last) : null;
-    var tip = 'Série complète terminée ' + n + ' fois' + (d ? ' · dernière le ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '') +
-      (r.lastPct != null ? ' (' + r.lastPct + ' % sues)' : '') + (r.best != null ? ' · meilleur score ' + r.best + ' %' : '');
-    return '<span class="cours-runs' + (n >= 3 ? ' lots' : '') + '" title="' + esc(tip) + '">✓ ' + n + ' fois</span>';
+    var d = r.last ? new Date(r.last) : null, est = +r.est || 0, onlyEst = est >= n;
+    var tip = 'Série complète terminée ' + (onlyEst ? 'environ ' : '') + n + ' fois' +
+      (est ? (onlyEst ? ' (estimation d\'après ton historique de flashcards)' : ' (dont ' + est + ' estimée' + (est > 1 ? 's' : '') + ' d\'après ton historique)') : '') +
+      (d ? ' · dernière le ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '') +
+      (r.lastPct != null ? ' (' + r.lastPct + ' % sues)' : '') + (r.best ? ' · meilleur score ' + r.best + ' %' : '');
+    return '<span class="cours-runs' + (n >= 3 ? ' lots' : '') + '" title="' + esc(tip) + '">' + (onlyEst ? '≈ ' : '✓ ') + n + ' fois</span>';
   }
 
   function render() {

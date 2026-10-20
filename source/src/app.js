@@ -798,7 +798,7 @@ var HPApp = (function () {
       if (e && e.code === 'no_sample') { if (el) showManual(el, d, e.extracted); return; }
       var msg = e && (e.code === 'rate_limited' || e.code === 'busy') ? 'Claude est très sollicité en ce moment : réessayez dans quelques minutes.'
         : e && e.code === 'invalid_json' ? 'La réponse de Claude n\'était pas exploitable. Réessayez.'
-        : e && e.code === 'truncated' ? 'Le document est trop long pour être analysé d\'un coup : découpez-le en plusieurs fichiers.'
+        : e && e.code === 'truncated' ? 'Une page de ce document contient trop de vocabulaire pour être analysée, même seule. Réessayez ; si l\'erreur revient, envoyez cette page en image ou en fichier séparé.'
         : e && e.code === 'timeout' ? 'L\'analyse a pris trop de temps. Réessayez, ou découpez le document.'
         : e && e.code === 'too_large' ? 'Les images de ce document sont trop lourdes : réduisez le nombre de pages ou de photos.'
         : e && e.code === 'network' ? 'Connexion internet interrompue pendant l\'analyse. Réessayez.'
@@ -827,6 +827,11 @@ var HPApp = (function () {
     var targets = targetIds || (d ? d.students : []) || [];
     HPA.markDuplicates(res, targets.map(function (id) { return cache.contents[id]; }));
     var nWords = res.themes.reduce(function (s, t) { return s + t.words.length; }, 0);
+    /* mots déjà présents mais sans voyelles : la ré-analyse peut les compléter */
+    var vfix = targets.reduce(function (m, id) {
+      var dry = { themes: res.themes.map(function (t) { return { name: t.name, words: t.words.map(function (w) { return Object.assign({}, w, { keep: false }); }) }; }), grammar: [] };
+      return Math.max(m, HPA.merge(cache.contents[id], dry, '').vowels || 0);
+    }, 0);
     var names = targets.map(function (id) { var s = cache.students.filter(function (x) { return x.id === id; })[0]; return s ? s.first : ''; }).filter(Boolean);
     function render() {
       var keep = res.themes.reduce(function (s, t) { return s + t.words.filter(function (w) { return w.keep; }).length; }, 0) + res.grammar.filter(function (g) { return g.keep; }).length;
@@ -842,7 +847,9 @@ var HPApp = (function () {
           return '<details class="rv-gram"><summary><input type="checkbox" data-g="' + gi + '"' + (g.keep ? ' checked' : '') + '> ' + esc(g.title) + (g.he ? ' <span class="he-inline">' + esc(g.he) + '</span>' : '') + ' <span class="pill grey">' + esc(g.category) + '</span></summary><div class="body">' + g.body + '</div></details>';
         }).join('') : '') +
         (!nWords && !res.grammar.length ? '<p class="hp-empty">Aucun vocabulaire ni grammaire trouvé dans ce document.</p>' : '') +
-        '<div class="row" style="margin-top:16px"><button class="btn primary" data-apply' + (keep && names.length ? '' : ' disabled') + '>Ajouter ' + keep + ' élément' + (keep > 1 ? 's' : '') + ' à l\'espace de ' + esc(names.join(', ') || '…') + '</button>' +
+        (vfix ? '<p class="small ok" style="margin-top:12px">' + (vfix > 1 ? vfix + ' mots déjà présents recevront leurs voyelles' : '1 mot déjà présent recevra ses voyelles') + ' (nikoud).</p>' : '') +
+        '<div class="row" style="margin-top:16px"><button class="btn primary" data-apply' + ((keep || vfix) && names.length ? '' : ' disabled') + '>' +
+          (keep ? 'Ajouter ' + keep + ' élément' + (keep > 1 ? 's' : '') : 'Compléter les voyelles') + ' à l\'espace de ' + esc(names.join(', ') || '…') + '</button>' +
         '<button class="btn" data-cancel>Annuler</button></div></div>';
       $$('[data-w]', slot).forEach(function (cb) { cb.onchange = function () { var p = cb.dataset.w.split(':'); res.themes[+p[0]].words[+p[1]].keep = cb.checked; render(); }; });
       $$('[data-g]', slot).forEach(function (cb) { cb.onclick = function (e) { e.stopPropagation(); }; cb.onchange = function () { res.grammar[+cb.dataset.g].keep = cb.checked; render(); }; });
@@ -853,7 +860,7 @@ var HPApp = (function () {
         var work = targets.reduce(function (p, id) {
           return p.then(function () { return HPB.getContent(id); }).then(function (c) {
             var r = HPA.merge(c, res, name);
-            added.words = Math.max(added.words, r.words); added.grammar = Math.max(added.grammar, r.grammar);
+            added.words = Math.max(added.words, r.words); added.grammar = Math.max(added.grammar, r.grammar); added.vowels = Math.max(added.vowels || 0, r.vowels || 0);
             return HPB.setContent(id, r.content);
           });
         }, Promise.resolve()).then(function () {

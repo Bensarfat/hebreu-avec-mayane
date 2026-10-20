@@ -53,7 +53,7 @@ var HPA = (function () {
         var chars = out.reduce(function (s, o) { return s + o.text.trim().length; }, 0);
         if (chars > 80 * n) return { text: text, images: [], pages: n };
         /* PDF scanné (peu de texte) : on envoie les pages en image */
-        var imgs = [], max = Math.min(n, 8), j = 0;
+        var imgs = [], max = Math.min(n, 40), j = 0;
         function snap() {
           if (j >= max) return Promise.resolve();
           onStep && onStep('Préparation de la page ' + (j + 1) + ' (document scanné)');
@@ -164,40 +164,80 @@ var HPA = (function () {
       (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).');
   }
 
-  /* un texte long est coupé en morceaux (aux changements de page si possible) */
-  var CHUNK = 24000;
+  /* Un document long est analysé en plusieurs fois : la réponse de Claude a une longueur maximale
+     (un résumé de cours dense en vocabulaire la dépasse vite). Le texte est coupé en morceaux,
+     aux changements de page si possible ; si une réponse est quand même coupée, le morceau est
+     redivisé en deux et réanalysé, jusqu'à ce que ça passe. Les pages scannées partent par 3. */
+  var CHUNK = 9000, MIN_SPLIT = 1200, IMG_BATCH = 3;
   function chunks(text) {
     if (text.length <= CHUNK) return [text];
     var parts = text.split(/(?=--- page \d+ ---)/), out = [], cur = '';
     parts.forEach(function (p) {
-      while (p.length > CHUNK) { if (cur) { out.push(cur); cur = ''; } out.push(p.slice(0, CHUNK)); p = p.slice(CHUNK); }
+      while (p.length > CHUNK) {
+        if (cur) { out.push(cur); cur = ''; }
+        var cut = p.lastIndexOf('\n', CHUNK); if (cut < CHUNK * 0.5) cut = CHUNK;
+        out.push(p.slice(0, cut)); p = p.slice(cut);
+      }
       if ((cur + p).length > CHUNK && cur) { out.push(cur); cur = ''; }
       cur += p;
     });
     if (cur.trim()) out.push(cur);
     return out;
   }
+  /* coupe un texte en deux, au changement de page le plus proche du milieu, sinon à un retour à la ligne */
+  function halves(text) {
+    var mid = Math.floor(text.length / 2), re = /--- page \d+ ---/g, m, idx = -1, best = Infinity;
+    while ((m = re.exec(text))) if (m.index > 0 && Math.abs(m.index - mid) < best) { best = Math.abs(m.index - mid); idx = m.index; }
+    if (idx <= 0 || best > text.length * 0.3) { idx = text.lastIndexOf('\n', mid); if (idx < text.length * 0.2) idx = text.lastIndexOf(' ', mid); if (idx < text.length * 0.2) idx = mid; }
+    return [text.slice(0, idx), text.slice(idx)];
+  }
   function combine(list) {
-    var themes = {}, order = [], grammar = [], summaries = [];
+    var themes = {}, order = [], grammar = [], gseen = {}, summaries = [], seen = {};
     list.forEach(function (r) {
       (r.themes || []).forEach(function (t) {
         if (!themes[t.name]) { themes[t.name] = { name: t.name, words: [] }; order.push(t.name); }
-        themes[t.name].words = themes[t.name].words.concat(t.words || []);
+        (t.words || []).forEach(function (w) {
+          var k = wkey(w.he, w.fr); if (seen[k]) return; seen[k] = 1;   /* un mot vu dans deux morceaux n'apparaît qu'une fois */
+          themes[t.name].words.push(w);
+        });
       });
-      grammar = grammar.concat(r.grammar || []);
+      (r.grammar || []).forEach(function (g) { var k = (g.title || '').toLowerCase(); if (gseen[k]) return; gseen[k] = 1; grammar.push(g); });
       if (r.summary) summaries.push(r.summary);
     });
-    return { themes: order.map(function (n) { return themes[n]; }), grammar: grammar, summary: summaries.join(' ') };
+    return { themes: order.map(function (n) { return themes[n]; }).filter(function (t) { return t.words.length; }), grammar: grammar, summary: summaries.join(' ').slice(0, 400) };
   }
   function viaServerChunked(ex, existingThemes, docName, signal, onStep) {
-    var parts = ex.text.trim() ? chunks(ex.text) : [''], results = [];
-    return parts.reduce(function (p, part, i) {
-      return p.then(function () {
-        var exPart = { text: part, images: i === 0 ? ex.images : [] };
-        var step = parts.length > 1 ? function (t) { onStep && onStep(t.replace('…', '… partie ' + (i + 1) + ' sur ' + parts.length)); } : onStep;
-        return viaServer(exPart, buildPrompt(exPart, existingThemes, docName), signal, step).then(function (r) { results.push(normalise(r)); });
+    /* file d'attente des morceaux : texte d'abord, puis les pages scannées par paquets */
+    var queue = [];
+    (ex.text.trim() ? chunks(ex.text) : []).forEach(function (t) { queue.push({ text: t, images: [], depth: 0 }); });
+    for (var i = 0; i < ex.images.length; i += IMG_BATCH) queue.push({ text: queue.length ? '' : '', images: ex.images.slice(i, i + IMG_BATCH), depth: 0 });
+    if (!queue.length) queue.push({ text: '', images: [], depth: 0 });
+    var results = [], done = 0, themesSoFar = (existingThemes || []).slice();
+    function label(t) {
+      var total = done + queue.length + 1;
+      return total > 1 ? t.replace('…', '… partie ' + (done + 1) + ' sur ' + total + ' (document long, analysé en plusieurs fois)') : t;
+    }
+    function next() {
+      if (!queue.length) return Promise.resolve();
+      var part = queue.shift();
+      return viaServer(part, buildPrompt(part, themesSoFar, docName), signal, function (t) { onStep && onStep(label(t)); }).then(function (r) {
+        var n = normalise(r); results.push(n); done++;
+        n.themes.forEach(function (t) { if (themesSoFar.indexOf(t.name) < 0) themesSoFar.push(t.name); });   /* mêmes noms de thèmes d'un morceau à l'autre */
+        return next();
+      }, function (e) {
+        if (e.code !== 'truncated' || part.depth >= 6) throw e;
+        /* réponse trop longue : on redivise ce morceau et on recommence */
+        if (part.images.length > 1) {
+          var h = Math.ceil(part.images.length / 2);
+          queue.unshift({ text: '', images: part.images.slice(0, h), depth: part.depth + 1 }, { text: '', images: part.images.slice(h), depth: part.depth + 1 });
+        } else if (part.text.length > MIN_SPLIT) {
+          var hv = halves(part.text);
+          queue.unshift({ text: hv[0], images: part.images, depth: part.depth + 1 }, { text: hv[1], images: [], depth: part.depth + 1 });
+        } else throw e;
+        return next();
       });
-    }, Promise.resolve()).then(function () { return results.length === 1 ? results[0] : combine(results); });
+    }
+    return next().then(function () { return results.length === 1 ? results[0] : combine(results); });
   }
 
   function analyse(doc, blob, existingThemes, onStep, signal) {
@@ -263,13 +303,15 @@ var HPA = (function () {
       return {
         name: str(t && t.name, 80) || 'Divers',
         words: (Array.isArray(t && t.words) ? t.words : []).map(function (w) {
-          var he = bare(str(w && w.he) || str(w && w.he_nikud)), hv = str(w && w.he_nikud) || he, fr = str(w && w.fr), n = str(w && w.nature).charAt(0).toLowerCase();
+          /* accepte aussi un résultat déjà nettoyé (heVoc) : un second passage ne perd pas les voyelles */
+          var he = bare(str(w && w.he) || str(w && w.he_nikud) || str(w && w.heVoc)), hv = str(w && w.he_nikud) || str(w && w.heVoc) || he, fr = str(w && w.fr), n = str(w && w.nature).charAt(0).toLowerCase();
           return { he: he, heVoc: hv, fr: fr, nature: NAT[n] ? n : 'n' };
         }).filter(function (w) { return w.he && w.fr; })
       };
     }).filter(function (t) { return t.words.length; });
     var grammar = (Array.isArray(r.grammar) ? r.grammar : []).map(function (g) {
-      return { category: str(g && g.category, 80) || 'Notes de cours', title: str(g && g.title, 160), he: str(g && g.he, 160), body: clean(g && g.html) };
+      /* « html » (réponse de Claude) ou « body » (résultat déjà nettoyé) */
+      return { category: str(g && g.category, 80) || 'Notes de cours', title: str(g && g.title, 160), he: str(g && g.he, 160), body: clean(g && (g.html != null ? g.html : g.body)) };
     }).filter(function (g) { return g.title && g.body; });
     return { themes: themes, grammar: grammar, summary: str(r.summary, 400) };
   }
@@ -287,10 +329,16 @@ var HPA = (function () {
     var c = content ? JSON.parse(JSON.stringify(content)) : emptyContent();
     ['VOCAB', 'NATURE', 'VERB_PRESENT'].forEach(function (k) { if (!c[k]) c[k] = {}; });
     ['CONJ', 'CORE_THEMES', 'ADVANCED_THEMES', 'GRAMMAR_CATEGORIES', 'sources'].forEach(function (k) { if (!Array.isArray(c[k])) c[k] = []; });
-    var keys = existingKeys(c), nw = 0, ng = 0;
+    var keys = existingKeys(c), nw = 0, ng = 0, nv = 0;
     result.themes.forEach(function (t) {
       t.words.forEach(function (w) {
         var k = wkey(w.he, w.fr);
+        /* mot déjà présent sans voyelles (anciennes analyses) : on lui ajoute celles du document */
+        if (keys[k] && w.heVoc && w.heVoc !== w.he && /[\u0591-\u05C7]/.test(w.heVoc)) {
+          (c.VOCAB[keys[k]] || []).forEach(function (e) {
+            if (wkey(e[0], e[1]) === k && !/[\u0591-\u05C7]/.test(e[2] || '')) { e[2] = w.heVoc; nv++; }
+          });
+        }
         if (!w.keep || keys[k]) return;
         if (!c.VOCAB[t.name]) { c.VOCAB[t.name] = []; c.NATURE[t.name] = ''; if (c.CORE_THEMES.indexOf(t.name) < 0) c.CORE_THEMES.push(t.name); }
         var len = c.VOCAB[t.name].length;
@@ -307,7 +355,7 @@ var HPA = (function () {
       cat.items.push({ title: g.title, he: g.he, body: g.body }); ng++;
     });
     if (docName && c.sources.indexOf(docName) < 0) c.sources.push(docName);
-    return { content: c, words: nw, grammar: ng };
+    return { content: c, words: nw, grammar: ng, vowels: nv };
   }
   /* contents : contenu de chaque élève visé ; un mot n'est « déjà présent » que si TOUS l'ont */
   function markDuplicates(result, contents) {

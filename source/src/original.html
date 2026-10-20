@@ -1640,6 +1640,55 @@
     border: 1.5px solid var(--line); background: var(--paper); color: var(--muted);
   }
   .flash-dir.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  /* --- flashcards : réponse écrite --- */
+  .flash-modes { display: flex; gap: 6px; margin-left: auto; }
+  .flash-modes + .flash-dirs { margin-left: 0; }
+  .flash-mode {
+    padding: 4px 11px; cursor: pointer; border-radius: 999px; font-family: inherit; font-weight: 700; font-size: 12px;
+    border: 1.5px solid var(--line); background: var(--paper); color: var(--muted); transition: all .15s;
+  }
+  .flash-mode:hover { border-color: var(--accent); color: var(--accent); }
+  .flash-mode.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .flash-card.typed { cursor: default; user-select: text; gap: 14px; }
+  .flash-card.typed:hover { border-color: var(--line); }
+  .flash-ask { font-size: 13px; color: var(--muted); }
+  .flash-fields { width: 100%; max-width: 380px; display: grid; gap: 8px; }
+  .flash-field { display: grid; gap: 4px; text-align: left; }
+  .flash-field > span { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .flash-in {
+    width: 100%; font: 600 22px/1.3 var(--font-ui, inherit); padding: 10px 14px; color: var(--ink);
+    background: var(--paper); border: 1.5px solid var(--line-strong, var(--line)); border-radius: 14px; outline: none;
+  }
+  .flash-in[dir="rtl"] { font-family: var(--font-he); font-size: 26px; text-align: right; color: var(--he); }
+  .flash-in:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--mark); }
+  .flash-kb { width: 100%; max-width: 440px; display: grid; gap: 5px; direction: rtl; user-select: none; }
+  .flash-kb-row { display: flex; gap: 4px; justify-content: center; }
+  .flash-kb button {
+    flex: 1 1 0; min-width: 0; max-width: 40px; height: 40px; padding: 0; cursor: pointer;
+    font: 600 19px/1 var(--font-he); color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); border-radius: 9px; box-shadow: 0 1px 0 var(--line);
+  }
+  .flash-kb button:active { background: var(--accent-tint); }
+  .flash-kb .wide { max-width: 150px; flex: 4 1 0; font: 700 12px/1 var(--font-ui, inherit); color: var(--muted); }
+  .flash-kb .bs { max-width: 64px; flex: 1.6 1 0; font-size: 16px; }
+  .flash-kb-sw { background: none; border: 0; padding: 2px; cursor: pointer; font: 600 12px var(--font-ui, inherit); color: var(--accent); text-decoration: underline; }
+  .flash-verdict { font-family: var(--font-display); font-weight: 900; font-size: 18px; }
+  .flash-verdict.ok { color: var(--olive); }
+  .flash-verdict.near { color: var(--gold); }
+  .flash-verdict.bad { color: var(--bad); }
+  .flash-given { font-size: 14px; color: var(--ink-soft); display: grid; gap: 4px; }
+  .flash-given b { font-weight: 700; }
+  .flash-given .he { font-family: var(--font-he); font-size: 18px; direction: rtl; unicode-bidi: isolate; }
+  .flash-given .x { text-decoration: line-through; text-decoration-color: var(--bad); }
+  .flash-acts .btn.sugg { box-shadow: 0 0 0 3px var(--mark); }
+  @media (max-width: 700px) {
+    .flash-in { font-size: 19px; padding: 9px 12px; }
+    .flash-in[dir="rtl"] { font-size: 23px; }
+    .flash-kb button { height: 38px; font-size: 17px; }
+    .flash-acts.typed-acts { flex-direction: row; flex-wrap: wrap; }
+    .flash-acts.typed-acts .btn { flex: 1 1 40%; }
+  }
   .flash-card {
     border-radius: 22px; border: 1px solid var(--line);
     background: linear-gradient(160deg, var(--paper) 0%, var(--accent-tint) 140%);
@@ -4452,6 +4501,10 @@ Formes vocalisées selon la norme de l'Académie de la langue hébraïque&nbsp;;
       </div>
       <div class="flash-sub">
         <span id="flash-progress">—</span>
+        <span class="flash-modes" id="flash-modes" role="group" aria-label="Façon de répondre">
+          <button type="button" class="flash-mode on" data-fmode="flip" title="Retourner la carte puis dire si tu savais">Retourner</button>
+          <button type="button" class="flash-mode" data-fmode="type" title="Écrire la réponse au clavier, puis la faire corriger">Écrire</button>
+        </span>
         <span class="flash-dirs" id="flash-dirs">
           <button type="button" class="flash-dir on" data-dir="fr">FR &rarr; עב</button>
           <button type="button" class="flash-dir" data-dir="he">עב &rarr; FR</button>
@@ -7994,6 +8047,10 @@ refreshGlobalStatsDisplay();
   var dir = storage.preferences.flashDir || 'fr';
 
   var title = '', deck = [], pos = 0, flipped = false, sess = null, again = [], soft = [];
+  /* réponse écrite : on tape la réponse, le site la corrige, puis on valide (A / O / P comme d'habitude) */
+  var modesEl = document.getElementById('flash-modes');
+  var typeMode = storage.preferences.flashType === 'type';
+  var typed = null, lastIn = null;
   var runTheme = null;   /* thème du lexique en cours : une série complète compte comme un passage */
 
   function esc(s) {
@@ -8043,7 +8100,7 @@ refreshGlobalStatsDisplay();
       c.__f = Math.random() < 0.5 ? 'fr' : 'he';
       return c;
     });
-    pos = 0; flipped = false; again = []; soft = [];
+    pos = 0; flipped = false; again = []; soft = []; typed = null;
     sess = { known: 0, again: 0, soft: 0, total: deck.length };
   }
 
@@ -8073,6 +8130,163 @@ refreshGlobalStatsDisplay();
         : '<div class="flash-acts"><button class="btn primary" data-flip="1">Retourner <span class="flash-key">Espace</span></button></div>');
   }
 
+  /* ---------- correction des réponses écrites ---------- */
+  var NIKUD = /[\u0591-\u05C7]/g;
+  var FINALS = { '\u05DA': '\u05DB', '\u05DD': '\u05DE', '\u05DF': '\u05E0', '\u05E3': '\u05E4', '\u05E5': '\u05E6' };
+  function normHe(x, fold) {
+    x = String(x || '').replace(NIKUD, '').replace(/[\u05BE\u05F3\u05F4'"`.,;:!?()\[\]\-–—\/]/g, ' ').replace(/\s+/g, ' ').trim();
+    return fold ? x.replace(/[\u05DA\u05DD\u05DF\u05E3\u05E5]/g, function (c) { return FINALS[c]; }) : x;
+  }
+  var FR_SKIP = { le: 1, la: 1, les: 1, l: 1, un: 1, une: 1, des: 1, du: 1, de: 1, d: 1, se: 1, s: 1 };
+  function normFr(x) {
+    x = String(x || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return x.replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(function (w) { return w && !FR_SKIP[w]; }).join(' ');
+  }
+  /* « enseignant(e) / prof » → enseignant, enseignante, prof ; « tu (m.) » → tu */
+  function frVariants(x) {
+    var out = [];
+    String(x || '').split(/\s*(?:\/|;|,|\bou\b)\s*/).concat([x]).forEach(function (v) {
+      [v.replace(/\([^)]*\)/g, ' '), v.replace(/(\w)\((\w{1,3})\)/g, '$1$2').replace(/\([^)]*\)/g, ' ')].forEach(function (w) {
+        w = normFr(w); if (w && out.indexOf(w) < 0) out.push(w);
+      });
+    });
+    return out;
+  }
+  function heVariants(list) {
+    var out = [];
+    list.forEach(function (x) {
+      String(x || '').split(/\s*\/\s*/).concat([x]).forEach(function (v) { v = normHe(v); if (v && out.indexOf(v) < 0) out.push(v); });
+    });
+    return out;
+  }
+  function lev(a, b) {
+    if (a === b) return 0;
+    var m = a.length, n = b.length, d = [], i, j;
+    if (!m || !n) return m || n;
+    for (j = 0; j <= n; j++) d[j] = j;
+    for (i = 1; i <= m; i++) {
+      var prev = d[0]; d[0] = i;
+      for (j = 1; j <= n; j++) {
+        var t = d[j];
+        d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+        prev = t;
+      }
+    }
+    return d[n];
+  }
+  /* 'ok' (juste), 'near' (petite faute, comptée juste), 'bad' */
+  function grade(given, variants, lang) {
+    var g = lang === 'he' ? normHe(given) : normFr(given);
+    if (!g) return { res: 'bad', why: 'vide' };
+    var best = 99, why = '';
+    for (var i = 0; i < variants.length; i++) {
+      var v = variants[i];
+      if (g === v) return { res: 'ok' };
+      if (lang === 'he' && normHe(g, true) === normHe(v, true)) { best = 0; why = 'finales'; continue; }
+      var dist = lev(g, v), tol = v.length >= 9 ? 2 : (v.length >= 5 ? 1 : 0);
+      if (dist <= tol && dist < best) { best = dist; why = 'faute'; }
+    }
+    return best < 99 ? { res: 'near', why: why } : { res: 'bad' };
+  }
+  /* ce qu'on demande d'écrire pour une carte */
+  function fieldsOf(e, face) {
+    if (e && e.conj) {
+      var pr = normHe(e.pron), strip = function (v) { return v; };
+      var f = [];
+      if (face === 'fr') f.push({ label: 'présent', lang: 'he', want: [e.pres] });
+      f.push({ label: 'passé', lang: 'he', want: [e.past] }, { label: 'futur', lang: 'he', want: [e.fut] });
+      f.forEach(function (x) { x.pron = pr; x.strip = strip; });
+      return f;
+    }
+    return face === 'fr'
+      ? [{ label: '', lang: 'he', want: [e[0], e[2]] }]
+      : [{ label: '', lang: 'fr', want: [e[1]] }];
+  }
+  function siteKb() { return (storage.preferences.flashKb || 'site') === 'site'; }
+  function kbHtml() {
+    var rows = ['\u05E7\u05E8\u05D0\u05D8\u05D5\u05DF\u05DD\u05E4', '\u05E9\u05D3\u05D2\u05DB\u05E2\u05D9\u05D7\u05DC\u05DA\u05E3', '\u05D6\u05E1\u05D1\u05D4\u05E0\u05DE\u05E6\u05EA\u05E5'];
+    return '<div class="flash-kb" aria-label="Clavier hébreu">' + rows.map(function (row) {
+      return '<div class="flash-kb-row">' + row.split('').map(function (c) {
+        return '<button type="button" data-kb="' + c + '" aria-label="' + c + '">' + c + '</button>';
+      }).join('') + '</div>';
+    }).join('') +
+      '<div class="flash-kb-row"><button type="button" class="bs" data-kb="bs" aria-label="Effacer">\u232B</button>' +
+      '<button type="button" class="wide" data-kb=" ">espace</button></div></div>';
+  }
+  function typedFront(e, face) {
+    if (e && e.conj) {
+      return face === 'fr'
+        ? '<div class="flash-face-fr">' + esc(e.pronFr) + ' &mdash; ' + esc(e.fr) + '</div>'
+        : '<div class="conj-line"><span class="conj-form">' + esc(e.pron + ' ' + e.pres) + '</span></div>';
+    }
+    return face === 'fr' ? '<div class="flash-face-fr">' + esc(e[1]) + '</div>' : '<div class="flash-face-he">' + esc(e[2] || e[0]) + '</div>';
+  }
+  function typedHtml(e, face) {
+    var fields = fieldsOf(e, face), he = fields[0].lang === 'he';
+    if (!flipped) {
+      var ask = e && e.conj ? (face === 'fr' ? 'Écris le présent, le passé et le futur' : 'Écris le passé et le futur')
+        : (he ? 'Écris le mot en hébreu (sans les voyelles)' : 'Écris la traduction en français');
+      var none = he && siteKb() ? ' inputmode="none"' : '';
+      return '<div class="flash-card typed solo" id="flash-card">' + typedFront(e, face) +
+        '<div class="flash-ask">' + ask + '</div>' +
+        '<div class="flash-fields">' + fields.map(function (f, i) {
+          return '<label class="flash-field">' + (f.label ? '<span>' + f.label + '</span>' : '') +
+            '<input class="flash-in" data-i="' + i + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"' +
+            (f.lang === 'he' ? ' lang="he" dir="rtl"' + none : ' lang="fr"') +
+            ' aria-label="' + (f.label ? 'Ta réponse : ' + f.label : 'Ta réponse') + '"></label>';
+        }).join('') + '</div>' +
+        (he ? (siteKb() ? kbHtml() : '') +
+          '<button type="button" class="flash-kb-sw" data-kbsw="1">' + (siteKb() ? 'Utiliser le clavier de mon appareil' : 'Afficher le clavier hébreu') + '</button>' : '') +
+        '</div>' +
+        '<div class="flash-acts"><button class="btn primary" data-check="1">Vérifier <span class="flash-key">Entrée</span></button>' +
+        '<button class="btn" data-giveup="1">Je ne sais pas</button></div>';
+    }
+    /* après correction : la carte entière, ce qu'on a écrit, et la validation */
+    var t = typed || { res: 'bad', fields: [] };
+    var title = t.res === 'ok' ? '✓ Bonne réponse' : t.res === 'near' ? '≈ Presque : comptée juste' : (t.skipped ? 'Voici la réponse' : '✗ Pas tout à fait');
+    var why = t.res === 'near' ? (t.why === 'finales' ? 'Attention aux lettres finales (ך ם ן ף ץ).' : 'Une petite faute d\'orthographe.') : '';
+    var given = t.skipped ? '' : '<div class="flash-given">' + t.fields.map(function (f) {
+      var cls = (f.lang === 'he' ? 'he ' : '') + (f.res === 'bad' ? 'x' : '');
+      return '<div>' + (f.label ? '<b>' + f.label + '</b> : ' : 'Ta réponse : ') +
+        '<span class="' + cls + '"' + (f.lang === 'he' ? ' lang="he" dir="rtl"' : '') + '>' + (esc(f.given) || '—') + '</span> ' +
+        (f.res === 'ok' ? '✓' : f.res === 'near' ? '≈' : '✗') + '</div>';
+    }).join('') + '</div>';
+    var full = e && e.conj ? conjHtml(e, face, true) : cardHtml(e, face, true, true);
+    full = full.slice(0, full.indexOf('<div class="flash-acts">'));
+    full = full.replace('class="flash-card"', 'class="flash-card typed"').replace('id="flash-card">', 'id="flash-card"><div class="flash-verdict ' + t.res + '">' + title + '</div>' + (why ? '<div class="flash-ask">' + why + '</div>' : '') + given);
+    var sg = t.sugg;
+    var b = function (v, lbl, key) { return '<button class="btn' + (v === sg ? ' sugg' : '') + '" data-ans="' + v + '">' + lbl + ' <span class="flash-key">' + key + '</span></button>'; };
+    return full + '<div class="flash-acts typed-acts">' +
+      (sg === 'known'
+        ? b('known', 'Suivant', 'Entrée') + b('again', 'Je préfère la revoir', 'P')
+        : b('again', 'À revoir', 'Entrée') + b('known', 'C\'était juste', 'A') + b('soft', 'Non essentiel', 'O')) +
+      '</div>';
+  }
+  function check(giveUp) {
+    var e = deck[pos], face = faceOf(pos), fields = fieldsOf(e, face);
+    var ins = body.querySelectorAll('.flash-in'), all = 'ok', why = '';
+    var out = fields.map(function (f, i) {
+      var v = giveUp ? '' : ((ins[i] && ins[i].value) || '').trim();
+      var want = f.lang === 'he' ? heVariants(f.want) : frVariants(f.want[0]);
+      var gv = v;
+      if (f.pron && v) { var nv = normHe(v); if (nv.indexOf(f.pron + ' ') === 0) gv = nv.slice(f.pron.length + 1); }
+      var g = grade(gv, want, f.lang);
+      if (g.res === 'bad') all = 'bad'; else if (g.res === 'near' && all === 'ok') { all = 'near'; why = g.why; }
+      return { label: f.label, lang: f.lang, given: v, res: g.res };
+    });
+    typed = { res: all, why: why, fields: out, skipped: !!giveUp, sugg: all === 'bad' ? 'again' : 'known' };
+    flipped = true;
+    draw();
+  }
+  function setMode(t) {
+    typeMode = t;
+    storage.preferences.flashType = t ? 'type' : 'flip';
+    saveData();
+    modesEl.querySelectorAll('.flash-mode').forEach(function (x) { x.classList.toggle('on', (x.dataset.fmode === 'type') === t); });
+    flipped = false; typed = null;
+    draw();
+  }
+
   function cardHtml(e, face, showBack) {
     if (e && e.conj) return conjHtml(e, face, showBack);
     var he = esc(e[2] || e[0]);
@@ -8099,7 +8313,13 @@ refreshGlobalStatsDisplay();
     var e = deck[pos];
     progEl.textContent = 'Carte ' + (pos + 1) + ' / ' + deck.length;
     barEl.style.width = Math.round(100 * pos / deck.length) + '%';
-    body.innerHTML = cardHtml(e, faceOf(pos), flipped);
+    body.innerHTML = typeMode ? typedHtml(e, faceOf(pos)) : cardHtml(e, faceOf(pos), flipped);
+    if (typeMode) {
+      var first = body.querySelector('.flash-in');
+      if (first && !flipped) { lastIn = first; try { first.focus({ preventScroll: true }); } catch (x) { first.focus(); } }
+      var sg = flipped && body.querySelector('.flash-acts .sugg');
+      if (sg) { try { sg.focus({ preventScroll: true }); } catch (x) {} }
+    }
   }
 
   function end() {
@@ -8138,7 +8358,7 @@ refreshGlobalStatsDisplay();
     if (verdict === 'known') sess.known++;
     else if (verdict === 'soft') { sess.soft++; soft.push(e); }
     else { sess.again++; again.push(e); }
-    pos++; flipped = false;
+    pos++; flipped = false; typed = null;
     draw();
   }
 
@@ -8216,6 +8436,29 @@ refreshGlobalStatsDisplay();
   ov.addEventListener('click', function (e) {
     if (e.target === ov) return close();
     if (e.target.closest('#flash-close') || e.target.closest('[data-close]')) return close();
+    var fm = e.target.closest('.flash-mode');
+    if (fm) return setMode(fm.dataset.fmode === 'type');
+    if (typeMode && pos < deck.length) {
+      if (e.target.closest('[data-check]')) return check(false);
+      if (e.target.closest('[data-giveup]')) return check(true);
+      var kb = e.target.closest('[data-kb]');
+      if (kb) {
+        var inp = (lastIn && body.contains(lastIn)) ? lastIn : body.querySelector('.flash-in');
+        if (!inp) return;
+        var a0 = inp.selectionStart == null ? inp.value.length : inp.selectionStart, a1 = inp.selectionEnd == null ? a0 : inp.selectionEnd;
+        if (kb.dataset.kb === 'bs') { if (a0 === a1 && a0 > 0) a0--; inp.value = inp.value.slice(0, a0) + inp.value.slice(a1); }
+        else { inp.value = inp.value.slice(0, a0) + kb.dataset.kb + inp.value.slice(a1); a0 += kb.dataset.kb.length; }
+        try { inp.setSelectionRange(a0, a0); } catch (x) {}
+        return;
+      }
+      if (e.target.closest('[data-kbsw]')) {
+        var keep = Array.prototype.map.call(body.querySelectorAll('.flash-in'), function (x) { return x.value; });
+        storage.preferences.flashKb = siteKb() ? 'device' : 'site'; saveData(); draw();
+        body.querySelectorAll('.flash-in').forEach(function (x, i) { x.value = keep[i] || ''; });
+        return;
+      }
+      if (e.target.closest('#flash-card')) return;
+    }
     if (e.target.closest('#flash-card') || e.target.closest('[data-flip]')) {
       if (pos < deck.length) { flipped = !flipped; draw(); }
       return;
@@ -8241,11 +8484,28 @@ refreshGlobalStatsDisplay();
     }
   });
 
+  ov.addEventListener('focusin', function (e) { if (e.target.classList && e.target.classList.contains('flash-in')) lastIn = e.target; });
+  ov.addEventListener('mousedown', function (e) { if (e.target.closest('.flash-kb')) e.preventDefault(); });
+  modesEl.querySelectorAll('.flash-mode').forEach(function (x) { x.classList.toggle('on', (x.dataset.fmode === 'type') === typeMode); });
+
   document.addEventListener('keydown', function (e) {
     if (!ov.classList.contains('on')) return;
     if (e.key === 'Escape') { e.preventDefault(); return close(); }
     if (pos >= deck.length) return;
-    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipped = !flipped; return draw(); }
+    if (typeMode) {
+      if (!flipped) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var ins = body.querySelectorAll('.flash-in'), i = Array.prototype.indexOf.call(ins, e.target);
+          if (i >= 0 && i < ins.length - 1 && !ins[i + 1].value) return ins[i + 1].focus();   /* conjugaison : champ suivant */
+          return check(false);
+        }
+        return;   /* on écrit : les autres touches ne pilotent pas les cartes */
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); return answer(typed ? typed.sugg : 'again'); }
+    }
+    if (!typeMode && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); flipped = !flipped; return draw(); }
     if (!flipped) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var k = (e.key || '').toLowerCase();

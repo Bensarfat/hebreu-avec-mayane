@@ -7291,19 +7291,45 @@ var HPS = (function () {
     setTimeout(pick, 500); setTimeout(pick, 2000);
   }
   function attr(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  /* voix relue à chaque lecture : sous Safari, l'objet voix gardé depuis le chargement peut devenir invalide */
+  function freshVoice() {
+    if (!voice) return null;
+    var vs = synth.getVoices() || [];
+    for (var i = 0; i < vs.length; i++) if (vs[i].name === voice.name && vs[i].lang === voice.lang) return vs[i];
+    return voice;
+  }
+  var current = null, startedAt = 0, playingBtn = null;
+  function done(u) {
+    if (u && u !== current) return;
+    current = null;
+    if (playingBtn) { playingBtn.classList.remove('playing'); playingBtn = null; }
+  }
   function speak(text, btn) {
     if (!synth || !voice || !text) return false;
     var now = Date.now(), slow = !!btn && text === lastText && now - lastAt < 6000;
     lastText = text; lastAt = now;
-    try { synth.cancel(); } catch (e) {}
-    var u = new SpeechSynthesisUtterance(String(text));
-    u.voice = voice; u.lang = voice.lang; u.rate = slow ? 0.55 : 0.85;
-    if (btn) {
-      btn.classList.add('playing');
-      u.onend = u.onerror = function () { btn.classList.remove('playing'); };
-      setTimeout(function () { btn.classList.remove('playing'); }, 6000);
+    if (playingBtn && playingBtn !== btn) playingBtn.classList.remove('playing');
+    playingBtn = btn || null;
+    if (btn) btn.classList.add('playing');
+    function go() {
+      var u = new SpeechSynthesisUtterance(String(text));
+      var v = freshVoice();
+      if (v) u.voice = v;
+      u.lang = (v && v.lang) || 'he-IL';
+      u.rate = slow ? 0.55 : 0.85;
+      u.onend = u.onerror = function () { done(u); };
+      current = u; startedAt = Date.now();          /* référence gardée : sinon Chrome peut oublier la lecture en cours */
+      try { synth.resume(); } catch (e) {}
+      synth.speak(u);
+      setTimeout(function () { if (current === u && !synth.speaking && !synth.pending) done(u); }, 8000);
     }
-    synth.speak(u);
+    /* Arrêter une lecture puis en lancer une autre immédiatement fait perdre la seconde (Safari, Chrome) :
+       on arrête, puis on attend un court instant avant de relancer. */
+    if (synth.speaking || synth.pending || current) {
+      try { synth.cancel(); } catch (e) {}
+      current = null;
+      setTimeout(go, 120);
+    } else go();
     return true;
   }
   function btn(text, cls) {

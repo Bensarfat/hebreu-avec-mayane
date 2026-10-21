@@ -74,10 +74,27 @@ var HPApp = (function () {
     var h = 0; String(id).split('').forEach(function (ch) { h = (h * 31 + ch.charCodeAt(0)) >>> 0; });
     return COLORS[h % COLORS.length][0];
   }
+  /* personnages proposés à la place de la photo */
+  var CHARS = [
+    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['👩‍✈️', 'pilote'], ['👨‍✈️', 'pilote'],
+      ['👩‍🏫', 'professeure'], ['👨‍🏫', 'professeur'], ['👩‍🔬', 'scientifique'], ['👨‍🔬', 'scientifique'], ['👩‍💻', 'informaticienne'], ['👨‍💻', 'informaticien'],
+      ['👩‍🍳', 'cuisinière'], ['👨‍🍳', 'cuisinier'], ['👩‍⚖️', 'avocate'], ['👨‍⚖️', 'avocat'], ['👩‍🚒', 'pompière'], ['👨‍🚒', 'pompier'],
+      ['👮‍♀️', 'policière'], ['👮‍♂️', 'policier'], ['👷‍♀️', 'architecte'], ['👷‍♂️', 'ingénieur'], ['👩‍🌾', 'agricultrice'], ['👨‍🌾', 'agriculteur'],
+      ['👩‍💼', 'cheffe d\'entreprise'], ['👨‍💼', 'chef d\'entreprise'], ['👩‍🚀', 'astronaute'], ['👨‍🚀', 'astronaute'], ['🕵️‍♀️', 'détective'], ['🕵️‍♂️', 'détective']]],
+    ['Musique et arts', [['👩‍🎤', 'chanteuse'], ['👨‍🎤', 'chanteur'], ['🎸', 'guitare'], ['🎹', 'piano'], ['🎻', 'violon'], ['🥁', 'batterie'], ['🎺', 'trompette'],
+      ['🎷', 'saxophone'], ['👩‍🎨', 'artiste'], ['👨‍🎨', 'artiste'], ['💃', 'danseuse'], ['🕺', 'danseur'], ['🎬', 'cinéma'], ['📸', 'photographe']]],
+    ['Sport', [['⚽', 'football'], ['🏀', 'basket'], ['🎾', 'tennis'], ['🏊', 'natation'], ['🚴', 'vélo'], ['🏃', 'course'], ['🧘', 'yoga'], ['🥋', 'judo'], ['⛷️', 'ski'], ['🏄', 'surf']]],
+    ['Imaginaire', [['🦸‍♀️', 'super-héroïne'], ['🦸‍♂️', 'super-héros'], ['🧙‍♀️', 'magicienne'], ['🧙‍♂️', 'magicien'], ['🧚', 'fée'], ['🧜‍♀️', 'sirène'],
+      ['👸', 'princesse'], ['🤴', 'prince'], ['🥷', 'ninja'], ['🤖', 'robot'], ['👽', 'extraterrestre'], ['🦄', 'licorne']]],
+    ['Animaux', [['🦁', 'lion'], ['🐯', 'tigre'], ['🐻', 'ours'], ['🐼', 'panda'], ['🐨', 'koala'], ['🦊', 'renard'], ['🐱', 'chat'], ['🐶', 'chien'],
+      ['🐰', 'lapin'], ['🐵', 'singe'], ['🐸', 'grenouille'], ['🦉', 'chouette'], ['🐧', 'pingouin'], ['🐬', 'dauphin'], ['🦋', 'papillon'], ['🐢', 'tortue']]]
+  ];
+  var CHAR_OK = {}; CHARS.forEach(function (g) { g[1].forEach(function (c) { CHAR_OK[c[0]] = 1; }); });
   function avatar(s, cls) {
-    var ph = look(s.id).photo;
-    return '<span class="av' + (cls ? ' ' + cls : '') + '" style="background:' + stColor(s.id) + '">' +
-      (/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(ph || '') ? '<img src="' + ph + '" alt="">' : initials(s)) + '</span>';
+    var l = look(s.id), c = stColor(s.id), ph = l.photo;
+    if (/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(ph || '')) return '<span class="av' + (cls ? ' ' + cls : '') + '" style="background:' + c + '"><img src="' + ph + '" alt=""></span>';
+    if (CHAR_OK[l.char]) return '<span class="av emo' + (cls ? ' ' + cls : '') + '" style="background:color-mix(in srgb, ' + c + ' 30%, #fff);box-shadow:inset 0 0 0 2px ' + c + '"><span aria-hidden="true">' + l.char + '</span></span>';
+    return '<span class="av' + (cls ? ' ' + cls : '') + '" style="background:' + c + '">' + initials(s) + '</span>';
   }
   function setLook(id, patch) {
     return HPB.getSettings().then(function (st) {
@@ -718,13 +735,14 @@ var HPApp = (function () {
         (s.pw ? accessCard(s, s.pw) : '<p class="small muted">Mot de passe non enregistré pour ce compte : définissez-en un ci-dessous.</p>') +
         '<form id="pwf" style="margin-top:16px"><label class="f">Changer le mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" id="pw-new" value="" placeholder="nouveau mot de passe" minlength="6" required autocomplete="off"><button type="button" class="btn small" data-gen title="Proposer un mot de passe">↻</button></span></label>' +
         '<div class="row" style="margin-top:10px"><button class="btn" type="submit">Enregistrer le nouveau mot de passe</button></div></form></div>' +
-      '<div class="card" data-look="' + s.id + '"><h3>Couleur et photo</h3><div class="row" style="gap:16px">' + avatar(s, 'lg') +
-        '<div class="row"><label class="btn small">📷 ' + (look(s.id).photo ? 'Changer la photo' : 'Ajouter une photo') + '<input type="file" accept="image/*" data-photo hidden></label>' +
-        (look(s.id).photo ? '<button type="button" class="btn small ghost" data-nophoto>Retirer la photo</button>' : '') + '</div></div>' +
+      '<div class="card" data-look="' + s.id + '"><h3>Couleur, personnage ou photo</h3><div class="row" style="gap:16px">' + avatar(s, 'lg') +
+        '<div class="row"><button type="button" class="btn small" data-chars>🦸 ' + (look(s.id).char ? 'Changer de personnage' : 'Choisir un personnage') + '</button>' +
+        '<label class="btn small">📷 ' + (look(s.id).photo ? 'Changer la photo' : 'Ajouter une photo') + '<input type="file" accept="image/*" data-photo hidden></label>' +
+        (look(s.id).photo || look(s.id).char ? '<button type="button" class="btn small ghost" data-nophoto>Revenir aux initiales</button>' : '') + '</div></div>' +
         '<div class="swatches" role="group" aria-label="Couleur de ' + esc(s.first) + '">' + COLORS.map(function (c) {
           return '<button type="button" class="sw' + (c[0] === stColor(s.id) ? ' on' : '') + '" data-color="' + c[0] + '" style="background:' + c[0] + '" title="' + c[1] + '" aria-label="' + c[1] + '" aria-pressed="' + (c[0] === stColor(s.id)) + '"></button>';
         }).join('') + '</div>' +
-        '<p class="small muted" style="margin:12px 0 0">La couleur repère ' + esc(s.first) + ' dans la liste des élèves et dans l\'agenda. La photo n\'est visible que par vous.</p></div>' +
+        '<p class="small muted" style="margin:12px 0 0">La couleur repère ' + esc(s.first) + ' dans la liste des élèves et dans l\'agenda. Le personnage ou la photo ne sont visibles que par vous.</p></div>' +
       '<div class="card"><h3>Accès</h3><div class="row">' +
         (s.active === false ? '<button class="btn" data-act="activate">Réactiver le compte</button>' : '<button class="btn" data-act="suspend">Suspendre le compte</button>') +
         '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
@@ -1047,9 +1065,19 @@ var HPApp = (function () {
       var ph = $('[data-photo]', card), rm = $('[data-nophoto]', card);
       if (ph) ph.onchange = function () {
         var f = ph.files && ph.files[0]; ph.value = '';
-        if (f) shrinkPhoto(f).then(function (d) { return save({ photo: d }, 'Photo enregistrée'); }, function () { toast('Cette image n\'a pas pu être lue : essayez une photo en JPEG ou PNG.', true); });
+        if (f) shrinkPhoto(f).then(function (d) { return save({ photo: d, char: '' }, 'Photo enregistrée'); }, function () { toast('Cette image n\'a pas pu être lue : essayez une photo en JPEG ou PNG.', true); });
       };
-      if (rm) rm.onclick = function () { save({ photo: '' }, 'Photo retirée'); };
+      if (rm) rm.onclick = function () { save({ photo: '', char: '' }, 'Initiales rétablies'); };
+      var ch = $('[data-chars]', card);
+      if (ch) ch.onclick = function () {
+        var cur = look(id).char;
+        var m = modal('<h2>Choisir un personnage</h2>' + CHARS.map(function (g) {
+          return '<h4 class="char-h">' + g[0] + '</h4><div class="chars">' + g[1].map(function (c) {
+            return '<button type="button" class="char' + (c[0] === cur ? ' on' : '') + '" data-char="' + c[0] + '" title="' + esc(c[1]) + '" aria-label="' + esc(c[1]) + '">' + c[0] + '</button>';
+          }).join('') + '</div>';
+        }).join(''));
+        $$('[data-char]', m).forEach(function (b) { b.onclick = function () { m.remove(); save({ char: b.dataset.char, photo: '' }, 'Personnage enregistré'); }; });
+      };
     });
     $$('[data-auto]').forEach(function (cb) {
       cb.onchange = function () {

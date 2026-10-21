@@ -578,7 +578,7 @@
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"861b890989"};
+var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"81dd740b33"};
 </script>
 <script>
 /* =====================================================================
@@ -2173,6 +2173,18 @@ var HPA = (function () {
 var HPHome = (function () {
   'use strict';
 
+  /* Illustration d'accueil : « bonne réussite » et les quatre verbes */
+  var SCENE = '<div class="mv-scene" role="img" aria-label="Parler, travailler, vivre, aimer en hébreu">' +
+    '<i class="mv-l l1">א</i><i class="mv-l l2">ש</i><i class="mv-l l3">ל</i><i class="mv-l l4">מ</i>' +
+    '<i class="mv-c c1"></i><i class="mv-c c2"></i><i class="mv-c c3"></i><i class="mv-c c4"></i><i class="mv-c c5"></i>' +
+    '<div class="mv-scene-t"><span class="e">🏆</span><span lang="he" dir="rtl">בְּהַצְלָחָה!</span></div>' +
+    '<div class="mv-tiles">' +
+      '<div class="mv-tile t1"><span class="e">💬</span><b lang="he" dir="rtl">לְדַבֵּר</b></div>' +
+      '<div class="mv-tile t2"><span class="e">💼</span><b lang="he" dir="rtl">לַעֲבוֹד</b></div>' +
+      '<div class="mv-tile t3"><span class="e">🏡</span><b lang="he" dir="rtl">לִחְיוֹת</b></div>' +
+      '<div class="mv-tile t4"><span class="e">❤️</span><b lang="he" dir="rtl">לֶאֱהוֹב</b></div>' +
+    '</div></div>';
+
   /* Illustration : Maayane (grande, brune, yeux marron, souriante) */
   var PORTRAIT = '' +
   '<svg class="mv-portrait" viewBox="0 0 360 440" role="img" aria-label="Illustration de Maayane">' +
@@ -2234,16 +2246,27 @@ var HPHome = (function () {
     '.mv{min-height:100vh}' +
     '.mv-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:0 auto;padding:18px 16px}' +
     '.mv-hero{max-width:1120px;margin:0 auto;padding:24px 16px 56px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}' +
-    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;max-width:220px;margin:0 auto}.mv-b2{top:64%;right:-14%}}' +
+    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;width:100%;max-width:250px;margin:6px auto 0}}' +
     '.mv-hero h1{font:900 clamp(36px,6vw,62px)/1.04 var(--font-display);letter-spacing:-.025em;margin:14px 0 0;text-wrap:balance}' +
     '.mv-hero h1 .grad{display:inline-block}' +
     '.mv-lead{font-size:clamp(16px,2vw,19px);color:var(--ink-soft);margin:18px 0 26px;max-width:560px}' +
     '.mv-he{font:700 clamp(22px,3vw,30px) var(--font-he);color:var(--he);margin-top:10px;direction:rtl;text-align:left}' +
     '.mv-cta{display:flex;gap:10px;flex-wrap:wrap}.mv-cta .btn{padding:14px 24px;font-size:15.5px}' +
-    '.mv-art{position:relative}.mv-portrait{width:100%;height:auto;display:block;filter:drop-shadow(0 30px 40px rgba(84,52,150,.25))}' +
+    '.mv-art{position:relative;container-type:inline-size;width:100%}.mv-portrait{width:100%;height:auto;display:block;filter:drop-shadow(0 30px 40px rgba(84,52,150,.25))}' +
     '.mv-bubble{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:10px 14px;box-shadow:var(--shadow-card);font-size:13.5px;font-weight:700;color:var(--ink);display:flex;gap:8px;align-items:center;animation:mvFloat 5s ease-in-out infinite}' +
     '.mv-bubble .he{color:var(--accent);font-size:16px}' +
-    '.mv-b1{left:-6%;top:14%}.mv-b2{right:-4%;top:46%;animation-delay:-2s}.mv-b3{left:2%;bottom:10%;animation-delay:-3.5s}' +
+    '.mv-bubble .e{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:18px;line-height:1}.mv-bubble{max-width:230px;line-height:1.25}' +
+    '.mv-b1{left:-12%;top:2%}.mv-b2{right:-10%;top:10%;animation-delay:-2s}.mv-b3{left:-12%;bottom:9%;animation-delay:-3.5s}.mv-b4{right:-8%;bottom:-3%;animation-delay:-1s}' +
+    '@media (max-width:860px){.mv-bubble{font-size:11.5px;padding:7px 9px;max-width:140px;border-radius:14px}.mv-bubble .e{font-size:14px}.mv-b1{left:-20%;top:1%}.mv-b2,.mv-b3{display:none}.mv-b4{right:-20%;bottom:-3%}}' +
+    '.mv-scene{position:relative;container-type:inline-size;aspect-ratio:360/440;border-radius:44% 44% 28px 28px / 28% 28% 28px 28px;overflow:hidden;background:linear-gradient(150deg,var(--accent),var(--accent-2));box-shadow:0 30px 60px -30px var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:7cqw;padding:30cqw 10cqw 0}' +
+    '.mv-scene-t{position:relative;display:flex;align-items:center;gap:3cqw;font:800 12cqw/1 var(--font-he);color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.18)}.mv-scene-t .e{font:11cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;text-shadow:none}' +
+    '.mv-tiles{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:5cqw;width:84%}' +
+    '.mv-tile{background:#fff;border-radius:6cqw;padding:5cqw 2cqw 4cqw;display:flex;flex-direction:column;align-items:center;gap:2cqw;box-shadow:0 10px 24px -14px rgba(30,20,60,.55)}' +
+    '.mv-tile .e{font:11cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif}.mv-tile b{font:700 6cqw/1.1 var(--font-he);color:#5a3fe0}' +
+    '.mv-tile.t1{transform:rotate(-4deg);background:#eef4ff}.mv-tile.t2{transform:rotate(3deg);background:#fff3e6}.mv-tile.t3{transform:rotate(2deg);background:#e8f8f0}.mv-tile.t4{transform:rotate(-3deg);background:#ffeef3}' +
+    '.mv-medal-x{position:absolute;left:50%;margin-left:-8.5cqw;top:5cqw;width:17cqw;height:17cqw;border-radius:50%;background:#fff;display:grid;place-items:center;font:10cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;box-shadow:0 8px 20px -8px rgba(0,0,0,.35);transform:rotate(10deg)}' +
+    '.mv-l{position:absolute;font:700 11cqw var(--font-he);color:#fff;opacity:.16;font-style:normal}.mv-l.l1{left:8cqw;top:10cqw}.mv-l.l2{right:30cqw;top:4cqw;font-size:8cqw}.mv-l.l3{left:5cqw;bottom:14cqw;font-size:9cqw}.mv-l.l4{right:7cqw;bottom:8cqw}' +
+    '.mv-c{position:absolute;width:2.6cqw;height:2.6cqw;border-radius:50%;background:#ffd166;opacity:.9}.mv-c.c1{left:22cqw;top:20cqw}.mv-c.c2{right:24cqw;top:28cqw;background:#7cf0c6}.mv-c.c3{left:12cqw;top:36cqw;background:#ffb3c8;width:2cqw;height:2cqw}.mv-c.c4{right:12cqw;bottom:30cqw;background:#9ad7ff}.mv-c.c5{left:46cqw;bottom:5cqw;background:#ffd166;width:2cqw;height:2cqw}' +
     '@keyframes mvFloat{50%{transform:translateY(-8px)}}' +
     '@media (prefers-reduced-motion:reduce){.mv-bubble{animation:none}}' +
     '.mv-sec{max-width:1120px;margin:0 auto;padding:30px 16px}' +
@@ -2279,10 +2302,11 @@ var HPHome = (function () {
         '<div class="mv-he" lang="he" dir="rtl">לְדַבֵּר, לַעֲבוֹד, לִחְיוֹת, לֶאֱהוֹב – בְּעִבְרִית</div>' +
         '<p class="mv-lead">Des cours en hébreu, avec le français pour t’aider quand tu en as besoin, à ton rythme et avec le sourire. Et un espace de révision rien qu’à toi : ton vocabulaire, tes règles de grammaire, tes flashcards, préparés à partir de tes propres cours.</p>' +
         '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
-      '</div><div class="mv-art">' + PORTRAIT +
-        '<div class="mv-bubble mv-b1"><span class="he">שָׁלוֹם!</span> Bonjour !</div>' +
-        '<div class="mv-bubble mv-b2">🔥 7 jours d\'affilée</div>' +
-        '<div class="mv-bubble mv-b3">⭐ +10 XP</div>' +
+      '</div><div class="mv-art">' + SCENE +
+        '<div class="mv-bubble mv-b1"><span class="e">💬</span>J\'ai tenu toute une conversation !</div>' +
+        '<div class="mv-bubble mv-b2"><span class="e">💼</span>Entretien d’embauche réussi !</div>' +
+        '<div class="mv-bubble mv-b3"><span class="e">🏡</span>Tout compris chez le médecin</div>' +
+        '<div class="mv-bubble mv-b4"><span class="e">❤️</span>Mes enfants me répondent en hébreu !</div>' +
       '</div></section>' +
 
       '<section class="mv-sec"><div class="mv-feats mv-four">' +

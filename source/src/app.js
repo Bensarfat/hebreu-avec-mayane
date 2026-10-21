@@ -183,7 +183,7 @@ var HPApp = (function () {
     if (s.role === 'teacher') {
       /* données gardées en mémoire entre les pages ; rechargées après une modification ou au bout d'une minute */
       if (cache.loadedAt && Date.now() - cache.loadedAt < 60000) return renderTeacher();
-      return loadAll().then(renderTeacher, function (e) { renderFatal('Impossible de charger vos données (' + errText(e) + '). Rechargez la page.'); });
+      return loadAll().then(function () { renderTeacher(); autoRun(); }, function (e) { renderFatal('Impossible de charger vos données (' + errText(e) + '). Rechargez la page.'); });
     }
     sess(null); renderLogin();
   }
@@ -774,20 +774,33 @@ var HPApp = (function () {
     if (refused.length) toast(refused.map(function (f) { return f.name; }).join(', ') + ' : format non lu. Enregistrez-le en .docx ou en PDF.', true);
     if (!files.length) return;
     var drop = $('#drop'); if (drop) drop.classList.add('busy');
-    var ok = 0, added = [];
+    var ok = 0;
     /* un par un : chaque ajout relit la liste, des ajouts simultanés s'écraseraient */
     files.reduce(function (p, f) {
-      return p.then(function () { return HPB.addDoc(f, targets).then(function (d) { ok++; if (d && d.id) added.push(d.id); }, function (e) { toast(f.name + ' n\'a pas pu être déposé : ' + errText(e), true); }); });
+      return p.then(function () { return HPB.addDoc(f, targets).then(function () { ok++; }, function (e) { toast(f.name + ' n\'a pas pu être déposé : ' + errText(e), true); }); });
     }, Promise.resolve()).then(function () {
       if (ok) toast(plural(ok, 'document déposé', 'documents déposés'));
       return loadAll();
     }).then(function () {
       renderTeacher();
-      /* élèves en intégration automatique : on lance l'analyse tout de suite */
-      return added.reduce(function (p, id) {
-        return p.then(function () { var d = cache.docs.filter(function (x) { return x.id === id; })[0]; return d && autoDoc(d) ? runAnalysis(id) : null; });
-      }, Promise.resolve());
+      return autoRun();
     }, function (e) { if (drop) drop.classList.remove('busy'); toast('Dépôt interrompu : ' + errText(e), true); });
+  }
+
+  /* élèves en intégration automatique : tous leurs documents en attente sont analysés et ajoutés
+     d'un coup, l'un après l'autre, sans clic. retry : reprend aussi ceux dont l'analyse a échoué. */
+  var autoBusy = false, autoTried = {};
+  function autoRun(retry) {
+    if (autoBusy) return Promise.resolve();
+    var ids = cache.docs.filter(function (d) {
+      return d.status !== 'done' && (retry || (d.status !== 'error' && !autoTried[d.id])) && autoDoc(d) && HPA.kind(d) !== 'doc';
+    }).map(function (d) { return d.id; });
+    if (!ids.length) return Promise.resolve();
+    autoBusy = true;
+    ids.forEach(function (id) { autoTried[id] = 1; });
+    if (ids.length > 1) toast('Analyse automatique de ' + ids.length + ' documents…');
+    return ids.reduce(function (p, id) { return p.then(function () { return runAnalysis(id); }); }, Promise.resolve())
+      .then(function () { autoBusy = false; if (ids.length > 1) toast('Analyse automatique terminée'); return autoRun(); }, function () { autoBusy = false; });
   }
 
   function runAnalysis(docId) {
@@ -994,6 +1007,7 @@ var HPApp = (function () {
         }).then(function () {
           toast(on ? 'Intégration automatique activée' : 'Intégration automatique désactivée : vous relirez chaque document');
           renderTeacher();
+          if (on) autoRun(true);
         }, function (e) { cb.checked = !on; cb.disabled = false; toast('Enregistrement impossible : ' + errText(e), true); });
       };
     });

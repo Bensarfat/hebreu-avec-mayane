@@ -85,7 +85,7 @@ var HPHome = (function () {
     '.mv-step .n{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:900 20px var(--font-display);margin-bottom:14px}' +
     '.mv-step h3{font:800 18px var(--font-display);margin:0 0 6px}.mv-step p{margin:0;color:var(--ink-soft);font-size:14.5px}' +
     '.mv-feats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media (max-width:860px){.mv-feats{grid-template-columns:1fr 1fr}}' +
-    '.mv-feat{border-radius:22px;padding:18px;background:var(--glass);border:1px solid var(--line)}.mv-feat .ic{font-size:26px}.mv-feat b{display:block;margin:8px 0 2px;font-family:var(--font-display);font-size:16px}.mv-feat span{font-size:13.5px;color:var(--ink-soft)}' +
+    '.mv-feat{border-radius:22px;padding:18px;background:var(--glass);border:1px solid var(--line)}.mv-feat .ic{font-size:26px}.mv-feat b{display:block;margin:8px 0 2px;font-family:var(--font-display);font-size:16px}.mv-feat span{font-size:13.5px;color:var(--ink-soft)}.mv-four .mv-feat b .he{color:var(--he);font-size:15px;margin-left:6px}' +
     '.mv-about{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:var(--shadow-card)}' +
     '@media (max-width:700px){.mv-about{grid-template-columns:1fr;text-align:center}.mv-about .mv-face{margin:0 auto}}' +
     '.mv-face{width:120px;height:120px;border-radius:36px;overflow:hidden;background:var(--accent-tint)}.mv-face svg{width:100%;height:auto;transform:scale(1.7) translateY(-2%)}' +
@@ -106,14 +106,21 @@ var HPHome = (function () {
         '<button class="btn" data-go="login">Mon espace</button></header>' +
       '<section class="mv-hero"><div>' +
         '<span class="kicker">Cours d\'hébreu en français · tous niveaux</span>' +
-        '<h1>Apprendre l\'hébreu,<br>à ton rythme, <span class="grad">avec le sourire</span></h1>' +
-        '<div class="mv-he">לוֹמְדִים עִבְרִית בְּיַחַד</div>' +
-        '<p class="mv-lead">Des cours vivants, en français, pour parler hébreu avec plaisir. Après chaque cours, tu retrouves dans ton espace personnel le vocabulaire, la grammaire et les flashcards de ce que tu viens d\'apprendre, pour réviser quand tu veux, à ton rythme.</p>' +
+        '<h1>Parle, travaille, vis, aime… <span class="grad">en hébreu</span></h1>' +
+        '<div class="mv-he" lang="he" dir="rtl">מְדַבְּרִים, עוֹבְדִים, חַיִּים, אוֹהֲבִים – בְּעִבְרִית</div>' +
+        '<p class="mv-lead">Des cours en hébreu, à ton rythme et avec le sourire. Et un espace de révision rien qu’à toi : ton vocabulaire, tes règles de grammaire, tes flashcards, préparés à partir de tes propres cours.</p>' +
         '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
       '</div><div class="mv-art">' + PORTRAIT +
         '<div class="mv-bubble mv-b1"><span class="he">שָׁלוֹם!</span> Bonjour !</div>' +
         '<div class="mv-bubble mv-b2">🔥 7 jours d\'affilée</div>' +
         '<div class="mv-bubble mv-b3">⭐ +10 XP</div>' +
+      '</div></section>' +
+
+      '<section class="mv-sec"><div class="mv-feats mv-four">' +
+        '<div class="mv-feat"><div class="ic">💬</div><b>Parle <span class="he" lang="he" dir="rtl">מְדַבְּרִים</span></b><span>Oser la conversation du quotidien, sans traduire dans ta tête.</span></div>' +
+        '<div class="mv-feat"><div class="ic">💼</div><b>Travaille <span class="he" lang="he" dir="rtl">עוֹבְדִים</span></b><span>L’hébreu des réunions, des mails et des entretiens.</span></div>' +
+        '<div class="mv-feat"><div class="ic">🏡</div><b>Vis <span class="he" lang="he" dir="rtl">חַיִּים</span></b><span>La banque, le médecin, l’école des enfants. Se sentir chez soi.</span></div>' +
+        '<div class="mv-feat"><div class="ic">❤️</div><b>Aime <span class="he" lang="he" dir="rtl">אוֹהֲבִים</span></b><span>Parler avec ta belle-famille, tes amis, ton amoureux… et tomber amoureux de la langue.</span></div>' +
       '</div></section>' +
 
       '<section class="mv-sec" id="comment"><h2>Comment ça marche</h2><p class="mv-sub">Le cours, puis la révision : tout ce que tu vois en classe se retrouve dans ton espace.</p>' +

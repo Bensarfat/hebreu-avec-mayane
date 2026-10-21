@@ -76,7 +76,7 @@ var HPApp = (function () {
   }
   /* personnages proposés à la place de la photo */
   var CHARS = [
-    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['💊', 'pharmacien·ne'], ['🐾', 'vétérinaire'],
+    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['💊', 'pharmacien·ne'], ['🐾', 'vétérinaire'], ['🧠', 'psychologue'], ['🛋️', 'psychanalyste'],
       ['👩‍✈️', 'pilote'], ['👨‍✈️', 'pilote'], ['👩‍🚀', 'astronaute'], ['👨‍🚀', 'astronaute'], ['👩‍🏫', 'professeure'], ['👨‍🏫', 'professeur'],
       ['👩‍🔬', 'chercheuse'], ['👨‍🔬', 'chercheur'], ['👩‍💻', 'informaticienne'], ['👨‍💻', 'informaticien'], ['👩‍🍳', 'cheffe cuisinière'], ['👨‍🍳', 'chef cuisinier'],
       ['👩‍⚖️', 'avocate'], ['👨‍⚖️', 'avocat'], ['👩‍💼', 'cheffe d\'entreprise'], ['👨‍💼', 'chef d\'entreprise'], ['👩‍🚒', 'pompière'], ['👨‍🚒', 'pompier'],

@@ -1,0 +1,3 @@
+# Site privé : aucune page ne doit être explorée ni répertoriée par les moteurs de recherche.
+User-agent: *
+Disallow: /

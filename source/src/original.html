@@ -1641,6 +1641,92 @@
   }
   .flash-dir.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+  /* --- Réviser : révision espacée et jeux courts --- */
+  #panel-revise .rv-today { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 22px; box-shadow: var(--shadow-card); }
+  .rv-head { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+  .rv-today h2 { font-family: var(--font-display); font-weight: 900; font-size: 22px; margin: 0 0 4px; color: var(--ink); }
+  .rv-sub { color: var(--ink-soft); margin: 0; font-size: 14.5px; line-height: 1.5; }
+  .rv-big { min-width: 86px; text-align: center; background: var(--accent-tint); border-radius: 18px; padding: 10px 12px; }
+  .rv-big b { display: block; font: 900 30px/1.05 var(--font-display); color: var(--accent); }
+  .rv-big span { font-size: 12px; color: var(--ink-soft); }
+  .rv-acts { display: flex; gap: 10px; margin: 18px 0 4px; flex-wrap: wrap; }
+  .rv-acts .btn { flex: 1 1 220px; padding: 14px 16px; font-size: 14px; border-radius: 999px; }
+  .rv-acts .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--on-accent); border-color: transparent; }
+  .rv-acts .btn:disabled { opacity: .55; cursor: default; }
+  .rv-boxes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 20px 0 6px; }
+  .rv-box { text-align: center; font-size: 11.5px; line-height: 1.3; color: var(--ink-soft); }
+  .rv-box i { display: block; height: 46px; border-radius: 10px; background: var(--hover); position: relative; overflow: hidden; margin-bottom: 6px; }
+  .rv-box i b { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent-soft); border-radius: 10px 10px 0 0; }
+  .rv-box strong { display: block; font-size: 15px; color: var(--ink); }
+  .rv-note { font-size: 13px; color: var(--ink-soft); margin: 12px 0 0; line-height: 1.5; }
+  .rv-h { font-family: var(--font-display); font-weight: 900; font-size: 18px; margin: 26px 0 12px; color: var(--ink); }
+  .rv-games { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .rv-game {
+    display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; padding: 18px; border-radius: 20px;
+    border: 1px solid var(--line); background: var(--paper); cursor: pointer; font-family: inherit; color: var(--ink); box-shadow: var(--shadow-card);
+  }
+  .rv-game:hover { border-color: var(--accent-soft); }
+  .rv-game .rv-ic { font-size: 24px; line-height: 1; }
+  .rv-game b { font-family: var(--font-display); font-weight: 900; font-size: 16px; }
+  .rv-game span { font-size: 13.5px; color: var(--ink-soft); line-height: 1.4; }
+  .rv-game small { font-size: 12px; color: var(--accent); font-weight: 700; margin-top: auto; }
+  .tab .rv-badge {
+    display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--rose);
+    color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; vertical-align: 1px; letter-spacing: 0;
+  }
+  body.rv-quiet .hp-toast.xp { display: none; }
+  .rv-timer { margin-left: auto; font-weight: 800; color: var(--ink); letter-spacing: 0; font-size: 14px; text-transform: none; }
+  .rv-timer.low { color: var(--bad); }
+  .rv-help { text-align: center; font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  .rv-pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rv-col { display: grid; gap: 8px; align-content: start; }
+  .rv-tile {
+    min-height: 50px; padding: 8px 10px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--paper);
+    font: 700 14.5px/1.25 var(--font-ui, inherit); color: var(--ink); cursor: pointer; transition: transform .12s, opacity .25s;
+  }
+  .rv-tile.he { font-family: var(--font-he); font-size: 21px; font-weight: 600; color: var(--he); }
+  .rv-tile:hover { border-color: var(--accent-soft); }
+  .rv-tile.sel { border-color: var(--accent); background: var(--accent-tint); }
+  .rv-tile.ok { border-color: var(--olive); background: var(--mint); }
+  .rv-tile.gone { opacity: 0; pointer-events: none; transform: scale(.92); }
+  .rv-tile.bad, .rv-letter.bad { border-color: var(--bad); background: var(--bad-tint); animation: rvShake .35s; }
+  @keyframes rvShake { 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+  .rv-slots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 50px; }
+  .rv-slot { width: 38px; height: 48px; border-bottom: 3px solid var(--line-strong, var(--line)); display: flex; align-items: center; justify-content: center; font: 600 28px var(--font-he); color: var(--he); }
+  .rv-slot.gap { width: 14px; border: 0; }
+  .rv-letters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .rv-letter {
+    width: 48px; height: 52px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--paper);
+    font: 600 26px var(--font-he); color: var(--ink); cursor: pointer; box-shadow: 0 2px 0 var(--line);
+  }
+  .rv-letter:hover { border-color: var(--accent-soft); }
+  .rv-reveal { font: 600 34px/1.4 var(--font-he); color: var(--he); }
+  .rv-q { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .rv-chip { padding: 5px 12px; border-radius: 999px; background: var(--accent-tint); color: var(--accent); font-weight: 800; font-size: 14px; }
+  .rv-sol { font: 600 22px var(--font-he); color: var(--olive); }
+  .rv-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .rv-choice {
+    position: relative; min-height: 58px; padding: 8px 30px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--paper);
+    font: 600 23px var(--font-he); color: var(--he); cursor: pointer;
+  }
+  .rv-choice:hover:not(:disabled) { border-color: var(--accent-soft); }
+  .rv-choice .rv-num { position: absolute; top: 6px; right: 9px; font: 700 10px var(--font-ui, inherit); color: var(--muted); }
+  .rv-choice.ok { border-color: var(--olive); background: var(--mint); color: var(--olive); }
+  .rv-choice.bad { border-color: var(--bad); background: var(--bad-tint); color: var(--bad); }
+  .rv-choice:disabled { cursor: default; }
+  .rv-best { font-weight: 800; color: var(--gold); margin: -6px 0 16px; }
+  @media (prefers-reduced-motion: reduce) { .rv-tile.bad, .rv-letter.bad { animation: none; } .rv-tile { transition: none; } }
+  @media (max-width: 700px) {
+    #panel-revise .rv-today { padding: 18px 16px; border-radius: 20px; }
+    .rv-boxes { gap: 5px; }
+    .rv-box { font-size: 10.5px; }
+    .rv-tile { font-size: 13.5px; min-height: 46px; padding: 6px 8px; }
+    .rv-tile.he { font-size: 19px; }
+    .rv-letter { width: 42px; height: 48px; font-size: 23px; }
+    .rv-slot { width: 30px; height: 44px; font-size: 24px; }
+    .rv-choice { font-size: 20px; min-height: 54px; }
+  }
+
   /* --- flashcards : réponse écrite --- */
   .flash-modes { display: flex; gap: 6px; margin-left: auto; }
   .flash-modes + .flash-dirs { margin-left: 0; }
@@ -1768,6 +1854,7 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="quiz">Quiz</button>
+    <button class="tab" data-tab="revise">Réviser</button>
     <button class="tab" data-tab="grammar">Grammaire</button>
     <button class="tab" data-tab="cours">Vocabulaire</button>
     <button class="tab" data-tab="tenses">Passé &amp; futur</button>
@@ -3106,6 +3193,11 @@
       <span><a id="cours-open">Tout déplier</a> &nbsp;&middot;&nbsp; <a id="cours-close">Tout replier</a></span>
     </div>
     <div id="cours-list"></div>
+  </div>
+
+  <!-- ================ RÉVISER : révision espacée et jeux courts ================ -->
+  <div class="panel" id="panel-revise">
+    <div id="rv-root"></div>
   </div>
 
   <!-- ================ COURS PASSE / FUTUR ================ -->
@@ -9813,4 +9905,515 @@ var HPG = (function () {
 try { HPG.install(); } catch (e) { console.error("HPG", e); }
 </script>
 <!-- HP:END -->
+<script>
+/* =====================================================================
+   RÉVISER — révision espacée, séance éclair et jeux courts
+   (paires express, mot en désordre, conjugaison mélangée).
+   storage.srs   : { "he|fr": { b: boîte 0-5, d: "AAAA-MM-JJ" prochaine révision, t: dernier jour de promotion } }
+   storage.games : { pairs|scramble|conj : { best, plays, last } }
+   Toutes les réponses (quiz, flashcards, jeux) font avancer les mots dans les boîtes.
+   ===================================================================== */
+(function () {
+  'use strict';
+  var root = document.getElementById('rv-root');
+  if (!root || typeof VOCAB === 'undefined' || typeof storage === 'undefined') return;
+  var tabEl = document.querySelector('.tab[data-tab="revise"]');
+  var IV = [1, 1, 3, 7, 14, 30];            /* jours avant la prochaine révision selon la boîte atteinte */
+  var BOX = ['à revoir demain', '1 jour', '3 jours', '1 semaine', '2 semaines', '1 mois'];
+  var NEW_PER_DAY = 10, FLASH_N = 5, DAY_MAX = 20;
+  var NIK = /[֑-ׇ]/g;
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function dk(d) { d = d || new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function addDays(key, n) { var p = key.split('-'); return dk(new Date(+p[0], +p[1] - 1, +p[2] + n)); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function plural(n, one, many) { return n + ' ' + (n > 1 ? (many || one + 's') : one); }
+  function excl(k) { return Array.isArray(storage.excluded) && storage.excluded.indexOf(k) >= 0; }
+  function S() { if (!storage.srs || typeof storage.srs !== 'object') storage.srs = {}; return storage.srs; }
+  function save() { if (typeof saveData === 'function') saveData(); }
+
+  /* tous les mots, sans doublon, thèmes de base d'abord */
+  function words() {
+    var seen = {}, out = [], order = [];
+    var core = (typeof CORE_THEMES !== 'undefined' && CORE_THEMES) || [];
+    core.forEach(function (t) { if (VOCAB[t] && order.indexOf(t) < 0) order.push(t); });
+    Object.keys(VOCAB).forEach(function (t) { if (order.indexOf(t) < 0) order.push(t); });
+    order.forEach(function (t) {
+      (VOCAB[t] || []).forEach(function (e) {
+        if (!e || !e[0] || !e[1]) return;
+        var k = e[0] + '|' + e[1];
+        if (seen[k] || excl(k)) return;
+        seen[k] = 1;
+        out.push({ k: k, e: e, he: e[0], fr: e[1], voc: e[2] || e[0], theme: t });
+      });
+    });
+    return out;
+  }
+
+  /* première fois : les mots déjà travaillés sont rangés d'après l'historique, étalés sur les jours suivants */
+  function bootstrap() {
+    if (storage.srsInit) return;
+    var srs = S(), t = dk();
+    words().forEach(function (w) {
+      if (srs[w.k]) return;
+      var q = storage.wordStats && storage.wordStats[w.k], f = storage.flash && storage.flash[w.k];
+      if (!q && !f) return;
+      var ok = (q ? q.correct || 0 : 0) + (f ? f.known || 0 : 0), ko = (q ? q.wrong || 0 : 0) + (f ? f.again || 0 : 0);
+      var b = Math.max(0, Math.min(4, ok - ko));
+      srs[w.k] = { b: b, d: addDays(t, Math.floor(Math.random() * (b ? IV[b] + 1 : 3))) };
+    });
+    storage.srsInit = t;
+    save();
+  }
+
+  /* une réponse : 'ok' fait monter d'une boîte (une fois par jour), 'ko' renvoie au lendemain */
+  function answer(k, res) {
+    if (!k) return;
+    var srs = S(), t = dk(), c = srs[k], isNew = !c;
+    c = c || { b: 0, d: t };
+    if (res === 'ok') {
+      if (c.t !== t) { c.b = isNew ? 1 : Math.min(5, c.b + 1); c.t = t; }
+      c.d = addDays(t, IV[c.b]);
+    } else if (res === 'soft') {
+      c.b = Math.min(c.b, 1); c.d = addDays(t, 3);
+    } else {
+      c.b = 0; c.d = addDays(t, 1);
+    }
+    srs[k] = c;
+  }
+
+  function due(list) {
+    var t = dk(), srs = S();
+    return (list || words()).filter(function (w) { return srs[w.k] && srs[w.k].d <= t; }).sort(function (a, b) {
+      var x = srs[a.k], y = srs[b.k];
+      return x.d < y.d ? -1 : x.d > y.d ? 1 : x.b - y.b;
+    });
+  }
+  function fresh(list) { var srs = S(); return (list || words()).filter(function (w) { return !srs[w.k]; }); }
+  function newLeft() {
+    var n = storage.srsNew && storage.srsNew.d === dk() ? storage.srsNew.n : 0;
+    return Math.max(0, NEW_PER_DAY - n);
+  }
+  function takeNew(n) {
+    if (!storage.srsNew || storage.srsNew.d !== dk()) storage.srsNew = { d: dk(), n: 0 };
+    storage.srsNew.n += n;
+  }
+  function plan(n) {
+    var all = words(), d = due(all).slice(0, n), nw = [];
+    if (d.length < n) nw = fresh(all).slice(0, Math.min(n - d.length, newLeft()));
+    return { due: d, fresh: nw, all: d.concat(nw) };
+  }
+  function startSession(n, title) {
+    var p = plan(n);
+    if (!p.all.length || typeof window.openFlash !== 'function') return;
+    if (p.fresh.length) { takeNew(p.fresh.length); save(); }
+    window.openFlash(title, p.all.map(function (w) { return w.e; }));
+  }
+
+  /* ---------- branchements : quiz et flashcards comptent aussi ---------- */
+  var origWS = window.updateWordStat;
+  if (typeof origWS === 'function') {
+    updateWordStat = function (item, result) {
+      origWS(item, result);
+      if (item && (result === 'correct' || result === 'wrong')) { answer(item.he + '|' + item.fr, result === 'correct' ? 'ok' : 'ko'); save(); }
+    };
+  }
+  if (window.HPG && typeof HPG.onFlash === 'function') {
+    var origFlash = HPG.onFlash;
+    HPG.onFlash = function (e, verdict, was) {
+      origFlash(e, verdict, was);
+      if (e && !e.conj && e[0]) answer(e[0] + '|' + e[1], verdict === 'known' ? 'ok' : verdict === 'soft' ? 'soft' : 'ko');
+    };
+  }
+  /* réponse donnée dans un jeu : enregistrée comme une réponse de quiz (XP, statistiques, boîtes) */
+  function stat(w, ok) { if (typeof updateWordStat === 'function') updateWordStat({ he: w.he, fr: w.fr }, ok ? 'correct' : 'wrong'); }
+
+  /* ---------- onglet ---------- */
+  function badge(n) {
+    if (!tabEl) return;
+    var b = tabEl.querySelector('.rv-badge');
+    if (n > 0) {
+      if (!b) { b = document.createElement('span'); b.className = 'rv-badge'; tabEl.appendChild(b); }
+      b.textContent = n > 99 ? '99+' : n;
+      b.setAttribute('aria-label', plural(n, 'mot') + ' à revoir');
+    } else if (b) b.remove();
+  }
+  function hasConj() { return typeof CONJ !== 'undefined' && Array.isArray(CONJ) && CONJ.filter(okVerb).length >= 2; }
+  function okVerb(v) { return v && v.i && Array.isArray(v.p) && Array.isArray(v.a) && Array.isArray(v.u) && v.a.length >= 5 && v.u.length >= 5 && v.p.length >= 3; }
+
+  function render() {
+    bootstrap();
+    var all = words();
+    if (!all.length) {
+      root.innerHTML = '<section class="rv-today"><h2>Réviser</h2><p class="rv-sub">Tes mots apparaîtront ici dès que ton vocabulaire sera rempli.</p></section>';
+      badge(0); return;
+    }
+    var srs = S(), t = dk(), d = due(all), fr = fresh(all), nl = Math.min(newLeft(), fr.length);
+    var boxes = [0, 0, 0, 0, 0, 0];
+    all.forEach(function (w) { var c = srs[w.k]; if (c) boxes[Math.max(0, Math.min(5, c.b))]++; });
+    var max = Math.max.apply(null, boxes.concat([1]));
+    var tom = 0, week = 0;
+    all.forEach(function (w) { var c = srs[w.k]; if (!c || c.d <= t) return; if (c.d === addDays(t, 1)) tom++; if (c.d <= addDays(t, 7)) week++; });
+    var dayN = Math.min(DAY_MAX, d.length + (d.length < DAY_MAX ? Math.min(DAY_MAX - d.length, nl) : 0));
+    var flashN = Math.min(FLASH_N, d.length + Math.min(nl, FLASH_N));
+    var G = storage.games || {};
+    var rec = function (id, unit) { var g = G[id]; return g && g.plays ? 'Record : ' + plural(g.best, unit) : 'Pas encore joué'; };
+
+    root.innerHTML =
+      '<section class="rv-today">' +
+        '<div class="rv-head"><div>' +
+          '<h2>Révision du jour</h2>' +
+          '<p class="rv-sub">' + (d.length ? '<b>' + plural(d.length, 'mot') + '</b> à revoir aujourd\'hui.' : 'Tout est à jour pour aujourd\'hui.') +
+            (nl ? ' ' + plural(nl, 'nouveau mot', 'nouveaux mots') + ' à découvrir.' : '') + '</p>' +
+        '</div><div class="rv-big"><b>' + d.length + '</b><span>à revoir</span></div></div>' +
+        '<div class="rv-acts">' +
+          '<button type="button" class="btn primary" data-rv="flash"' + (flashN ? '' : ' disabled') + '>Séance éclair · ' + plural(flashN || FLASH_N, 'mot') + '</button>' +
+          '<button type="button" class="btn" data-rv="day"' + (dayN ? '' : ' disabled') + '>' +
+            (dayN ? 'Révision du jour · ' + plural(dayN, 'mot') : 'Rien d\'autre à revoir aujourd\'hui') + '</button>' +
+        '</div>' +
+        '<div class="rv-boxes" role="img" aria-label="Répartition de tes mots par délai de révision">' + boxes.map(function (n, i) {
+          return '<div class="rv-box"><i><b style="height:' + Math.round(100 * n / max) + '%"></b></i><strong>' + n + '</strong>' + BOX[i] + '</div>';
+        }).join('') + '</div>' +
+        '<p class="rv-note">Un mot réussi revient de plus en plus tard : 1, 3, 7, 14 puis 30 jours. Un mot raté revient le lendemain. ' +
+          'Tes réponses au quiz, aux flashcards et aux jeux comptent aussi.' +
+          (tom || week ? ' Demain : ' + plural(tom, 'mot') + ' · 7 prochains jours : ' + plural(week, 'mot') + '.' : '') + '</p>' +
+      '</section>' +
+      '<h3 class="rv-h">Jeux courts</h3>' +
+      '<div class="rv-games">' +
+        '<button type="button" class="rv-game" data-rv="pairs"><span class="rv-ic" aria-hidden="true">🔗</span><b>Paires express</b>' +
+          '<span>Relie le plus de paires hébreu–français possible en 60 secondes.</span><small>' + rec('pairs', 'paire') + '</small></button>' +
+        '<button type="button" class="rv-game" data-rv="scramble"><span class="rv-ic" aria-hidden="true">🔤</span><b>Mot en désordre</b>' +
+          '<span>Remets les lettres dans l\'ordre, de droite à gauche. 10 mots.</span><small>' + rec('scramble', 'mot') + '</small></button>' +
+        (hasConj() ? '<button type="button" class="rv-game" data-rv="conj"><span class="rv-ic" aria-hidden="true">🔁</span><b>Conjugaison mélangée</b>' +
+          '<span>Choisis la bonne forme pour la personne et le temps demandés. 12 questions.</span><small>' + rec('conj', 'bonne réponse', 'bonnes réponses') + '</small></button>' : '') +
+      '</div>';
+    badge(d.length);
+  }
+
+  root.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rv]');
+    if (!b || b.disabled) return;
+    var a = b.dataset.rv;
+    if (a === 'flash') return startSession(FLASH_N, 'Séance éclair');
+    if (a === 'day') return startSession(DAY_MAX, 'Révision du jour');
+    if (GAMES[a]) return openGame(a);
+  });
+
+  /* ---------- fenêtre des jeux (même style que les flashcards) ---------- */
+  var ov, gBody, gTitle, gProg, gTimer, gBar, game = null;
+  function ensureOv() {
+    if (ov) return;
+    ov = document.createElement('div');
+    ov.className = 'flash-ov rv-ov'; ov.id = 'rv-ov';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+    ov.innerHTML = '<div class="flash-box"><div class="flash-top"><span class="flash-title" id="rv-title"></span>' +
+      '<button type="button" class="flash-close" data-rvclose="1" title="Fermer (Échap)" aria-label="Fermer">&times;</button></div>' +
+      '<div class="flash-sub"><span id="rv-prog"></span><span class="rv-timer" id="rv-timer"></span></div>' +
+      '<div id="rv-body"></div><div class="flash-bar"><i id="rv-bar" style="width:0"></i></div></div>';
+    document.body.appendChild(ov);
+    gBody = ov.querySelector('#rv-body'); gTitle = ov.querySelector('#rv-title'); gProg = ov.querySelector('#rv-prog');
+    gTimer = ov.querySelector('#rv-timer'); gBar = ov.querySelector('#rv-bar');
+    ov.addEventListener('click', onClick);
+  }
+  function xpNow() { return (storage.progress && storage.progress.xp) || 0; }
+  function openGame(id) {
+    ensureOv();
+    stop();
+    game = { id: id, xp0: xpNow() };
+    gTitle.textContent = GAMES[id].title; gTimer.textContent = ''; gTimer.classList.remove('low'); gBar.style.width = '0';
+    document.body.classList.add('rv-quiet');           /* pas de « +10 XP » à chaque réponse pendant un jeu rapide */
+    ov.classList.add('on'); document.body.style.overflow = 'hidden';
+    GAMES[id].start();
+  }
+  function stop() { if (game && game.timer) { clearInterval(game.timer); game.timer = null; } if (game && game.wait) { clearTimeout(game.wait); game.wait = null; } }
+  function closeGame() {
+    stop(); game = null;
+    if (ov) ov.classList.remove('on');
+    document.body.classList.remove('rv-quiet'); document.body.style.overflow = '';
+    if (window.HPG && HPG.hud) { try { HPG.hud(); } catch (x) {} }
+    render();
+  }
+  function record(id, score) {
+    if (!storage.games || typeof storage.games !== 'object') storage.games = {};
+    var g = storage.games[id] || (storage.games[id] = { best: 0, plays: 0 });
+    var prev = g.plays ? g.best : -1;
+    g.plays++; g.last = dk();
+    if (score > g.best) g.best = score;
+    save();
+    return { record: score > prev && prev >= 0 && score > 0, first: prev < 0, best: g.best };
+  }
+  function endScreen(id, score, big, msg, unit) {
+    stop();
+    var r = record(id, score), gained = xpNow() - game.xp0;
+    Array.prototype.forEach.call(document.querySelectorAll('.hp-toast.xp'), function (t) { t.remove(); });
+    document.body.classList.remove('rv-quiet');
+    gBar.style.width = '100%'; gProg.textContent = 'Terminé'; gTimer.textContent = '';
+    gBody.innerHTML = '<div class="flash-end"><div class="big">' + big + '</div><p>' + msg + (gained > 0 ? ' · +' + gained + ' XP' : '') + '</p>' +
+      (r.record ? '<p class="rv-best">Nouveau record !</p>' : (!r.first ? '<p class="rv-sub">Record : ' + plural(r.best, unit[0], unit[1]) + '</p>' : '')) +
+      '<div class="flash-acts"><button class="btn primary" data-rvagain="1">Rejouer</button><button class="btn" data-rvclose="1">Fermer</button></div></div>';
+    var b = gBody.querySelector('[data-rvagain]'); if (b) try { b.focus({ preventScroll: true }); } catch (x) {}
+  }
+  function onClick(e) {
+    if (e.target === ov || e.target.closest('[data-rvclose]')) return closeGame();
+    if (e.target.closest('[data-rvagain]')) return openGame(game.id);
+    if (game && GAMES[game.id].click) GAMES[game.id].click(e);
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!ov || !ov.classList.contains('on')) return;
+    if (e.key === 'Escape') { e.preventDefault(); return closeGame(); }
+    if (e.key === 'Enter') {
+      var nx = gBody.querySelector('[data-rvnext]') || gBody.querySelector('[data-rvagain]');
+      if (nx) { e.preventDefault(); nx.click(); }
+      return;
+    }
+    if (game && GAMES[game.id].key) GAMES[game.id].key(e);
+  });
+
+  /* mots pour les jeux : ceux déjà rencontrés d'abord (les plus fragiles en tête), puis les autres */
+  function pick(n, filter, avoid) {
+    var srs = S(), t = dk();
+    var all = words().filter(function (w) { return (!filter || filter(w)) && !(avoid && avoid[w.k]); });
+    var known = all.filter(function (w) { return srs[w.k]; }).map(function (w) {
+      var c = srs[w.k]; return { w: w, s: (c.d <= t ? 0 : 6) + c.b + Math.random() * 4 };
+    }).sort(function (a, b) { return a.s - b.s; }).map(function (x) { return x.w; });
+    var out = known.slice(0, n);
+    if (out.length < n) out = out.concat(shuffle(all.filter(function (w) { return !srs[w.k]; })).slice(0, n - out.length));
+    return shuffle(out);
+  }
+  function plain(he) { return String(he || '').replace(NIK, ''); }
+
+  var GAMES = {
+    /* ---------- Paires express : 60 secondes ---------- */
+    pairs: {
+      title: 'Paires express',
+      start: function () {
+        game.score = 0; game.err = 0; game.left = 60; game.used = {}; game.sel = null;
+        this.round();
+        var self = this;
+        game.timer = setInterval(function () {
+          game.left--;
+          self.clock();
+          if (game.left <= 0) self.end();
+        }, 1000);
+        this.clock();
+      },
+      clock: function () {
+        gTimer.textContent = game.left + ' s';
+        gTimer.classList.toggle('low', game.left <= 10);
+        gBar.style.width = Math.round(100 * (60 - game.left) / 60) + '%';
+        gProg.textContent = plural(game.score, 'paire');
+      },
+      round: function () {
+        var ws = pick(6, function (w) { return w.fr.length <= 32 && plain(w.voc).length <= 22; }, game.used);
+        if (ws.length < 2) { game.used = {}; ws = pick(6, null, null); }
+        if (ws.length < 2) return this.end();
+        ws.forEach(function (w) { game.used[w.k] = 1; });
+        game.cur = ws; game.left6 = ws.length;
+        var tile = function (w, side) {
+          return '<button type="button" class="rv-tile ' + side + '" data-k="' + esc(w.k) + '" data-side="' + side + '"' +
+            (side === 'he' ? ' lang="he" dir="rtl"' : '') + '>' + esc(side === 'he' ? w.voc : w.fr) + '</button>';
+        };
+        gBody.innerHTML = '<p class="rv-help">Touche un mot hébreu puis sa traduction.</p><div class="rv-pairs">' +
+          '<div class="rv-col">' + shuffle(ws).map(function (w) { return tile(w, 'he'); }).join('') + '</div>' +
+          '<div class="rv-col">' + shuffle(ws).map(function (w) { return tile(w, 'fr'); }).join('') + '</div></div>';
+      },
+      click: function (e) {
+        var t = e.target.closest('.rv-tile');
+        if (!t || t.classList.contains('ok') || game.left <= 0) return;
+        var sel = game.sel;
+        if (!sel || sel.dataset.side === t.dataset.side) {
+          if (sel) sel.classList.remove('sel');
+          if (sel === t) { game.sel = null; return; }
+          t.classList.add('sel'); game.sel = t; return;
+        }
+        var w = game.cur.filter(function (x) { return x.k === sel.dataset.k; })[0];
+        game.sel = null;
+        if (sel.dataset.k === t.dataset.k) {
+          sel.classList.remove('sel'); sel.classList.add('ok'); t.classList.add('ok');
+          game.score++; this.clock(); stat(w, true);
+          setTimeout(function () { sel.classList.add('gone'); t.classList.add('gone'); }, 220);
+          if (--game.left6 <= 0) { var self = this; game.wait = setTimeout(function () { if (game && game.left > 0) self.round(); }, 380); }
+        } else {
+          game.err++; stat(w, false);
+          [sel, t].forEach(function (x) { x.classList.remove('sel'); x.classList.add('bad'); setTimeout(function () { x.classList.remove('bad'); }, 420); });
+        }
+      },
+      end: function () {
+        endScreen('pairs', game.score, plural(game.score, 'paire'),
+          game.err ? plural(game.err, 'erreur') : 'Sans erreur', ['paire', 'paires']);
+      }
+    },
+
+    /* ---------- Mot en désordre : 10 mots ---------- */
+    scramble: {
+      title: 'Mot en désordre',
+      letters: function (w) { return plain(w.he).split('').filter(function (c) { return /[א-ת]/.test(c); }); },
+      start: function () {
+        var self = this;
+        game.list = pick(10, function (w) { var n = self.letters(w).length; return n >= 3 && n <= 9; });
+        if (!game.list.length) { gBody.innerHTML = '<p class="rv-help">Pas encore assez de mots pour ce jeu.</p>'; return; }
+        game.i = 0; game.ok = 0;
+        this.next();
+      },
+      next: function () {
+        if (game.i >= game.list.length) return this.end();
+        var w = game.list[game.i];
+        game.w = w; game.target = plain(w.he).split('').filter(function (c) { return /[א-ת ]/.test(c); });
+        game.pos = 0; game.err = 0; game.done = false;
+        game.tiles = shuffle(this.letters(w).map(function (c, i) { return { c: c, id: i }; }));
+        gProg.textContent = 'Mot ' + (game.i + 1) + ' / ' + game.list.length;
+        gBar.style.width = Math.round(100 * game.i / game.list.length) + '%';
+        this.draw();
+      },
+      skipSpaces: function () { while (game.pos < game.target.length && game.target[game.pos] === ' ') game.pos++; },
+      draw: function () {
+        this.skipSpaces();
+        var w = game.w, slots = game.target.map(function (c, i) {
+          return c === ' ' ? '<span class="rv-slot gap"></span>' : '<span class="rv-slot">' + (i < game.pos ? c : '') + '</span>';
+        }).join('');
+        gBody.innerHTML = '<div class="flash-card typed solo"><div class="flash-face-fr">' + esc(w.fr) + '</div>' +
+          (game.done
+            ? '<div class="rv-reveal" lang="he" dir="rtl">' + esc(w.voc) + '</div><div class="flash-verdict ' + (game.err ? 'bad' : 'ok') + '">' +
+              (game.err ? (game.gaveUp ? 'Voici le mot' : 'Trouvé, avec ' + plural(game.err, 'erreur')) : '✓ Sans faute') + '</div>'
+            : '<div class="rv-slots" dir="rtl" aria-label="Ta réponse">' + slots + '</div>' +
+              '<div class="rv-letters" dir="rtl">' + game.tiles.map(function (t) {
+                return '<button type="button" class="rv-letter" data-id="' + t.id + '" lang="he">' + t.c + '</button>';
+              }).join('') + '</div>') +
+          '</div>' +
+          '<div class="flash-acts">' + (game.done
+            ? '<button class="btn primary" data-rvnext="1">' + (game.i + 1 < game.list.length ? 'Mot suivant' : 'Voir le résultat') + ' <span class="flash-key">Entrée</span></button>'
+            : '<button class="btn" data-rvhint="1">Indice</button><button class="btn" data-rvgive="1">Je ne sais pas</button>') + '</div>';
+      },
+      finish: function (gaveUp) {
+        game.done = true; game.gaveUp = !!gaveUp; game.pos = game.target.length;
+        if (!game.err && !gaveUp) game.ok++;
+        stat(game.w, !game.err && !gaveUp);
+        this.draw();
+      },
+      place: function (id) {
+        var t = game.tiles.filter(function (x) { return x.id === id; })[0];
+        game.tiles = game.tiles.filter(function (x) { return x !== t; });
+        game.pos++;
+        this.skipSpaces();
+        if (game.pos >= game.target.length) return this.finish(false);
+        this.draw();
+      },
+      click: function (e) {
+        if (e.target.closest('[data-rvnext]')) { game.i++; return this.next(); }
+        if (game.done) return;
+        if (e.target.closest('[data-rvgive]')) { game.err = Math.max(1, game.err); return this.finish(true); }
+        if (e.target.closest('[data-rvhint]')) {
+          var need = game.target[game.pos], h = game.tiles.filter(function (x) { return x.c === need; })[0];
+          game.err++;
+          if (h) this.place(h.id);
+          return;
+        }
+        var b = e.target.closest('.rv-letter');
+        if (!b) return;
+        var id = +b.dataset.id, tile = game.tiles.filter(function (x) { return x.id === id; })[0];
+        if (!tile) return;
+        if (tile.c === game.target[game.pos]) return this.place(id);
+        game.err++;
+        b.classList.add('bad'); setTimeout(function () { b.classList.remove('bad'); }, 420);
+        if (game.err >= 4) { var self = this; setTimeout(function () { if (game && !game.done) self.finish(true); }, 450); }
+      },
+      end: function () {
+        endScreen('scramble', game.ok, game.ok + ' / ' + game.list.length,
+          plural(game.ok, 'mot') + ' sans faute', ['mot', 'mots']);
+      }
+    },
+
+    /* ---------- Conjugaison mélangée : 12 questions ---------- */
+    conj: {
+      title: 'Conjugaison mélangée',
+      PR: [{ fr: 'je', he: 'אֲנִי', p: 0, s: 0 }, { fr: 'tu (m.)', he: 'אַתָּה', p: 1, s: 0 }, { fr: 'il', he: 'הוּא', p: 2, s: 0 },
+           { fr: 'elle', he: 'הִיא', p: 3, s: 1 }, { fr: 'nous', he: 'אֲנַחְנוּ', p: 4, s: 2 }],
+      TN: [{ id: 'p', fr: 'présent' }, { id: 'a', fr: 'passé' }, { id: 'u', fr: 'futur' }],
+      form: function (v, tn, pr) { return tn === 'p' ? v.p[pr.s] : v[tn][pr.p]; },
+      start: function () {
+        game.verbs = CONJ.filter(okVerb);
+        game.n = 12; game.i = 0; game.ok = 0;
+        this.next();
+      },
+      next: function () {
+        if (game.i >= game.n) return this.end();
+        var V = game.verbs, self = this, v, pr, tn, good, tries = 0;
+        do {
+          v = V[Math.floor(Math.random() * V.length)];
+          pr = this.PR[Math.floor(Math.random() * this.PR.length)];
+          tn = this.TN[Math.floor(Math.random() * this.TN.length)];
+          good = this.form(v, tn.id, pr);
+        } while (!good && ++tries < 30);
+        var pool = [];
+        var add = function (f) { if (f && f !== good && pool.indexOf(f) < 0 && plain(f) !== plain(good)) pool.push(f); };
+        /* pièges : le même verbe à une autre personne ou un autre temps, puis un autre verbe au même endroit */
+        var same = [];
+        this.TN.forEach(function (t) { self.PR.forEach(function (p) { same.push(self.form(v, t.id, p)); }); });
+        shuffle(same).forEach(add);
+        var opts = pool.slice(0, 2);
+        shuffle(V.filter(function (x) { return x !== v; })).forEach(function (o) {
+          var f = self.form(o, tn.id, pr);
+          if (opts.length < 3 && f && f !== good && opts.indexOf(f) < 0 && plain(f) !== plain(good)) opts.push(f);
+        });
+        pool.slice(2).forEach(function (f) { if (opts.length < 3 && opts.indexOf(f) < 0) opts.push(f); });
+        game.q = { v: v, pr: pr, tn: tn, good: good, opts: shuffle(opts.concat([good])), done: false };
+        gProg.textContent = 'Question ' + (game.i + 1) + ' / ' + game.n;
+        gBar.style.width = Math.round(100 * game.i / game.n) + '%';
+        this.draw();
+      },
+      draw: function (picked) {
+        var q = game.q;
+        gBody.innerHTML = '<div class="flash-card typed solo">' +
+          '<div class="rv-q"><span class="rv-chip">' + esc(q.pr.fr) + '</span><span class="rv-chip">' + q.tn.fr + '</span></div>' +
+          '<div class="flash-face-he" lang="he" dir="rtl">' + esc(q.v.i) + '</div><div class="flash-ask">' + esc(q.v.f) + '</div>' +
+          (q.done ? '<div class="rv-sol" lang="he" dir="rtl">' + esc(q.pr.he + ' ' + q.good) + '</div>' : '') + '</div>' +
+          '<div class="rv-choices">' + q.opts.map(function (f, i) {
+            var cls = !q.done ? '' : f === q.good ? ' ok' : f === picked ? ' bad' : '';
+            return '<button type="button" class="rv-choice' + cls + '" data-opt="' + i + '" lang="he" dir="rtl"' + (q.done ? ' disabled' : '') + '>' +
+              '<span class="rv-num" aria-hidden="true">' + (i + 1) + '</span>' + esc(f) + '</button>';
+          }).join('') + '</div>' +
+          (q.done ? '<div class="flash-acts"><button class="btn primary" data-rvnext="1">' + (game.i + 1 < game.n ? 'Question suivante' : 'Voir le résultat') +
+            ' <span class="flash-key">Entrée</span></button></div>' : '');
+      },
+      choose: function (i) {
+        var q = game.q; if (!q || q.done) return;
+        var f = q.opts[i], ok = f === q.good;
+        q.done = true; if (ok) game.ok++;
+        if (!storage.conj || typeof storage.conj !== 'object') storage.conj = {};
+        var s = storage.conj[q.v.i] || (storage.conj[q.v.i] = { seen: 0, known: 0, again: 0, soft: 0 });
+        s.seen++; if (ok) s.known++; else s.again++;
+        if (window.HPG && HPG.onFlash) HPG.onFlash({ conj: true, inf: q.v.i, fr: q.v.f }, ok ? 'known' : 'again', false);
+        save();
+        this.draw(f);
+        if (ok) { var self = this; game.wait = setTimeout(function () { if (game && game.q === q) { game.i++; self.next(); } }, 900); }
+      },
+      click: function (e) {
+        if (e.target.closest('[data-rvnext]')) { stop(); game.i++; return this.next(); }
+        var b = e.target.closest('[data-opt]');
+        if (b) this.choose(+b.dataset.opt);
+      },
+      key: function (e) {
+        if (/^[1-4]$/.test(e.key) && game.q && !game.q.done) { e.preventDefault(); this.choose(+e.key - 1); }
+      },
+      end: function () {
+        endScreen('conj', game.ok, game.ok + ' / ' + game.n,
+          plural(game.ok, 'bonne réponse', 'bonnes réponses'), ['bonne réponse', 'bonnes réponses']);
+      }
+    }
+  };
+
+  /* mise à jour : à l'ouverture de l'onglet, à la fermeture des flashcards, au retour sur la page */
+  if (tabEl) tabEl.addEventListener('click', render);
+  var fo = document.getElementById('flash-ov');
+  if (fo && window.MutationObserver) {
+    var wasOn = false;
+    new MutationObserver(function () { var on = fo.classList.contains('on'); if (wasOn && !on) render(); wasOn = on; })
+      .observe(fo, { attributes: true, attributeFilter: ['class'] });
+  }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') render(); });
+  try { render(); } catch (e) { console.error('Réviser', e); }
+  window.HPR = { render: render, due: function () { return due().length; } };
+})();
+</script>
 </body></html>

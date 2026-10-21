@@ -92,6 +92,10 @@ var HPApp = (function () {
       ['🏃‍♂️', 'coureur'], ['🧘‍♀️', 'yoga'], ['🤸', 'gymnastique'], ['🥋', 'judo / karaté'], ['🥊', 'boxe'], ['🏋️', 'musculation'],
       ['🧗', 'escalade'], ['⛷️', 'ski'], ['🏂', 'snowboard'], ['🏄', 'surf'], ['🛹', 'skate'], ['🏇', 'équitation'],
       ['⛳', 'golf'], ['♟️', 'échecs']]],
+    ['Voitures et espace', [['🏎️', 'voiture de course'], ['🏁', 'drapeau à damier'], ['🚗', 'voiture'], ['🚙', '4x4'], ['🛻', 'dépanneuse'], ['🚚', 'camion'],
+      ['🚌', 'bus'], ['🚒', 'camion de pompiers'], ['🚓', 'voiture de police'], ['🚑', 'ambulance'], ['🚜', 'tracteur'], ['🏍️', 'moto'],
+      ['🚂', 'train'], ['🚁', 'hélicoptère'], ['✈️', 'avion'], ['🚀', 'fusée'], ['🛸', 'soucoupe volante'], ['🛰️', 'satellite'],
+      ['🪐', 'planète'], ['🌌', 'galaxie'], ['👾', 'monstre de l\'espace'], ['🦹‍♂️', 'méchant masqué'], ['🦹‍♀️', 'méchante masquée'], ['🤺', 'combat au sabre']]],
     ['Personnes', [['👧', 'fille'], ['👦', 'garçon'], ['👩', 'femme'], ['👨', 'homme'], ['👩‍🦰', 'rousse'], ['👨‍🦰', 'roux'],
       ['👱‍♀️', 'blonde'], ['👱‍♂️', 'blond'], ['👩‍🦱', 'cheveux bouclés'], ['👨‍🦱', 'cheveux bouclés'], ['🧔', 'barbe'], ['👩‍🦳', 'cheveux blancs'],
       ['👵', 'grand-mère'], ['👴', 'grand-père'], ['🧕', 'foulard'], ['👳', 'turban'], ['🧑‍🦯', 'canne'], ['👶', 'bébé']]],
@@ -107,9 +111,9 @@ var HPApp = (function () {
       ['🦋', 'papillon'], ['🐝', 'abeille'], ['🐞', 'coccinelle'], ['🐌', 'escargot']]],
     ['Nature et objets', [['🌸', 'fleur'], ['🌻', 'tournesol'], ['🌈', 'arc-en-ciel'], ['⭐', 'étoile'], ['🌙', 'lune'], ['☀️', 'soleil'],
       ['🔥', 'feu'], ['❄️', 'flocon'], ['🌵', 'cactus'], ['🍀', 'trèfle'], ['🍉', 'pastèque'], ['🍓', 'fraise'],
-      ['🍕', 'pizza'], ['🍦', 'glace'], ['🧁', 'cupcake'], ['☕', 'café'], ['🚀', 'fusée'], ['✈️', 'avion'],
-      ['🚗', 'voiture'], ['🏍️', 'moto'], ['⛵', 'voilier'], ['🎈', 'ballon'], ['🎁', 'cadeau'], ['💎', 'diamant'],
-      ['👑', 'couronne'], ['💡', 'idée'], ['🧩', 'puzzle'], ['🎮', 'jeux vidéo'], ['🪐', 'planète']]]
+      ['🍕', 'pizza'], ['🍦', 'glace'], ['🧁', 'cupcake'], ['☕', 'café'],
+      ['⛵', 'voilier'], ['🎈', 'ballon'], ['🎁', 'cadeau'], ['💎', 'diamant'],
+      ['👑', 'couronne'], ['💡', 'idée'], ['🧩', 'puzzle'], ['🎮', 'jeux vidéo']]]
   ];
   var CHAR_OK = {}; CHARS.forEach(function (g) { g[1].forEach(function (c) { CHAR_OK[c[0]] = 1; }); });
   function avatar(s, cls) {

@@ -1,8 +1,8 @@
 /* =====================================================================
-   HPA — analyse des documents déposés par Mayane et mise à jour des
+   HPA — analyse des documents déposés par Maayane et mise à jour des
    espaces élèves. Lecture : PDF (pdf.js), Word .docx (mammoth), images,
    texte. L'analyse elle-même est faite par Claude ; rien n'est ajouté à
-   un élève sans validation de Mayane.
+   un élève sans validation de Maayane.
    ===================================================================== */
 var HPA = (function () {
   'use strict';
@@ -86,7 +86,7 @@ var HPA = (function () {
     '  "summary": "une phrase qui résume le contenu du document"\n}';
   /* consigne fixe (identique pour tous les morceaux d'un document : mise en cache par l'API) */
   function rules() {
-    return 'Tu prépares le contenu de révision d\'un élève de Mayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
+    return 'Tu prépares le contenu de révision d\'un élève de Maayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
       'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
       'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +

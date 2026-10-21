@@ -1,12 +1,12 @@
 /* =====================================================================
-   Page d'accueil publique — cours d'hébreu en français avec Mayane
+   Page d'accueil publique — cours d'hébreu en français avec Maayane
    ===================================================================== */
 var HPHome = (function () {
   'use strict';
 
-  /* Illustration : Mayane (grande, brune, yeux marron, souriante) */
+  /* Illustration : Maayane (grande, brune, yeux marron, souriante) */
   var PORTRAIT = '' +
-  '<svg class="mv-portrait" viewBox="0 0 360 440" role="img" aria-label="Illustration de Mayane">' +
+  '<svg class="mv-portrait" viewBox="0 0 360 440" role="img" aria-label="Illustration de Maayane">' +
     '<defs>' +
       '<linearGradient id="mvBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient>' +
       '<linearGradient id="mvHair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2a1c"/><stop offset="1" stop-color="#2c1810"/></linearGradient>' +
@@ -99,10 +99,10 @@ var HPHome = (function () {
 
   function render(root, go) {
     if (!document.getElementById('mv-css')) { var s = document.createElement('style'); s.id = 'mv-css'; s.textContent = CSS; document.head.appendChild(s); }
-    document.title = 'Hébreu avec Mayane · cours en français';
+    document.title = 'Hébreu avec Maayane · cours en français';
     root.innerHTML =
       '<div class="mv">' +
-      '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Mayane</a>' +
+      '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Maayane</a>' +
         '<button class="btn" data-go="login">Mon espace</button></header>' +
       '<section class="mv-hero"><div>' +
         '<span class="kicker">Cours d\'hébreu en français · tous niveaux</span>' +
@@ -118,8 +118,8 @@ var HPHome = (function () {
 
       '<section class="mv-sec" id="comment"><h2>Comment ça marche</h2><p class="mv-sub">Le cours, puis la révision : tout ce que tu vois en classe se retrouve dans ton espace.</p>' +
         '<div class="mv-steps">' +
-          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Mayane</h3><p>On avance ensemble, en français, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
-          '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Mayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Maayane</h3><p>On avance ensemble, en français, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Maayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
           '<div class="mv-step"><div class="n" style="background:var(--peach);color:var(--gold)">3</div><h3>Tu révises en jouant</h3><p>Quiz, flashcards, conjugaison : tu gagnes des XP, tu montes de niveau et tu débloques des badges.</p></div>' +
         '</div></section>' +
 
@@ -131,13 +131,13 @@ var HPHome = (function () {
       '</div></section>' +
 
       '<section class="mv-sec"><div class="mv-about"><div class="mv-face">' + PORTRAIT + '</div><div>' +
-        '<h3>Ta professeure : Mayane</h3>' +
-        '<p>Patiente, à l\'écoute et toujours positive, Mayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
+        '<h3>Ta professeure : Maayane</h3>' +
+        '<p>Patiente, à l\'écoute et toujours positive, Maayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
         '<div class="mv-tags"><span class="pill">Cours en français</span><span class="pill green">Bienveillance</span><span class="pill gold">Motivation</span><span class="pill rose">Tous niveaux</span></div>' +
       '</div></div></section>' +
 
-      '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Mayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +
-      '<footer class="mv-foot"><span class="he">לְאַט לְאַט</span> · petit à petit · Hébreu avec Mayane</footer>' +
+      '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Maayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +
+      '<footer class="mv-foot"><span class="he">לְאַט לְאַט</span> · petit à petit · Hébreu avec Maayane</footer>' +
       '</div>';
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
     var a = root.querySelector('a[href="#comment"]');

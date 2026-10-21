@@ -1,5 +1,5 @@
 /* Construit le site publié :
-   - index.html            : la page (accueil, connexion, espace de Mayane), légère
+   - index.html            : la page (accueil, connexion, espace de Maayane), légère
    - assets/student.*.txt  : l'espace élève, chargé seulement à l'ouverture d'un espace
    - assets/demo.*.json    : les données de démonstration, chargées seulement en mode démo
    Les noms contiennent une empreinte du contenu : le navigateur peut les garder en cache longtemps. */
@@ -37,8 +37,8 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Hébreu avec Mayane</title>
-<meta name="description" content="Cours d'hébreu en français avec Mayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
+<title>Hébreu avec Maayane</title>
+<meta name="description" content="Cours d'hébreu en français avec Maayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
 <meta name="theme-color" content="#7457f5">
 <link rel="icon" href="${ICON}">
 <link rel="preconnect" href="https://fonts.googleapis.com">

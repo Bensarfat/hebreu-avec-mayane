@@ -1,14 +1,14 @@
-/* Construit le gabarit « espace élève » du site de Mayane à partir du site
+/* Construit le gabarit « espace élève » du site de Maayane à partir du site
    personnel de Benjamin (source/src/original.html = copie de
    github.com/Bensarfat/hebreu/index.html, mise à jour automatiquement).
 
    Tout ce qui change dans le site de Benjamin (fonctions, design, quiz,
    flashcards, progression…) est repris tel quel. Seules les DONNÉES
    (vocabulaire, grammaire, conjugaison, cours Passé & futur) sont retirées :
-   chaque élève reçoit les siennes, issues des documents de Mayane.
+   chaque élève reçoit les siennes, issues des documents de Maayane.
 
    Si un repère attendu disparaît du site de Benjamin, la construction
-   s'arrête avec un message clair et le site de Mayane garde sa version
+   s'arrête avec un message clair et le site de Maayane garde sa version
    précédente (rien n'est publié à moitié). */
 const fs = require('fs'), path = require('path');
 const S = __dirname, OUT = path.join(S, '..', 'build');
@@ -69,7 +69,7 @@ fs.writeFileSync(path.join(OUT, 'progress.js'), progressJs);
 /* ---- 4. gabarit élève ---- */
 let st = src.slice(0, tInner0) + '<!--HP_TENSES-->\n' + src.slice(src.lastIndexOf('\n', tInner1) + 1);
 const loader = [
-  '/* Données propres à l\'élève — injectées par l\'espace de Mayane, uniquement depuis ses documents */',
+  '/* Données propres à l\'élève — injectées par l\'espace de Maayane, uniquement depuis ses documents */',
   'const __D = window.__HP_DATA__ || {};',
   'const VOCAB = __D.VOCAB || {};',
   'const NATURE = __D.NATURE || {};',
@@ -94,7 +94,7 @@ st = st.replace('Tes stats et préférences sont sauvegardées dans ton navigate
   'Tes stats sont enregistrées dans ton espace : ta professeure voit ta progression (XP, régularité, mots à revoir) pour adapter ses cours.');
 
 if (!hasHP) {
-  /* site sans module de progression : on branche celui du site de Mayane */
+  /* site sans module de progression : on branche celui du site de Maayane */
   const game = fs.readFileSync(path.join(S, 'game.js'), 'utf8');
   if (st.indexOf('__hpWas') < 0) {
     st = must(st, '  function record(e, verdict) {\n    var store, k;', '  function record(e, verdict) {\n    var __hpWas = window.HPG ? HPG.before(e) : false;\n    var store, k;', 'record()');
@@ -104,4 +104,4 @@ if (!hasHP) {
   st = st.slice(0, i) + '<script>\n' + progressJs + '\n</script>\n<script>\n' + game + '\ntry { HPG.install(); } catch (e) { console.error("HPG", e); }\n</script>\n' + st.slice(i);
 }
 fs.writeFileSync(path.join(OUT, 'student-template.html'), st);
-console.log('✓ gabarit élève', (st.length / 1024).toFixed(0) + ' Ko · ' + Object.keys(data.VOCAB).length + ' thèmes de démo · module de progression ' + (hasHP ? 'du site de Benjamin' : 'du site de Mayane'));
+console.log('✓ gabarit élève', (st.length / 1024).toFixed(0) + ' Ko · ' + Object.keys(data.VOCAB).length + ' thèmes de démo · module de progression ' + (hasHP ? 'du site de Benjamin' : 'du site de Maayane'));

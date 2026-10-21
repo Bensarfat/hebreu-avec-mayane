@@ -1,5 +1,5 @@
 /* =====================================================================
-   HPB — stockage du site de Mayane.
+   HPB — stockage du site de Maayane.
    Version 1 (démo) : tout est conservé dans ce navigateur (IndexedDB).
    L'interface est volontairement réduite à ces fonctions pour pouvoir
    brancher ensuite un vrai serveur (comptes partagés entre appareils)
@@ -67,7 +67,7 @@ var HPB = (function () {
     });
   }
 
-  /* ---------- mots de passe : vérifiés par empreinte (hash) ; celui des élèves est aussi gardé pour Mayane ---------- */
+  /* ---------- mots de passe : vérifiés par empreinte (hash) ; celui des élèves est aussi gardé pour Maayane ---------- */
   function rnd(n) {
     var a = new Uint8Array(n);
     try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < n; i++) a[i] = Math.floor(Math.random() * 256); }
@@ -104,7 +104,7 @@ var HPB = (function () {
     getTeacher: function () { return get('teacher'); },
     setTeacherPassword: function (login, pw) {
       return get('teacher').then(function (t) {
-        t = t || { name: 'Mayane' };
+        t = t || { name: 'Maayane' };
         t.login = login;
         if (!pw) return set('teacher', t);   /* identifiant seul : mot de passe inchangé */
         return withPassword(t, pw).then(function (r) { return set('teacher', r); });

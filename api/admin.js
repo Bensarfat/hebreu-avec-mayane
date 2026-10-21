@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
       if (await sb.hasTeacher()) { res.status(409).json({ error: 'already_setup' }); return; }
       const login = clean(b.login, 40).toLowerCase(), pw = String(b.pw || '');
       if (!sb.validLogin(login) || pw.length < 8) { res.status(400).json({ error: 'invalid' }); return; }
-      await createAccount(login, pw, { role: 'teacher', first: clean(b.first) || 'Mayane' });
+      await createAccount(login, pw, { role: 'teacher', first: clean(b.first) || 'Maayane' });
       res.status(200).json({ ok: true });
       return;
     }

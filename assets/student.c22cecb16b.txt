@@ -3369,7 +3369,7 @@
 /* ============================================
    VOCABULAIRE — organisé par thèmes
    ============================================ */
-/* Données propres à l'élève — injectées par l'espace de Mayane, uniquement depuis ses documents */
+/* Données propres à l'élève — injectées par l'espace de Maayane, uniquement depuis ses documents */
 const __D = window.__HP_DATA__ || {};
 const VOCAB = __D.VOCAB || {};
 const NATURE = __D.NATURE || {};

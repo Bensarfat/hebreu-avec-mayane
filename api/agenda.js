@@ -1,7 +1,7 @@
 /* Réservation des cours par les élèves (le serveur vérifie tout : créneau ouvert, libre, délais),
-   et lien d'abonnement à l'agenda de Mayane (Google Agenda, Apple Calendrier, Outlook).
+   et lien d'abonnement à l'agenda de Maayane (Google Agenda, Apple Calendrier, Outlook).
    POST { action: 'state' | 'book' | 'cancel' }   — élève connecté (jeton Supabase)
-   GET  ?feed=<code secret>                        — agenda de Mayane au format .ics */
+   GET  ?feed=<code secret>                        — agenda de Maayane au format .ics */
 const crypto = require('crypto');
 const sb = require('./_supabase');
 const C = require('./_agenda');

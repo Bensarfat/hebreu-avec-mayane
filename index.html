@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Hébreu avec Mayane</title>
-<meta name="description" content="Cours d'hébreu en français avec Mayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
+<title>Hébreu avec Maayane</title>
+<meta name="description" content="Cours d'hébreu en français avec Maayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
 <meta name="theme-color" content="#7457f5">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%237457f5%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23b86cf2%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2245%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%22%20font-weight%3D%22700%22%20font-size%3D%2238%22%20fill%3D%22%23fff%22%3E%D7%9E%3C%2Ftext%3E%3C%2Fsvg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -560,7 +560,7 @@
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.5a8d0c7d51.txt","demo":"assets/demo.b98348612f.json","build":"c5d0c54419"};
+var ASSETS = {"student":"assets/student.c22cecb16b.txt","demo":"assets/demo.b98348612f.json","build":"b85be158f2"};
 </script>
 <script>
 /* =====================================================================
@@ -1094,7 +1094,7 @@ var HP = (function () {
 
 /* =====================================================================
    HPCal — calcul des créneaux de cours (partagé par le navigateur et le serveur).
-   Les disponibilités sont saisies à l'heure de Mayane (fuseau « tz ») ;
+   Les disponibilités sont saisies à l'heure de Maayane (fuseau « tz ») ;
    les cours sont enregistrés en temps universel et affichés à l'heure de chacun.
    Fichier ignoré par Vercel comme route (il commence par « _ »).
    ===================================================================== */
@@ -1114,7 +1114,7 @@ var HP = (function () {
     buffer: 0,              // pause entre deux cours (minutes)
     cancel: 24,             // annulation par l'élève jusqu'à … heures avant
     maxUpcoming: 0,         // cours à venir par élève (0 = sans limite)
-    message: '',            // mot de Mayane affiché aux élèves (lieu, lien visio…)
+    message: '',            // mot de Maayane affiché aux élèves (lieu, lien visio…)
     rules: [],              // [{ d: 0-6 (0 = dimanche), from: 'HH:MM', to: 'HH:MM' }]
     blocks: []              // [{ s: ISO, e: ISO, note }] fermetures, vacances
   };
@@ -1252,7 +1252,7 @@ var HP = (function () {
   function fold(line) { var out = [], i = 0; while (line.length - i > 60) { out.push((i ? ' ' : '') + line.slice(i, i + 60)); i += 60; } out.push((i ? ' ' : '') + line.slice(i)); return out.join('\r\n'); }
   /* events : [{ uid, s, e, title, desc, cancelled }] */
   function ics(events, name) {
-    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hebreu avec Mayane//Agenda//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hebreu avec Maayane//Agenda//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
     if (name) { L.push('X-WR-CALNAME:' + icsText(name)); L.push('REFRESH-INTERVAL;VALUE=DURATION:PT1H'); L.push('X-PUBLISHED-TTL:PT1H'); }
     var stamp = icsDate(Date.now());
     events.forEach(function (ev) {
@@ -1273,7 +1273,7 @@ var HP = (function () {
 });
 
 /* =====================================================================
-   HPB — stockage du site de Mayane.
+   HPB — stockage du site de Maayane.
    Version 1 (démo) : tout est conservé dans ce navigateur (IndexedDB).
    L'interface est volontairement réduite à ces fonctions pour pouvoir
    brancher ensuite un vrai serveur (comptes partagés entre appareils)
@@ -1341,7 +1341,7 @@ var HPB = (function () {
     });
   }
 
-  /* ---------- mots de passe : vérifiés par empreinte (hash) ; celui des élèves est aussi gardé pour Mayane ---------- */
+  /* ---------- mots de passe : vérifiés par empreinte (hash) ; celui des élèves est aussi gardé pour Maayane ---------- */
   function rnd(n) {
     var a = new Uint8Array(n);
     try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < n; i++) a[i] = Math.floor(Math.random() * 256); }
@@ -1378,7 +1378,7 @@ var HPB = (function () {
     getTeacher: function () { return get('teacher'); },
     setTeacherPassword: function (login, pw) {
       return get('teacher').then(function (t) {
-        t = t || { name: 'Mayane' };
+        t = t || { name: 'Maayane' };
         t.login = login;
         if (!pw) return set('teacher', t);   /* identifiant seul : mot de passe inchangé */
         return withPassword(t, pw).then(function (r) { return set('teacher', r); });
@@ -1531,10 +1531,10 @@ var HPB = (function () {
 })();
 
 /* =====================================================================
-   HPA — analyse des documents déposés par Mayane et mise à jour des
+   HPA — analyse des documents déposés par Maayane et mise à jour des
    espaces élèves. Lecture : PDF (pdf.js), Word .docx (mammoth), images,
    texte. L'analyse elle-même est faite par Claude ; rien n'est ajouté à
-   un élève sans validation de Mayane.
+   un élève sans validation de Maayane.
    ===================================================================== */
 var HPA = (function () {
   'use strict';
@@ -1618,7 +1618,7 @@ var HPA = (function () {
     '  "summary": "une phrase qui résume le contenu du document"\n}';
   /* consigne fixe (identique pour tous les morceaux d'un document : mise en cache par l'API) */
   function rules() {
-    return 'Tu prépares le contenu de révision d\'un élève de Mayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
+    return 'Tu prépares le contenu de révision d\'un élève de Maayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
       'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
       'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +
@@ -2150,14 +2150,14 @@ var HPA = (function () {
 })();
 
 /* =====================================================================
-   Page d'accueil publique — cours d'hébreu en français avec Mayane
+   Page d'accueil publique — cours d'hébreu en français avec Maayane
    ===================================================================== */
 var HPHome = (function () {
   'use strict';
 
-  /* Illustration : Mayane (grande, brune, yeux marron, souriante) */
+  /* Illustration : Maayane (grande, brune, yeux marron, souriante) */
   var PORTRAIT = '' +
-  '<svg class="mv-portrait" viewBox="0 0 360 440" role="img" aria-label="Illustration de Mayane">' +
+  '<svg class="mv-portrait" viewBox="0 0 360 440" role="img" aria-label="Illustration de Maayane">' +
     '<defs>' +
       '<linearGradient id="mvBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient>' +
       '<linearGradient id="mvHair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2a1c"/><stop offset="1" stop-color="#2c1810"/></linearGradient>' +
@@ -2250,10 +2250,10 @@ var HPHome = (function () {
 
   function render(root, go) {
     if (!document.getElementById('mv-css')) { var s = document.createElement('style'); s.id = 'mv-css'; s.textContent = CSS; document.head.appendChild(s); }
-    document.title = 'Hébreu avec Mayane · cours en français';
+    document.title = 'Hébreu avec Maayane · cours en français';
     root.innerHTML =
       '<div class="mv">' +
-      '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Mayane</a>' +
+      '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Maayane</a>' +
         '<button class="btn" data-go="login">Mon espace</button></header>' +
       '<section class="mv-hero"><div>' +
         '<span class="kicker">Cours d\'hébreu en français · tous niveaux</span>' +
@@ -2269,8 +2269,8 @@ var HPHome = (function () {
 
       '<section class="mv-sec" id="comment"><h2>Comment ça marche</h2><p class="mv-sub">Le cours, puis la révision : tout ce que tu vois en classe se retrouve dans ton espace.</p>' +
         '<div class="mv-steps">' +
-          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Mayane</h3><p>On avance ensemble, en français, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
-          '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Mayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Maayane</h3><p>On avance ensemble, en français, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Maayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
           '<div class="mv-step"><div class="n" style="background:var(--peach);color:var(--gold)">3</div><h3>Tu révises en jouant</h3><p>Quiz, flashcards, conjugaison : tu gagnes des XP, tu montes de niveau et tu débloques des badges.</p></div>' +
         '</div></section>' +
 
@@ -2282,13 +2282,13 @@ var HPHome = (function () {
       '</div></section>' +
 
       '<section class="mv-sec"><div class="mv-about"><div class="mv-face">' + PORTRAIT + '</div><div>' +
-        '<h3>Ta professeure : Mayane</h3>' +
-        '<p>Patiente, à l\'écoute et toujours positive, Mayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
+        '<h3>Ta professeure : Maayane</h3>' +
+        '<p>Patiente, à l\'écoute et toujours positive, Maayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
         '<div class="mv-tags"><span class="pill">Cours en français</span><span class="pill green">Bienveillance</span><span class="pill gold">Motivation</span><span class="pill rose">Tous niveaux</span></div>' +
       '</div></div></section>' +
 
-      '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Mayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +
-      '<footer class="mv-foot"><span class="he">לְאַט לְאַט</span> · petit à petit · Hébreu avec Mayane</footer>' +
+      '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Maayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +
+      '<footer class="mv-foot"><span class="he">לְאַט לְאַט</span> · petit à petit · Hébreu avec Maayane</footer>' +
       '</div>';
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
     var a = root.querySelector('a[href="#comment"]');
@@ -2300,7 +2300,7 @@ var HPHome = (function () {
 
 /* =====================================================================
    HPAgendaUI — réservation des cours.
-   · Mayane : calendrier de la semaine (tous les élèves), disponibilités,
+   · Maayane : calendrier de la semaine (tous les élèves), disponibilités,
      fermetures, ajout / annulation de cours, lien vers son agenda.
    · Élève : ses cours à venir et les créneaux libres ; il réserve en ligne.
    Les règles de calcul (créneaux, délais, fuseaux) sont dans HPCal (api/_agenda.js),
@@ -2333,13 +2333,13 @@ var HPAgendaUI = function (X) {
       taken: 'Ce créneau vient d\'être pris. Choisis-en un autre.', unavailable: 'Ce créneau n\'est plus disponible.',
       too_soon: 'Ce créneau est trop proche : il faut réserver un peu plus à l\'avance.', too_far: 'Ce créneau est trop loin dans le temps.',
       closed: 'La réservation en ligne est fermée pour le moment.', duration: 'Cette durée n\'est plus proposée.',
-      max_upcoming: 'Tu as déjà le nombre maximum de cours à venir.', too_late: 'Il est trop tard pour annuler en ligne : préviens Mayane directement.',
+      max_upcoming: 'Tu as déjà le nombre maximum de cours à venir.', too_late: 'Il est trop tard pour annuler en ligne : préviens Maayane directement.',
       not_found: 'Ce cours n\'existe plus.', not_student: 'Ta session a expiré : reconnecte-toi.', server_error: 'Le serveur n\'a pas répondu. Réessaie dans un instant.',
       not_configured: 'L\'agenda n\'est pas encore installé sur le serveur.'
     };
     return M[code] || X.errText(e || { message: code });
   }
-  function cfgT() {                  // réglages de Mayane (avec son fuseau par défaut)
+  function cfgT() {                  // réglages de Maayane (avec son fuseau par défaut)
     var raw = (cache.settings && cache.settings.agenda) || null;
     return C.norm(raw || { tz: LOCAL_TZ });
   }
@@ -2351,9 +2351,9 @@ var HPAgendaUI = function (X) {
   function rid() { var a = new Uint8Array(20); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }
 
   /* ================================================================
-     CÔTÉ MAYANE
+     CÔTÉ MAAYANE
      ================================================================ */
-  var week = null;                   // lundi affiché (AAAA-MM-JJ, fuseau de Mayane)
+  var week = null;                   // lundi affiché (AAAA-MM-JJ, fuseau de Maayane)
   var draft = null;                  // disponibilités en cours de modification
 
   /* cours chargés : de -4 mois à +6 mois ; au-delà, chargés à la demande */
@@ -2532,7 +2532,7 @@ var HPAgendaUI = function (X) {
   /* ---------- détail d'un cours ---------- */
   function bookingModal(b) {
     var c = cfgT(), s = student(b.studentId), past = b.end < Date.now();
-    var msg = s ? 'Shalom ' + s.first + ' ! Petit rappel : cours d\'hébreu ' + fFull(b.start, c.tz) + ' (heure de ' + C.tzCity(c.tz) + ', ' + dur(b) + '). À bientôt, Mayane' : '';
+    var msg = s ? 'Shalom ' + s.first + ' ! Petit rappel : cours d\'hébreu ' + fFull(b.start, c.tz) + ' (heure de ' + C.tzCity(c.tz) + ', ' + dur(b) + '). À bientôt, Maayane' : '';
     var m = X.modal('<h2>' + esc(sName(b.studentId)) + '</h2>' +
       '<div class="ag-detail"><div><span>Date</span><b>' + esc(cap(fDay(b.start, c.tz))) + '</b></div><div><span>Horaire</span><b>' + range(b, c.tz) + ' · ' + dur(b) + '</b></div>' +
       '<div><span>Réservé</span><b>' + (b.by === 'student' ? 'par l\'élève' : 'par vous') + (b.createdAt ? ', le ' + esc(fShort(Date.parse(b.createdAt), c.tz)) : '') + '</b></div>' +
@@ -2821,9 +2821,9 @@ var HPAgendaUI = function (X) {
     html += '<section class="card"><h3>Mes prochains cours <small>' + up.length + '</small></h3>' + (up.length ? '<ul class="ag-mine">' + up.map(function (b) {
       var can = C.canCancel(c, b.start, now);
       return '<li><div class="ag-date"><span>' + esc(fm(tz, { weekday: 'short' }).format(b.start)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(b.start)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(b.start)) + '</span></div>' +
-        '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Mayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
-        '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) +
-        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler ce cours</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
+        '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Maayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
+        '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Maayane', studentDesc(b, c)) +
+        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler ce cours</button>' : '<span class="small muted">Pour annuler, préviens Maayane</span>') + '</div></li>';
     }).join('') + '</ul>' : '<p class="hp-empty">Aucun cours prévu pour l\'instant.</p>') + '</section>';
     if (c.open) {
       var all = C.slots(c, st.busy, now, now + c.horizon * 7 * DAY, P.dur, now);
@@ -2834,7 +2834,7 @@ var HPAgendaUI = function (X) {
       html += '<section class="card"><h3>Réserver un cours</h3>' +
         (c.message ? '<div class="ag-msg">' + linkify(esc(c.message)) + '</div>' : '') +
         (c.tz !== LOCAL_TZ ? '<p class="small muted">Horaires affichés à ton heure (' + esc(C.tzCity(LOCAL_TZ)) + ').</p>' : '') +
-        (maxed ? '<p class="ok">Tu as déjà ' + X.plural(up.length, 'cours', 'cours') + ' à venir : c\'est le maximum fixé par Mayane. Tu pourras réserver le suivant après ton prochain cours.</p>' :
+        (maxed ? '<p class="ok">Tu as déjà ' + X.plural(up.length, 'cours', 'cours') + ' à venir : c\'est le maximum fixé par Maayane. Tu pourras réserver le suivant après ton prochain cours.</p>' :
         '<p class="small muted" style="margin:0 0 8px">1. Durée du cours</p><div class="ag-durs">' + c.durations.map(function (d) { return '<button type="button" class="chip' + (d === P.dur ? ' on' : '') + '" data-dur="' + d + '" aria-pressed="' + (d === P.dur) + '">' + C.durLabel(d) + '</button>'; }).join('') + '</div>' +
         (order.length ? '<p class="small muted" style="margin:16px 0 8px">2. Jour</p><div class="ag-days" role="group" aria-label="Jours disponibles">' + order.map(function (k) {
           var t = byDay[k][0];
@@ -2846,7 +2846,7 @@ var HPAgendaUI = function (X) {
         : '<p class="hp-empty">Aucun créneau libre de ' + C.durLabel(P.dur) + ' pour le moment' + (c.durations.length > 1 ? ' : essaie une autre durée, ou' : ',') + ' reviens bientôt.</p>')) +
         '</section>';
     } else if (!up.length) {
-      html += '<section class="card"><p class="hp-empty">La réservation en ligne n\'est pas ouverte pour le moment. Mayane te proposera tes prochains cours.</p></section>';
+      html += '<section class="card"><p class="hp-empty">La réservation en ligne n\'est pas ouverte pour le moment. Maayane te proposera tes prochains cours.</p></section>';
     }
     if (past.length) html += '<section class="card"><h3>Cours passés</h3><ul class="content-list">' + past.map(function (b) { return '<li><span>' + esc(cap(fDay(b.start, tz))) + '</span><span class="small muted">' + range(b, tz) + '</span></li>'; }).join('') + '</ul></section>';
     $('#ag-pbody', P.el).innerHTML = '<div class="stack">' + html + '</div>';
@@ -2889,7 +2889,7 @@ var HPAgendaUI = function (X) {
   function confirmBook(t) {
     var c = P.st.cfg, e = t + P.dur * MIN, minutes = P.dur;
     var m = X.modal('<h2>Réserver ce cours ?</h2><div class="ag-detail"><div><span>Date</span><b>' + esc(cap(fDay(t))) + '</b></div><div><span>Horaire</span><b>' + fTime(t) + ' – ' + fTime(e) + ' · ' + C.durLabel(minutes) + '</b></div></div>' +
-      '<label class="f" style="margin-top:14px">Un mot pour Mayane <span class="muted" style="font-weight:500">(facultatif)</span><textarea class="in" name="note" rows="2" maxlength="500" placeholder="ex. j\'aimerais revoir les verbes au passé"></textarea></label>' +
+      '<label class="f" style="margin-top:14px">Un mot pour Maayane <span class="muted" style="font-weight:500">(facultatif)</span><textarea class="in" name="note" rows="2" maxlength="500" placeholder="ex. j\'aimerais revoir les verbes au passé"></textarea></label>' +
       (c.cancel < 336 ? '<p class="small muted">Annulation possible en ligne ' + (c.cancel ? 'jusqu\'à ' + c.cancel + ' h avant le cours' : 'jusqu\'au début du cours') + '.</p>' : '') +
       '<div class="row" style="margin-top:14px"><button class="btn primary" data-yes>Confirmer la réservation</button><button class="btn" data-no>Retour</button></div><div id="bk-msg" style="margin-top:10px"></div>');
     $('[data-no]', m).onclick = function () { m.remove(); };
@@ -2898,7 +2898,7 @@ var HPAgendaUI = function (X) {
       btn.disabled = true; btn.textContent = 'Réservation…';
       HPB.agendaBook(P.sid, t, minutes, $('textarea', m).value.trim()).then(function (b) {
         $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>C\'est réservé ! 🎉</h2><p>' + esc(cap(fDay(b.start))) + ', ' + range(b) + '</p>' +
-          '<p class="small muted">Mayane voit ton cours dans son agenda. Ajoute-le aussi au tien :</p><div class="row">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) + '<button class="btn primary" data-ok>Parfait</button></div>';
+          '<p class="small muted">Maayane voit ton cours dans son agenda. Ajoute-le aussi au tien :</p><div class="row">' + calMenu(b, 'Cours d\'hébreu avec Maayane', studentDesc(b, c)) + '<button class="btn primary" data-ok>Parfait</button></div>';
         bindCalMenus(m);
         $('[data-ok]', m).onclick = function () { m.remove(); };
         refresh();
@@ -2929,7 +2929,7 @@ var HPAgendaUI = function (X) {
 };
 
 /* =====================================================================
-   HPApp — connexion, back-office de Mayane, ouverture des espaces élèves.
+   HPApp — connexion, back-office de Maayane, ouverture des espaces élèves.
    ===================================================================== */
 var HPApp = (function () {
   'use strict';
@@ -2980,7 +2980,7 @@ var HPApp = (function () {
     if (e && /fetch|network|Failed/i.test(e.message || '')) return 'connexion internet interrompue';
     var msg = (e && e.message) || '';
     if (/password/i.test(msg)) return 'le mot de passe doit contenir au moins 6 caractères';
-    /* message technique (anglais, code, JSON) : on l'écrit en clair pour Mayane */
+    /* message technique (anglais, code, JSON) : on l'écrit en clair pour Maayane */
     if (!msg || /^(HTTP|\d{3}\b)|[{}_<>]|violates|duplicate|null value|JWT|PGRST|undefined|unexpected|status/i.test(msg)) return 'le serveur n\'a pas répondu comme prévu, réessayez dans un instant';
     return msg;
   }
@@ -3106,7 +3106,7 @@ var HPApp = (function () {
     if (HPB.remote && !route.verified) {
       /* la session enregistrée dans l'onglet doit correspondre au compte réellement connecté */
       return HPB.currentUser().then(function (u) {
-        if (!u || u.role !== s.role || (s.role === 'student' && u.id !== s.id)) { sess(null); route.checked = true; return renderLogin(u && u.role === 'blocked' ? 'Ce compte est suspendu. Contacte Mayane.' : null); }
+        if (!u || u.role !== s.role || (s.role === 'student' && u.id !== s.id)) { sess(null); route.checked = true; return renderLogin(u && u.role === 'blocked' ? 'Ce compte est suspendu. Contacte Maayane.' : null); }
         route.verified = true; route();
       });
     }
@@ -3139,13 +3139,13 @@ var HPApp = (function () {
 
   /* ================= CONNEXION ================= */
   function renderLogin(msg, loginValue) {
-    document.title = 'Hébreu avec Mayane';
+    document.title = 'Hébreu avec Maayane';
     root.innerHTML =
       '<div class="login-wrap"><div class="login">' +
         '<a class="back" href="#">← Accueil</a><br>' +
         '<span class="kicker">Espace de révision</span>' +
-        '<h1>Hébreu avec Mayane <span class="grad">עִבְרִית</span></h1>' +
-        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Mayane t\'a envoyés.</p>' +
+        '<h1>Hébreu avec Maayane <span class="grad">עִבְרִית</span></h1>' +
+        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Maayane t\'a envoyés.</p>' +
         '<div class="card"><form id="lf" autocomplete="on">' +
           '<label class="f">Identifiant<input class="in" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required value="' + esc(loginValue || '') + '"></label>' +
           '<label class="f">Mot de passe<input class="in" name="pw" type="password" autocomplete="current-password" required></label>' +
@@ -3170,7 +3170,7 @@ var HPApp = (function () {
       busy(btn, HPB.login(f.login.value, f.pw.value), 'Connexion impossible').then(function (r) {
         if (!r) { renderLogin('Identifiant ou mot de passe incorrect.', f.login.value); var pw = $('#lf [name=pw]'); if (pw) pw.focus(); return; }
         route.verified = true;
-        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Mayane.');
+        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Maayane.');
         sess(r); if (r.role === 'teacher') location.hash = '#/tableau'; else history.replaceState(null, '', location.pathname + location.search); route();
       }).catch(function () {});
     });
@@ -3185,12 +3185,12 @@ var HPApp = (function () {
 
   /* première ouverture du site en ligne : création du compte de la professeure */
   function renderSetup(msg) {
-    document.title = 'Hébreu avec Mayane · première ouverture';
+    document.title = 'Hébreu avec Maayane · première ouverture';
     root.innerHTML = '<div class="login-wrap"><div class="login">' +
       '<span class="kicker">Première ouverture</span><h1>Bienvenue <span class="grad">בְּרוּכָה הַבָּאָה</span></h1>' +
       '<p class="sub">Créez votre compte de professeure. Vous seule aurez accès à l\'espace de gestion.</p>' +
       '<div class="card"><form id="sf">' +
-        '<label class="f">Prénom<input class="in" name="first" value="Mayane" required></label>' +
+        '<label class="f">Prénom<input class="in" name="first" value="Maayane" required></label>' +
         '<label class="f">Identifiant<input class="in mono" name="login" value="mayane" autocapitalize="none" spellcheck="false" required></label>' +
         '<label class="f">Mot de passe (8 caractères minimum)<input class="in" name="pw" type="password" minlength="8" autocomplete="new-password" required></label>' +
         '<label class="f">Mot de passe, encore une fois<input class="in" name="pw2" type="password" minlength="8" autocomplete="new-password" required></label>' +
@@ -3228,7 +3228,7 @@ var HPApp = (function () {
       if (!s.words && !s.grammar) {
         root.innerHTML = '<div class="login-wrap"><div class="login card empty-state"><div class="big">🌱</div>' +
           '<h2 style="font-family:var(--font-display)">שָׁלוֹם ' + esc(st.first) + ' !</h2>' +
-          '<p class="muted">Ton espace est en préparation : Mayane va y déposer tes premiers cours. Reviens bientôt.</p>' +
+          '<p class="muted">Ton espace est en préparation : Maayane va y déposer tes premiers cours. Reviens bientôt.</p>' +
           '<button class="btn" id="out">' + (preview ? 'Retour au tableau de bord' : 'Se déconnecter') + '</button></div></div>';
         $('#out').onclick = preview ? closePreview : logout;
         return;
@@ -3338,14 +3338,14 @@ var HPApp = (function () {
     var nb = AG.badge();
     var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
-      '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
+      '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Maayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '"' + (cur === it[0] ? ' aria-current="page"' : '') + '>' + it[1] + '</a>'; }).join('') +
       '</nav><button class="btn small" id="lo">Se déconnecter</button></header>';
   }
   function renderTeacher() {
     var h = (location.hash || '#/tableau').slice(2).split('/');
     var page = h[0] || 'tableau';
-    document.title = 'Espace de Mayane';
+    document.title = 'Espace de Maayane';
     var body;
     if (page === 'eleve' && h[1]) body = studentPage(h[1], h[2] || 'progression');
     else if (page === 'eleves') body = studentsPage();
@@ -3408,7 +3408,7 @@ var HPApp = (function () {
       if (m.rate7 != null && m.rate7p != null && m.rate7p - m.rate7 >= 10) alerts.push(['warn', '📉', 'Réussite de <b>' + esc(fullName(s)) + '</b> en baisse : ' + m.rate7p + ' % → ' + m.rate7 + ' % cette semaine.', s.id]);
       if (m.active7 >= 5) alerts.push(['good', '🔥', '<b>' + esc(fullName(s)) + '</b> a révisé ' + m.active7 + ' jours sur 7. Bravo !', s.id]);
     });
-    return '<div class="bo-head"><div><h1 class="page-title">Bonjour ' + esc((HPB.me && HPB.me.first) || 'Mayane') + ' <span class="grad">שָׁלוֹם</span></h1>' +
+    return '<div class="bo-head"><div><h1 class="page-title">Bonjour ' + esc((HPB.me && HPB.me.first) || 'Maayane') + ' <span class="grad">שָׁלוֹם</span></h1>' +
         '<p>Vue d\'ensemble de vos élèves sur les 7 derniers jours.</p></div>' +
         '<div class="row"><a class="btn" href="#/agenda">📅 Agenda</a><button class="btn" data-act="upload">Déposer des documents</button><button class="btn primary" data-act="new">+ Créer un compte élève</button></div></div>' +
       '<div class="stack">' +
@@ -3612,12 +3612,12 @@ var HPApp = (function () {
   }
   function accessCard(s, pw) {
     var site = (cache.settings && cache.settings.siteUrl) || (HPB.remote ? location.origin : '');
-    var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMayane';
+    var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMaayane';
     return '<div class="access"><div><div class="k">Identifiant</div><div class="v">' + esc(s.login) + '</div></div>' +
       '<div><div class="k">Mot de passe</div><div class="v">' + esc(pw) + '</div></div>' +
       (location.hash.indexOf('/acces') < 0 ? '<div class="small muted">Vous le retrouverez à tout moment dans la fiche de l\'élève, onglet « Compte & accès ».</div>' : '') +
       '<div class="row"><button class="btn small" data-copy="' + esc(msg) + '">Copier le message</button>' +
-      (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Tes accès — hébreu avec Mayane') + '&body=' + encodeURIComponent(msg) + '">✉️ Envoyer par e-mail</a>' : '') +
+      (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Tes accès — hébreu avec Maayane') + '&body=' + encodeURIComponent(msg) + '">✉️ Envoyer par e-mail</a>' : '') +
       (s.phone ? '<a class="btn small" href="sms:' + encodeURIComponent(s.phone.replace(/\s/g, '')) + '?&body=' + encodeURIComponent(msg) + '">📱 Envoyer par SMS</a>' : '') +
       '<a class="btn small" target="_blank" rel="noopener" href="https://wa.me/' + (s.phone ? s.phone.replace(/[^0-9]/g, '') : '') + '?text=' + encodeURIComponent(msg) + '">WhatsApp</a></div></div>';
   }
@@ -4032,7 +4032,7 @@ var HPApp = (function () {
   function seedAgenda() {
     var tz; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
     var cfg = HPCal.norm({ open: true, tz: tz || 'Europe/Paris', durations: [60, 90, 120], step: 30, notice: 12, horizon: 6, buffer: 0, cancel: 24,
-      message: 'Les cours ont lieu en visio (lien envoyé la veille) ou chez Mayane. Pense à apporter ton cahier !',
+      message: 'Les cours ont lieu en visio (lien envoyé la veille) ou chez Maayane. Pense à apporter ton cahier !',
       rules: [{ d: 0, from: '10:00', to: '13:00' }, { d: 1, from: '17:00', to: '21:00' }, { d: 2, from: '17:00', to: '21:00' },
         { d: 3, from: '09:00', to: '12:00' }, { d: 3, from: '17:00', to: '21:00' }, { d: 4, from: '17:00', to: '21:00' }] });
     var today = HPCal.dayKey(Date.now(), cfg.tz);

@@ -1703,7 +1703,6 @@
   .rv-reveal { font: 600 34px/1.4 var(--font-he); color: var(--he); }
   .rv-q { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .rv-chip { padding: 5px 12px; border-radius: 999px; background: var(--accent-tint); color: var(--accent); font-weight: 800; font-size: 14px; }
-  .rv-sol { font: 600 22px var(--font-he); color: var(--olive); }
   .rv-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
   .rv-choice {
     position: relative; min-height: 58px; padding: 8px 30px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--paper);
@@ -1715,6 +1714,24 @@
   .rv-choice.bad { border-color: var(--bad); background: var(--bad-tint); color: var(--bad); }
   .rv-choice:disabled { cursor: default; }
   .rv-best { font-weight: 800; color: var(--gold); margin: -6px 0 16px; }
+  .rv-verdict { display: inline-block; padding: 6px 16px; border-radius: 999px; font: 900 19px/1.2 var(--font-display); }
+  .rv-verdict.ok { background: var(--mint); color: var(--olive); }
+  .rv-verdict.bad { background: var(--bad-tint); color: var(--bad); }
+  .flash-card.rv-is-ok, .flash-card.rv-is-ok:hover { border: 2px solid var(--olive); }
+  .flash-card.rv-is-bad, .flash-card.rv-is-bad:hover { border: 2px solid var(--bad); }
+  .rv-sol { display: grid; gap: 2px; justify-items: center; }
+  .rv-sol-l { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .rv-sol [lang="he"] { font: 600 22px var(--font-he); color: var(--olive); }
+  .rv-durs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rv-dur {
+    position: relative; display: grid; gap: 4px; padding: 18px 12px; border-radius: 18px; border: 1.5px solid var(--line);
+    background: var(--paper); cursor: pointer; font-family: inherit; color: var(--ink);
+  }
+  .rv-dur b { font: 900 22px var(--font-display); }
+  .rv-dur small { font-size: 12px; color: var(--muted); }
+  .rv-dur:hover, .rv-dur.pref { border-color: var(--accent); }
+  .rv-dur.pref { background: var(--accent-tint); }
+  .rv-dur .rv-num { position: absolute; top: 8px; right: 11px; font: 700 10px var(--font-ui, inherit); color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { .rv-tile.bad, .rv-letter.bad { animation: none; } .rv-tile { transition: none; } }
   @media (max-width: 700px) {
     #panel-revise .rv-today { padding: 18px 16px; border-radius: 20px; }
@@ -10058,7 +10075,9 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     var dayN = Math.min(DAY_MAX, d.length + (d.length < DAY_MAX ? Math.min(DAY_MAX - d.length, nl) : 0));
     var flashN = Math.min(FLASH_N, d.length + Math.min(nl, FLASH_N));
     var G = storage.games || {};
-    var rec = function (id, unit) { var g = G[id]; return g && g.plays ? 'Record : ' + plural(g.best, unit) : 'Pas encore joué'; };
+    if (G.pairs && !G['pairs-60']) { G['pairs-60'] = G.pairs; delete G.pairs; }
+    var pd = storage.preferences.pairsDur || 60, pdl = pd >= 60 ? (pd / 60) + ' min' : pd + ' s';
+    var rec = function (id, unit, many, sfx) { var g = G[id]; return g && g.plays ? 'Record : ' + plural(g.best, unit, many) + (sfx || '') : 'Pas encore joué'; };
 
     root.innerHTML =
       '<section class="rv-today">' +
@@ -10082,7 +10101,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
       '<h3 class="rv-h">Jeux courts</h3>' +
       '<div class="rv-games">' +
         '<button type="button" class="rv-game" data-rv="pairs"><span class="rv-ic" aria-hidden="true">🔗</span><b>Paires express</b>' +
-          '<span>Relie le plus de paires hébreu–français possible en 60 secondes.</span><small>' + rec('pairs', 'paire') + '</small></button>' +
+          '<span>Relie le plus de paires hébreu–français possible avant la fin du temps : 1, 2, 3 ou 5 minutes.</span><small>' + rec('pairs-' + pd, 'paire', null, ' en ' + pdl) + '</small></button>' +
         '<button type="button" class="rv-game" data-rv="scramble"><span class="rv-ic" aria-hidden="true">🔤</span><b>Mot en désordre</b>' +
           '<span>Remets les lettres dans l\'ordre, de droite à gauche. 10 mots.</span><small>' + rec('scramble', 'mot') + '</small></button>' +
         (hasConj() ? '<button type="button" class="rv-game" data-rv="conj"><span class="rv-ic" aria-hidden="true">🔁</span><b>Conjugaison mélangée</b>' +
@@ -10117,14 +10136,14 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     ov.addEventListener('click', onClick);
   }
   function xpNow() { return (storage.progress && storage.progress.xp) || 0; }
-  function openGame(id) {
+  function openGame(id, opt) {
     ensureOv();
     stop();
-    game = { id: id, xp0: xpNow() };
+    game = { id: id, opt: opt, xp0: xpNow() };
     gTitle.textContent = GAMES[id].title; gTimer.textContent = ''; gTimer.classList.remove('low'); gBar.style.width = '0';
     document.body.classList.add('rv-quiet');           /* pas de « +10 XP » à chaque réponse pendant un jeu rapide */
     ov.classList.add('on'); document.body.style.overflow = 'hidden';
-    GAMES[id].start();
+    GAMES[id].start(opt);
   }
   function stop() { if (game && game.timer) { clearInterval(game.timer); game.timer = null; } if (game && game.wait) { clearTimeout(game.wait); game.wait = null; } }
   function closeGame() {
@@ -10143,7 +10162,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     save();
     return { record: score > prev && prev >= 0 && score > 0, first: prev < 0, best: g.best };
   }
-  function endScreen(id, score, big, msg, unit) {
+  function endScreen(id, score, big, msg, unit, extra) {
     stop();
     var r = record(id, score), gained = xpNow() - game.xp0;
     Array.prototype.forEach.call(document.querySelectorAll('.hp-toast.xp'), function (t) { t.remove(); });
@@ -10151,12 +10170,13 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     gBar.style.width = '100%'; gProg.textContent = 'Terminé'; gTimer.textContent = '';
     gBody.innerHTML = '<div class="flash-end"><div class="big">' + big + '</div><p>' + msg + (gained > 0 ? ' · +' + gained + ' XP' : '') + '</p>' +
       (r.record ? '<p class="rv-best">Nouveau record !</p>' : (!r.first ? '<p class="rv-sub">Record : ' + plural(r.best, unit[0], unit[1]) + '</p>' : '')) +
-      '<div class="flash-acts"><button class="btn primary" data-rvagain="1">Rejouer</button><button class="btn" data-rvclose="1">Fermer</button></div></div>';
+      '<div class="flash-acts"><button class="btn primary" data-rvagain="1">Rejouer</button>' + (extra || '') + '<button class="btn" data-rvclose="1">Fermer</button></div></div>';
     var b = gBody.querySelector('[data-rvagain]'); if (b) try { b.focus({ preventScroll: true }); } catch (x) {}
   }
   function onClick(e) {
     if (e.target === ov || e.target.closest('[data-rvclose]')) return closeGame();
-    if (e.target.closest('[data-rvagain]')) return openGame(game.id);
+    if (e.target.closest('[data-rvagain]')) return openGame(game.id, game.opt);
+    if (e.target.closest('[data-rvchoose]')) return openGame(game.id);
     if (game && GAMES[game.id].click) GAMES[game.id].click(e);
   }
   document.addEventListener('keydown', function (e) {
@@ -10187,8 +10207,11 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     /* ---------- Paires express : 60 secondes ---------- */
     pairs: {
       title: 'Paires express',
-      start: function () {
-        game.score = 0; game.err = 0; game.left = 60; game.used = {}; game.sel = null;
+      DURS: [[60, '1 min'], [120, '2 min'], [180, '3 min'], [300, '5 min']],
+      start: function (sec) {
+        if (!sec) return this.choose();
+        storage.preferences.pairsDur = sec; save();
+        game.total = sec; game.score = 0; game.err = 0; game.left = sec; game.used = {}; game.sel = null;
         this.round();
         var self = this;
         game.timer = setInterval(function () {
@@ -10198,10 +10221,26 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
         }, 1000);
         this.clock();
       },
+      /* écran de départ : durée de la partie (chaque durée a son record) */
+      choose: function () {
+        var G = storage.games || {}, pref = storage.preferences.pairsDur || 60;
+        gProg.textContent = 'Choisis la durée'; gTimer.textContent = ''; gBar.style.width = '0';
+        gBody.innerHTML = '<p class="rv-help">Combien de temps veux-tu jouer ?</p><div class="rv-durs">' + this.DURS.map(function (d, i) {
+          var g = G['pairs-' + d[0]];
+          return '<button type="button" class="rv-dur' + (d[0] === pref ? ' pref' : '') + '" data-dur="' + d[0] + '"><b>' + d[1] + '</b>' +
+            '<small>' + (g && g.plays ? 'record : ' + plural(g.best, 'paire') : 'pas encore joué') + '</small><span class="rv-num" aria-hidden="true">' + (i + 1) + '</span></button>';
+        }).join('') + '</div>';
+        var b = gBody.querySelector('.rv-dur.pref'); if (b) try { b.focus({ preventScroll: true }); } catch (x) {}
+      },
+      fmt: function (n) { return n >= 60 ? Math.floor(n / 60) + ':' + pad(n % 60) : n + ' s'; },
+      key: function (e) {
+        if (game.total || !/^[1-4]$/.test(e.key)) return;
+        e.preventDefault(); game.opt = this.DURS[+e.key - 1][0]; this.start(game.opt);
+      },
       clock: function () {
-        gTimer.textContent = game.left + ' s';
+        gTimer.textContent = this.fmt(game.left);
         gTimer.classList.toggle('low', game.left <= 10);
-        gBar.style.width = Math.round(100 * (60 - game.left) / 60) + '%';
+        gBar.style.width = Math.round(100 * (game.total - game.left) / game.total) + '%';
         gProg.textContent = plural(game.score, 'paire');
       },
       round: function () {
@@ -10219,6 +10258,8 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
           '<div class="rv-col">' + shuffle(ws).map(function (w) { return tile(w, 'fr'); }).join('') + '</div></div>';
       },
       click: function (e) {
+        var du = e.target.closest('[data-dur]');
+        if (du && !game.total) { game.opt = +du.dataset.dur; return this.start(game.opt); }
         var t = e.target.closest('.rv-tile');
         if (!t || t.classList.contains('ok') || game.left <= 0) return;
         var sel = game.sel;
@@ -10240,8 +10281,10 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
         }
       },
       end: function () {
-        endScreen('pairs', game.score, plural(game.score, 'paire'),
-          game.err ? plural(game.err, 'erreur') : 'Sans erreur', ['paire', 'paires']);
+        var lbl = this.DURS.filter(function (d) { return d[0] === game.total; })[0];
+        endScreen('pairs-' + game.total, game.score, plural(game.score, 'paire'),
+          'En ' + (lbl ? lbl[1] : game.total + ' s') + ' · ' + (game.err ? plural(game.err, 'erreur') : 'sans erreur'), ['paire', 'paires'],
+          '<button class="btn" data-rvchoose="1">Changer de durée</button>');
       }
     },
 
@@ -10272,10 +10315,11 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
         var w = game.w, slots = game.target.map(function (c, i) {
           return c === ' ' ? '<span class="rv-slot gap"></span>' : '<span class="rv-slot">' + (i < game.pos ? c : '') + '</span>';
         }).join('');
-        gBody.innerHTML = '<div class="flash-card typed solo"><div class="flash-face-fr">' + esc(w.fr) + '</div>' +
+        gBody.innerHTML = '<div class="flash-card typed solo' + (game.done ? (game.err ? ' rv-is-bad' : ' rv-is-ok') : '') + '"><div class="flash-face-fr">' + esc(w.fr) + '</div>' +
           (game.done
-            ? '<div class="rv-reveal" lang="he" dir="rtl">' + esc(w.voc) + '</div><div class="flash-verdict ' + (game.err ? 'bad' : 'ok') + '">' +
-              (game.err ? (game.gaveUp ? 'Voici le mot' : 'Trouvé, avec ' + plural(game.err, 'erreur')) : '✓ Sans faute') + '</div>'
+            ? '<div class="rv-verdict ' + (game.err ? 'bad' : 'ok') + '" role="status">' +
+              (game.err ? (game.gaveUp ? '✗ Voici le mot' : '≈ Trouvé, avec ' + plural(game.err, 'erreur')) : '✓ Correct, sans faute') + '</div>' +
+              '<div class="rv-reveal" lang="he" dir="rtl">' + esc(w.voc) + '</div>'
             : '<div class="rv-slots" dir="rtl" aria-label="Ta réponse">' + slots + '</div>' +
               '<div class="rv-letters" dir="rtl">' + game.tiles.map(function (t) {
                 return '<button type="button" class="rv-letter" data-id="' + t.id + '" lang="he">' + t.c + '</button>';
@@ -10364,10 +10408,12 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
       },
       draw: function (picked) {
         var q = game.q;
-        gBody.innerHTML = '<div class="flash-card typed solo">' +
+        var okPick = q.done && picked === q.good;
+        gBody.innerHTML = '<div class="flash-card typed solo' + (q.done ? (okPick ? ' rv-is-ok' : ' rv-is-bad') : '') + '">' +
+          (q.done ? '<div class="rv-verdict ' + (okPick ? 'ok' : 'bad') + '" role="status">' + (okPick ? '✓ Correct' : '✗ Faux') + '</div>' : '') +
           '<div class="rv-q"><span class="rv-chip">' + esc(q.pr.fr) + '</span><span class="rv-chip">' + q.tn.fr + '</span></div>' +
           '<div class="flash-face-he" lang="he" dir="rtl">' + esc(q.v.i) + '</div><div class="flash-ask">' + esc(q.v.f) + '</div>' +
-          (q.done ? '<div class="rv-sol" lang="he" dir="rtl">' + esc(q.pr.he + ' ' + q.good) + '</div>' : '') + '</div>' +
+          (q.done ? '<div class="rv-sol"><span class="rv-sol-l">' + (okPick ? 'C\'est bien' : 'La bonne réponse') + '</span><span lang="he" dir="rtl">' + esc(q.pr.he + ' ' + q.good) + '</span></div>' : '') + '</div>' +
           '<div class="rv-choices">' + q.opts.map(function (f, i) {
             var cls = !q.done ? '' : f === q.good ? ' ok' : f === picked ? ' bad' : '';
             return '<button type="button" class="rv-choice' + cls + '" data-opt="' + i + '" lang="he" dir="rtl"' + (q.done ? ' disabled' : '') + '>' +
@@ -10386,7 +10432,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
         if (window.HPG && HPG.onFlash) HPG.onFlash({ conj: true, inf: q.v.i, fr: q.v.f }, ok ? 'known' : 'again', false);
         save();
         this.draw(f);
-        if (ok) { var self = this; game.wait = setTimeout(function () { if (game && game.q === q) { game.i++; self.next(); } }, 900); }
+        var nx = gBody.querySelector('[data-rvnext]'); if (nx) try { nx.focus({ preventScroll: true }); } catch (x) {}
       },
       click: function (e) {
         if (e.target.closest('[data-rvnext]')) { stop(); game.i++; return this.next(); }

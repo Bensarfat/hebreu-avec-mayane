@@ -38,7 +38,7 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hébreu avec Maayane</title>
-<meta name="description" content="Cours d'hébreu en français avec Maayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
+<meta name="description" content="Cours d'hébreu, en hébreu avec le soutien du français, avec Maayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
 <meta name="theme-color" content="#7457f5">
 <link rel="icon" href="${ICON}">
 <link rel="preconnect" href="https://fonts.googleapis.com">

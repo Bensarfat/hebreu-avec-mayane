@@ -99,16 +99,16 @@ var HPHome = (function () {
 
   function render(root, go) {
     if (!document.getElementById('mv-css')) { var s = document.createElement('style'); s.id = 'mv-css'; s.textContent = CSS; document.head.appendChild(s); }
-    document.title = 'Hébreu avec Maayane · cours en français';
+    document.title = 'Hébreu avec Maayane · cours en hébreu, avec le soutien du français';
     root.innerHTML =
       '<div class="mv">' +
       '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Maayane</a>' +
         '<button class="btn" data-go="login">Mon espace</button></header>' +
       '<section class="mv-hero"><div>' +
-        '<span class="kicker">Cours d\'hébreu en français · tous niveaux</span>' +
+        '<span class="kicker">Cours en hébreu, avec le soutien du français · tous niveaux</span>' +
         '<h1>Parle, travaille, vis, aime… <span class="grad">en hébreu</span></h1>' +
         '<div class="mv-he" lang="he" dir="rtl">מְדַבְּרִים, עוֹבְדִים, חַיִּים, אוֹהֲבִים – בְּעִבְרִית</div>' +
-        '<p class="mv-lead">Des cours en hébreu, à ton rythme et avec le sourire. Et un espace de révision rien qu’à toi : ton vocabulaire, tes règles de grammaire, tes flashcards, préparés à partir de tes propres cours.</p>' +
+        '<p class="mv-lead">Des cours en hébreu, avec le français pour t’aider quand tu en as besoin, à ton rythme et avec le sourire. Et un espace de révision rien qu’à toi : ton vocabulaire, tes règles de grammaire, tes flashcards, préparés à partir de tes propres cours.</p>' +
         '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
       '</div><div class="mv-art">' + PORTRAIT +
         '<div class="mv-bubble mv-b1"><span class="he">שָׁלוֹם!</span> Bonjour !</div>' +
@@ -125,7 +125,7 @@ var HPHome = (function () {
 
       '<section class="mv-sec" id="comment"><h2>Comment ça marche</h2><p class="mv-sub">Le cours, puis la révision : tout ce que tu vois en classe se retrouve dans ton espace.</p>' +
         '<div class="mv-steps">' +
-          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Maayane</h3><p>On avance ensemble, en français, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
+          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Maayane</h3><p>On parle hébreu ensemble, et le français est là pour t’expliquer quand c’est nécessaire, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
           '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Maayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
           '<div class="mv-step"><div class="n" style="background:var(--peach);color:var(--gold)">3</div><h3>Tu révises en jouant</h3><p>Quiz, flashcards, conjugaison : tu gagnes des XP, tu montes de niveau et tu débloques des badges.</p></div>' +
         '</div></section>' +
@@ -140,7 +140,7 @@ var HPHome = (function () {
       '<section class="mv-sec"><div class="mv-about"><div class="mv-face">' + PORTRAIT + '</div><div>' +
         '<h3>Ta professeure : Maayane</h3>' +
         '<p>Patiente, à l\'écoute et toujours positive, Maayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
-        '<div class="mv-tags"><span class="pill">Cours en français</span><span class="pill green">Bienveillance</span><span class="pill gold">Motivation</span><span class="pill rose">Tous niveaux</span></div>' +
+        '<div class="mv-tags"><span class="pill">En hébreu, soutien en français</span><span class="pill green">Bienveillance</span><span class="pill gold">Motivation</span><span class="pill rose">Tous niveaux</span></div>' +
       '</div></div></section>' +
 
       '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Maayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +

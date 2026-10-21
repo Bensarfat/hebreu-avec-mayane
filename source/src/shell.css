@@ -1,3 +1,7 @@
+  /* ---------- fond de page bleu (remplace le fond pêche / rose / lavande du site de Benjamin) ---------- */
+  :root { --bg: #f2f7fe; --bg-1: #d4e8ff; --bg-2: #dbe4ff; --bg-3: #e1f0ff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0e1522; --bg-1: #12233d; --bg-2: #141f3a; --bg-3: #0d1c31; } }
+  :root[data-theme="dark"] { --bg: #0e1522; --bg-1: #12233d; --bg-2: #141f3a; --bg-3: #0d1c31; }
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; font-family: var(--font-ui); color: var(--ink); background-color: var(--bg); }
   body { -webkit-font-smoothing: antialiased; font-size: 15px; line-height: 1.5; min-height: 100vh; }

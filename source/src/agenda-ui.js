@@ -1,6 +1,6 @@
 /* =====================================================================
    HPAgendaUI — réservation des cours.
-   · Mayane : calendrier de la semaine (tous les élèves), disponibilités,
+   · Maayane : calendrier de la semaine (tous les élèves), disponibilités,
      fermetures, ajout / annulation de cours, lien vers son agenda.
    · Élève : ses cours à venir et les créneaux libres ; il réserve en ligne.
    Les règles de calcul (créneaux, délais, fuseaux) sont dans HPCal (api/_agenda.js),
@@ -33,13 +33,13 @@ var HPAgendaUI = function (X) {
       taken: 'Ce créneau vient d\'être pris. Choisis-en un autre.', unavailable: 'Ce créneau n\'est plus disponible.',
       too_soon: 'Ce créneau est trop proche : il faut réserver un peu plus à l\'avance.', too_far: 'Ce créneau est trop loin dans le temps.',
       closed: 'La réservation en ligne est fermée pour le moment.', duration: 'Cette durée n\'est plus proposée.',
-      max_upcoming: 'Tu as déjà le nombre maximum de cours à venir.', too_late: 'Il est trop tard pour annuler en ligne : préviens Mayane directement.',
+      max_upcoming: 'Tu as déjà le nombre maximum de cours à venir.', too_late: 'Il est trop tard pour annuler en ligne : préviens Maayane directement.',
       not_found: 'Ce cours n\'existe plus.', not_student: 'Ta session a expiré : reconnecte-toi.', server_error: 'Le serveur n\'a pas répondu. Réessaie dans un instant.',
       not_configured: 'L\'agenda n\'est pas encore installé sur le serveur.'
     };
     return M[code] || X.errText(e || { message: code });
   }
-  function cfgT() {                  // réglages de Mayane (avec son fuseau par défaut)
+  function cfgT() {                  // réglages de Maayane (avec son fuseau par défaut)
     var raw = (cache.settings && cache.settings.agenda) || null;
     return C.norm(raw || { tz: LOCAL_TZ });
   }
@@ -51,9 +51,9 @@ var HPAgendaUI = function (X) {
   function rid() { var a = new Uint8Array(20); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }
 
   /* ================================================================
-     CÔTÉ MAYANE
+     CÔTÉ MAAYANE
      ================================================================ */
-  var week = null;                   // lundi affiché (AAAA-MM-JJ, fuseau de Mayane)
+  var week = null;                   // lundi affiché (AAAA-MM-JJ, fuseau de Maayane)
   var draft = null;                  // disponibilités en cours de modification
 
   /* cours chargés : de -4 mois à +6 mois ; au-delà, chargés à la demande */
@@ -232,7 +232,7 @@ var HPAgendaUI = function (X) {
   /* ---------- détail d'un cours ---------- */
   function bookingModal(b) {
     var c = cfgT(), s = student(b.studentId), past = b.end < Date.now();
-    var msg = s ? 'Shalom ' + s.first + ' ! Petit rappel : cours d\'hébreu ' + fFull(b.start, c.tz) + ' (heure de ' + C.tzCity(c.tz) + ', ' + dur(b) + '). À bientôt, Mayane' : '';
+    var msg = s ? 'Shalom ' + s.first + ' ! Petit rappel : cours d\'hébreu ' + fFull(b.start, c.tz) + ' (heure de ' + C.tzCity(c.tz) + ', ' + dur(b) + '). À bientôt, Maayane' : '';
     var m = X.modal('<h2>' + esc(sName(b.studentId)) + '</h2>' +
       '<div class="ag-detail"><div><span>Date</span><b>' + esc(cap(fDay(b.start, c.tz))) + '</b></div><div><span>Horaire</span><b>' + range(b, c.tz) + ' · ' + dur(b) + '</b></div>' +
       '<div><span>Réservé</span><b>' + (b.by === 'student' ? 'par l\'élève' : 'par vous') + (b.createdAt ? ', le ' + esc(fShort(Date.parse(b.createdAt), c.tz)) : '') + '</b></div>' +
@@ -521,9 +521,9 @@ var HPAgendaUI = function (X) {
     html += '<section class="card"><h3>Mes prochains cours <small>' + up.length + '</small></h3>' + (up.length ? '<ul class="ag-mine">' + up.map(function (b) {
       var can = C.canCancel(c, b.start, now);
       return '<li><div class="ag-date"><span>' + esc(fm(tz, { weekday: 'short' }).format(b.start)) + '</span><b>' + esc(fm(tz, { day: 'numeric' }).format(b.start)) + '</b><span>' + esc(fm(tz, { month: 'short' }).format(b.start)) + '</span></div>' +
-        '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Mayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
-        '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) +
-        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler ce cours</button>' : '<span class="small muted">Pour annuler, préviens Mayane</span>') + '</div></li>';
+        '<div class="ag-what"><b>' + range(b, tz) + '</b><span>Cours d\'hébreu avec Maayane · ' + dur(b) + '</span>' + (b.note ? '<i>' + esc(b.note) + '</i>' : '') + '</div>' +
+        '<div class="ag-acts">' + calMenu(b, 'Cours d\'hébreu avec Maayane', studentDesc(b, c)) +
+        (can ? '<button class="btn small ghost" data-cancel="' + b.id + '">Annuler ce cours</button>' : '<span class="small muted">Pour annuler, préviens Maayane</span>') + '</div></li>';
     }).join('') + '</ul>' : '<p class="hp-empty">Aucun cours prévu pour l\'instant.</p>') + '</section>';
     if (c.open) {
       var all = C.slots(c, st.busy, now, now + c.horizon * 7 * DAY, P.dur, now);
@@ -534,7 +534,7 @@ var HPAgendaUI = function (X) {
       html += '<section class="card"><h3>Réserver un cours</h3>' +
         (c.message ? '<div class="ag-msg">' + linkify(esc(c.message)) + '</div>' : '') +
         (c.tz !== LOCAL_TZ ? '<p class="small muted">Horaires affichés à ton heure (' + esc(C.tzCity(LOCAL_TZ)) + ').</p>' : '') +
-        (maxed ? '<p class="ok">Tu as déjà ' + X.plural(up.length, 'cours', 'cours') + ' à venir : c\'est le maximum fixé par Mayane. Tu pourras réserver le suivant après ton prochain cours.</p>' :
+        (maxed ? '<p class="ok">Tu as déjà ' + X.plural(up.length, 'cours', 'cours') + ' à venir : c\'est le maximum fixé par Maayane. Tu pourras réserver le suivant après ton prochain cours.</p>' :
         '<p class="small muted" style="margin:0 0 8px">1. Durée du cours</p><div class="ag-durs">' + c.durations.map(function (d) { return '<button type="button" class="chip' + (d === P.dur ? ' on' : '') + '" data-dur="' + d + '" aria-pressed="' + (d === P.dur) + '">' + C.durLabel(d) + '</button>'; }).join('') + '</div>' +
         (order.length ? '<p class="small muted" style="margin:16px 0 8px">2. Jour</p><div class="ag-days" role="group" aria-label="Jours disponibles">' + order.map(function (k) {
           var t = byDay[k][0];
@@ -546,7 +546,7 @@ var HPAgendaUI = function (X) {
         : '<p class="hp-empty">Aucun créneau libre de ' + C.durLabel(P.dur) + ' pour le moment' + (c.durations.length > 1 ? ' : essaie une autre durée, ou' : ',') + ' reviens bientôt.</p>')) +
         '</section>';
     } else if (!up.length) {
-      html += '<section class="card"><p class="hp-empty">La réservation en ligne n\'est pas ouverte pour le moment. Mayane te proposera tes prochains cours.</p></section>';
+      html += '<section class="card"><p class="hp-empty">La réservation en ligne n\'est pas ouverte pour le moment. Maayane te proposera tes prochains cours.</p></section>';
     }
     if (past.length) html += '<section class="card"><h3>Cours passés</h3><ul class="content-list">' + past.map(function (b) { return '<li><span>' + esc(cap(fDay(b.start, tz))) + '</span><span class="small muted">' + range(b, tz) + '</span></li>'; }).join('') + '</ul></section>';
     $('#ag-pbody', P.el).innerHTML = '<div class="stack">' + html + '</div>';
@@ -589,7 +589,7 @@ var HPAgendaUI = function (X) {
   function confirmBook(t) {
     var c = P.st.cfg, e = t + P.dur * MIN, minutes = P.dur;
     var m = X.modal('<h2>Réserver ce cours ?</h2><div class="ag-detail"><div><span>Date</span><b>' + esc(cap(fDay(t))) + '</b></div><div><span>Horaire</span><b>' + fTime(t) + ' – ' + fTime(e) + ' · ' + C.durLabel(minutes) + '</b></div></div>' +
-      '<label class="f" style="margin-top:14px">Un mot pour Mayane <span class="muted" style="font-weight:500">(facultatif)</span><textarea class="in" name="note" rows="2" maxlength="500" placeholder="ex. j\'aimerais revoir les verbes au passé"></textarea></label>' +
+      '<label class="f" style="margin-top:14px">Un mot pour Maayane <span class="muted" style="font-weight:500">(facultatif)</span><textarea class="in" name="note" rows="2" maxlength="500" placeholder="ex. j\'aimerais revoir les verbes au passé"></textarea></label>' +
       (c.cancel < 336 ? '<p class="small muted">Annulation possible en ligne ' + (c.cancel ? 'jusqu\'à ' + c.cancel + ' h avant le cours' : 'jusqu\'au début du cours') + '.</p>' : '') +
       '<div class="row" style="margin-top:14px"><button class="btn primary" data-yes>Confirmer la réservation</button><button class="btn" data-no>Retour</button></div><div id="bk-msg" style="margin-top:10px"></div>');
     $('[data-no]', m).onclick = function () { m.remove(); };
@@ -598,7 +598,7 @@ var HPAgendaUI = function (X) {
       btn.disabled = true; btn.textContent = 'Réservation…';
       HPB.agendaBook(P.sid, t, minutes, $('textarea', m).value.trim()).then(function (b) {
         $('.card', m).innerHTML = '<button class="close" aria-label="Fermer">×</button><h2>C\'est réservé ! 🎉</h2><p>' + esc(cap(fDay(b.start))) + ', ' + range(b) + '</p>' +
-          '<p class="small muted">Mayane voit ton cours dans son agenda. Ajoute-le aussi au tien :</p><div class="row">' + calMenu(b, 'Cours d\'hébreu avec Mayane', studentDesc(b, c)) + '<button class="btn primary" data-ok>Parfait</button></div>';
+          '<p class="small muted">Maayane voit ton cours dans son agenda. Ajoute-le aussi au tien :</p><div class="row">' + calMenu(b, 'Cours d\'hébreu avec Maayane', studentDesc(b, c)) + '<button class="btn primary" data-ok>Parfait</button></div>';
         bindCalMenus(m);
         $('[data-ok]', m).onclick = function () { m.remove(); };
         refresh();

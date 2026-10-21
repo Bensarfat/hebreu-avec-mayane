@@ -1,5 +1,5 @@
 -- =====================================================================
--- Hébreu avec Mayane — base de données Supabase
+-- Hébreu avec Maayane — base de données Supabase
 -- À coller dans Supabase > SQL Editor > New query, puis « Run ».
 -- Peut être relancé sans risque (il ne recrée que ce qui manque).
 -- =====================================================================

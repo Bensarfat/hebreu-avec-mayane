@@ -1,5 +1,5 @@
 /* =====================================================================
-   HPApp — connexion, back-office de Mayane, ouverture des espaces élèves.
+   HPApp — connexion, back-office de Maayane, ouverture des espaces élèves.
    ===================================================================== */
 var HPApp = (function () {
   'use strict';
@@ -50,7 +50,7 @@ var HPApp = (function () {
     if (e && /fetch|network|Failed/i.test(e.message || '')) return 'connexion internet interrompue';
     var msg = (e && e.message) || '';
     if (/password/i.test(msg)) return 'le mot de passe doit contenir au moins 6 caractères';
-    /* message technique (anglais, code, JSON) : on l'écrit en clair pour Mayane */
+    /* message technique (anglais, code, JSON) : on l'écrit en clair pour Maayane */
     if (!msg || /^(HTTP|\d{3}\b)|[{}_<>]|violates|duplicate|null value|JWT|PGRST|undefined|unexpected|status/i.test(msg)) return 'le serveur n\'a pas répondu comme prévu, réessayez dans un instant';
     return msg;
   }
@@ -176,7 +176,7 @@ var HPApp = (function () {
     if (HPB.remote && !route.verified) {
       /* la session enregistrée dans l'onglet doit correspondre au compte réellement connecté */
       return HPB.currentUser().then(function (u) {
-        if (!u || u.role !== s.role || (s.role === 'student' && u.id !== s.id)) { sess(null); route.checked = true; return renderLogin(u && u.role === 'blocked' ? 'Ce compte est suspendu. Contacte Mayane.' : null); }
+        if (!u || u.role !== s.role || (s.role === 'student' && u.id !== s.id)) { sess(null); route.checked = true; return renderLogin(u && u.role === 'blocked' ? 'Ce compte est suspendu. Contacte Maayane.' : null); }
         route.verified = true; route();
       });
     }
@@ -209,13 +209,13 @@ var HPApp = (function () {
 
   /* ================= CONNEXION ================= */
   function renderLogin(msg, loginValue) {
-    document.title = 'Hébreu avec Mayane';
+    document.title = 'Hébreu avec Maayane';
     root.innerHTML =
       '<div class="login-wrap"><div class="login">' +
         '<a class="back" href="#">← Accueil</a><br>' +
         '<span class="kicker">Espace de révision</span>' +
-        '<h1>Hébreu avec Mayane <span class="grad">עִבְרִית</span></h1>' +
-        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Mayane t\'a envoyés.</p>' +
+        '<h1>Hébreu avec Maayane <span class="grad">עִבְרִית</span></h1>' +
+        '<p class="sub">Connecte-toi avec l\'identifiant et le mot de passe que Maayane t\'a envoyés.</p>' +
         '<div class="card"><form id="lf" autocomplete="on">' +
           '<label class="f">Identifiant<input class="in" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required value="' + esc(loginValue || '') + '"></label>' +
           '<label class="f">Mot de passe<input class="in" name="pw" type="password" autocomplete="current-password" required></label>' +
@@ -240,7 +240,7 @@ var HPApp = (function () {
       busy(btn, HPB.login(f.login.value, f.pw.value), 'Connexion impossible').then(function (r) {
         if (!r) { renderLogin('Identifiant ou mot de passe incorrect.', f.login.value); var pw = $('#lf [name=pw]'); if (pw) pw.focus(); return; }
         route.verified = true;
-        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Mayane.');
+        if (r.role === 'blocked') return renderLogin('Ce compte est suspendu. Contacte Maayane.');
         sess(r); if (r.role === 'teacher') location.hash = '#/tableau'; else history.replaceState(null, '', location.pathname + location.search); route();
       }).catch(function () {});
     });
@@ -255,12 +255,12 @@ var HPApp = (function () {
 
   /* première ouverture du site en ligne : création du compte de la professeure */
   function renderSetup(msg) {
-    document.title = 'Hébreu avec Mayane · première ouverture';
+    document.title = 'Hébreu avec Maayane · première ouverture';
     root.innerHTML = '<div class="login-wrap"><div class="login">' +
       '<span class="kicker">Première ouverture</span><h1>Bienvenue <span class="grad">בְּרוּכָה הַבָּאָה</span></h1>' +
       '<p class="sub">Créez votre compte de professeure. Vous seule aurez accès à l\'espace de gestion.</p>' +
       '<div class="card"><form id="sf">' +
-        '<label class="f">Prénom<input class="in" name="first" value="Mayane" required></label>' +
+        '<label class="f">Prénom<input class="in" name="first" value="Maayane" required></label>' +
         '<label class="f">Identifiant<input class="in mono" name="login" value="mayane" autocapitalize="none" spellcheck="false" required></label>' +
         '<label class="f">Mot de passe (8 caractères minimum)<input class="in" name="pw" type="password" minlength="8" autocomplete="new-password" required></label>' +
         '<label class="f">Mot de passe, encore une fois<input class="in" name="pw2" type="password" minlength="8" autocomplete="new-password" required></label>' +
@@ -298,7 +298,7 @@ var HPApp = (function () {
       if (!s.words && !s.grammar) {
         root.innerHTML = '<div class="login-wrap"><div class="login card empty-state"><div class="big">🌱</div>' +
           '<h2 style="font-family:var(--font-display)">שָׁלוֹם ' + esc(st.first) + ' !</h2>' +
-          '<p class="muted">Ton espace est en préparation : Mayane va y déposer tes premiers cours. Reviens bientôt.</p>' +
+          '<p class="muted">Ton espace est en préparation : Maayane va y déposer tes premiers cours. Reviens bientôt.</p>' +
           '<button class="btn" id="out">' + (preview ? 'Retour au tableau de bord' : 'Se déconnecter') + '</button></div></div>';
         $('#out').onclick = preview ? closePreview : logout;
         return;
@@ -408,14 +408,14 @@ var HPApp = (function () {
     var nb = AG.badge();
     var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
-      '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Mayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
+      '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Maayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '"' + (cur === it[0] ? ' aria-current="page"' : '') + '>' + it[1] + '</a>'; }).join('') +
       '</nav><button class="btn small" id="lo">Se déconnecter</button></header>';
   }
   function renderTeacher() {
     var h = (location.hash || '#/tableau').slice(2).split('/');
     var page = h[0] || 'tableau';
-    document.title = 'Espace de Mayane';
+    document.title = 'Espace de Maayane';
     var body;
     if (page === 'eleve' && h[1]) body = studentPage(h[1], h[2] || 'progression');
     else if (page === 'eleves') body = studentsPage();
@@ -478,7 +478,7 @@ var HPApp = (function () {
       if (m.rate7 != null && m.rate7p != null && m.rate7p - m.rate7 >= 10) alerts.push(['warn', '📉', 'Réussite de <b>' + esc(fullName(s)) + '</b> en baisse : ' + m.rate7p + ' % → ' + m.rate7 + ' % cette semaine.', s.id]);
       if (m.active7 >= 5) alerts.push(['good', '🔥', '<b>' + esc(fullName(s)) + '</b> a révisé ' + m.active7 + ' jours sur 7. Bravo !', s.id]);
     });
-    return '<div class="bo-head"><div><h1 class="page-title">Bonjour ' + esc((HPB.me && HPB.me.first) || 'Mayane') + ' <span class="grad">שָׁלוֹם</span></h1>' +
+    return '<div class="bo-head"><div><h1 class="page-title">Bonjour ' + esc((HPB.me && HPB.me.first) || 'Maayane') + ' <span class="grad">שָׁלוֹם</span></h1>' +
         '<p>Vue d\'ensemble de vos élèves sur les 7 derniers jours.</p></div>' +
         '<div class="row"><a class="btn" href="#/agenda">📅 Agenda</a><button class="btn" data-act="upload">Déposer des documents</button><button class="btn primary" data-act="new">+ Créer un compte élève</button></div></div>' +
       '<div class="stack">' +
@@ -682,12 +682,12 @@ var HPApp = (function () {
   }
   function accessCard(s, pw) {
     var site = (cache.settings && cache.settings.siteUrl) || (HPB.remote ? location.origin : '');
-    var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMayane';
+    var msg = 'Shalom ' + s.first + ' !\n\nVoici tes accès à ton espace de révision d\'hébreu' + (site ? ' : ' + site : '') + '\n\nIdentifiant : ' + s.login + '\nMot de passe : ' + pw + '\n\nÀ bientôt,\nMaayane';
     return '<div class="access"><div><div class="k">Identifiant</div><div class="v">' + esc(s.login) + '</div></div>' +
       '<div><div class="k">Mot de passe</div><div class="v">' + esc(pw) + '</div></div>' +
       (location.hash.indexOf('/acces') < 0 ? '<div class="small muted">Vous le retrouverez à tout moment dans la fiche de l\'élève, onglet « Compte & accès ».</div>' : '') +
       '<div class="row"><button class="btn small" data-copy="' + esc(msg) + '">Copier le message</button>' +
-      (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Tes accès — hébreu avec Mayane') + '&body=' + encodeURIComponent(msg) + '">✉️ Envoyer par e-mail</a>' : '') +
+      (s.email ? '<a class="btn small" href="mailto:' + encodeURIComponent(s.email) + '?subject=' + encodeURIComponent('Tes accès — hébreu avec Maayane') + '&body=' + encodeURIComponent(msg) + '">✉️ Envoyer par e-mail</a>' : '') +
       (s.phone ? '<a class="btn small" href="sms:' + encodeURIComponent(s.phone.replace(/\s/g, '')) + '?&body=' + encodeURIComponent(msg) + '">📱 Envoyer par SMS</a>' : '') +
       '<a class="btn small" target="_blank" rel="noopener" href="https://wa.me/' + (s.phone ? s.phone.replace(/[^0-9]/g, '') : '') + '?text=' + encodeURIComponent(msg) + '">WhatsApp</a></div></div>';
   }
@@ -1102,7 +1102,7 @@ var HPApp = (function () {
   function seedAgenda() {
     var tz; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
     var cfg = HPCal.norm({ open: true, tz: tz || 'Europe/Paris', durations: [60, 90, 120], step: 30, notice: 12, horizon: 6, buffer: 0, cancel: 24,
-      message: 'Les cours ont lieu en visio (lien envoyé la veille) ou chez Mayane. Pense à apporter ton cahier !',
+      message: 'Les cours ont lieu en visio (lien envoyé la veille) ou chez Maayane. Pense à apporter ton cahier !',
       rules: [{ d: 0, from: '10:00', to: '13:00' }, { d: 1, from: '17:00', to: '21:00' }, { d: 2, from: '17:00', to: '21:00' },
         { d: 3, from: '09:00', to: '12:00' }, { d: 3, from: '17:00', to: '21:00' }, { d: 4, from: '17:00', to: '21:00' }] });
     var today = HPCal.dayKey(Date.now(), cfg.tz);

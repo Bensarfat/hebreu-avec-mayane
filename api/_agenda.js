@@ -1,6 +1,6 @@
 /* =====================================================================
    HPCal — calcul des créneaux de cours (partagé par le navigateur et le serveur).
-   Les disponibilités sont saisies à l'heure de Mayane (fuseau « tz ») ;
+   Les disponibilités sont saisies à l'heure de Maayane (fuseau « tz ») ;
    les cours sont enregistrés en temps universel et affichés à l'heure de chacun.
    Fichier ignoré par Vercel comme route (il commence par « _ »).
    ===================================================================== */
@@ -20,7 +20,7 @@
     buffer: 0,              // pause entre deux cours (minutes)
     cancel: 24,             // annulation par l'élève jusqu'à … heures avant
     maxUpcoming: 0,         // cours à venir par élève (0 = sans limite)
-    message: '',            // mot de Mayane affiché aux élèves (lieu, lien visio…)
+    message: '',            // mot de Maayane affiché aux élèves (lieu, lien visio…)
     rules: [],              // [{ d: 0-6 (0 = dimanche), from: 'HH:MM', to: 'HH:MM' }]
     blocks: []              // [{ s: ISO, e: ISO, note }] fermetures, vacances
   };
@@ -158,7 +158,7 @@
   function fold(line) { var out = [], i = 0; while (line.length - i > 60) { out.push((i ? ' ' : '') + line.slice(i, i + 60)); i += 60; } out.push((i ? ' ' : '') + line.slice(i)); return out.join('\r\n'); }
   /* events : [{ uid, s, e, title, desc, cancelled }] */
   function ics(events, name) {
-    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hebreu avec Mayane//Agenda//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hebreu avec Maayane//Agenda//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
     if (name) { L.push('X-WR-CALNAME:' + icsText(name)); L.push('REFRESH-INTERVAL;VALUE=DURATION:PT1H'); L.push('X-PUBLISHED-TTL:PT1H'); }
     var stamp = icsDate(Date.now());
     events.forEach(function (ev) {

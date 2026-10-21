@@ -45,7 +45,10 @@ var HPAgendaUI = function (X) {
   }
   function student(id) { return cache.students.filter(function (s) { return s.id === id; })[0] || null; }
   function sName(id) { var s = student(id); return s ? X.fullName(s) : 'Élève supprimé'; }
-  function tone(id) { var i = cache.students.findIndex(function (s) { return s.id === id; }); return TONES[(i < 0 ? 0 : i) % TONES.length]; }
+  function tone(id) {
+    if (X.color && student(id)) { var c = X.color(id); return ['color-mix(in srgb, ' + c + ' 16%, var(--paper))', c]; }
+    var i = cache.students.findIndex(function (s) { return s.id === id; }); return TONES[(i < 0 ? 0 : i) % TONES.length];
+  }
   function seenAt() { try { return +localStorage.getItem('hp_agenda_seen') || 0; } catch (e) { return 0; } }
   function setSeen() { try { localStorage.setItem('hp_agenda_seen', String(Date.now())); } catch (e) {} }
   function rid() { var a = new Uint8Array(20); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }

@@ -1641,6 +1641,23 @@
   }
   .flash-dir.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+  /* --- audio : bouton 🔊 --- */
+  .hps-btn {
+    display: none; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; margin: 0 6px;
+    border-radius: 50%; border: 1.5px solid var(--line); background: var(--paper); color: var(--accent);
+    cursor: pointer; vertical-align: middle; flex: none; transition: background .15s, border-color .15s;
+  }
+  .hps-on .hps-btn { display: inline-flex; }
+  .hps-btn:hover { border-color: var(--accent); background: var(--accent-tint); }
+  .hps-btn.playing { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .hps-btn.lg { width: 40px; height: 40px; }
+  .hps-btn.lg svg { width: 22px; height: 22px; }
+  .cours-he .hps-btn { margin: 0; margin-inline-start: 12px; }
+  .flash-face-he .hps-btn { margin: 0 10px; }
+  .flash-auto { display: none; }
+  .hps-on .flash-auto { display: inline-flex; }
+  @media (max-width: 600px) { .cours-he .hps-btn { width: 30px; height: 30px; margin-inline-start: 8px; } }
+
   /* --- Réviser : révision espacée et jeux courts --- */
   #panel-revise .rv-today { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 22px; box-shadow: var(--shadow-card); }
   .rv-head { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
@@ -4610,6 +4627,7 @@ Formes vocalisées selon la norme de l'Académie de la langue hébraïque&nbsp;;
       </div>
       <div class="flash-sub">
         <span id="flash-progress">—</span>
+        <button type="button" class="flash-mode flash-auto" id="flash-auto" aria-pressed="false" title="Prononcer automatiquement le mot hébreu quand il apparaît">🔊 Son auto</button>
         <span class="flash-modes" id="flash-modes" role="group" aria-label="Façon de répondre">
           <button type="button" class="flash-mode on" data-fmode="flip" title="Retourner la carte puis dire si tu savais">Retourner</button>
           <button type="button" class="flash-mode" data-fmode="type" title="Écrire la réponse au clavier, puis la faire corriger">Écrire</button>
@@ -7251,6 +7269,57 @@ function saveData() {
 
 let storage = loadData();
 
+/* ============================================
+   AUDIO — prononciation des mots en hébreu par la voix de l'appareil
+   (synthèse vocale du navigateur : iPhone, iPad, Mac, Android, Windows avec la langue hébreu).
+   Les boutons 🔊 n'apparaissent que si une voix hébraïque est disponible.
+   Deuxième clic sur le même mot : plus lentement.
+   ============================================ */
+var HPS = (function () {
+  var synth = window.speechSynthesis, voice = null, lastText = '', lastAt = 0;
+  var ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
+  function pick() {
+    if (!synth || !synth.getVoices) return;
+    var he = (synth.getVoices() || []).filter(function (v) { return /^(he|iw)([-_]|$)/i.test(v.lang || ''); });
+    he.sort(function (a, b) { return (b.localService ? 1 : 0) - (a.localService ? 1 : 0); });
+    voice = he[0] || null;
+    document.documentElement.classList.toggle('hps-on', !!voice);
+  }
+  if (synth) {
+    pick();
+    if (synth.addEventListener) synth.addEventListener('voiceschanged', pick); else synth.onvoiceschanged = pick;
+    setTimeout(pick, 500); setTimeout(pick, 2000);
+  }
+  function attr(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function speak(text, btn) {
+    if (!synth || !voice || !text) return false;
+    var now = Date.now(), slow = !!btn && text === lastText && now - lastAt < 6000;
+    lastText = text; lastAt = now;
+    try { synth.cancel(); } catch (e) {}
+    var u = new SpeechSynthesisUtterance(String(text));
+    u.voice = voice; u.lang = voice.lang; u.rate = slow ? 0.55 : 0.85;
+    if (btn) {
+      btn.classList.add('playing');
+      u.onend = u.onerror = function () { btn.classList.remove('playing'); };
+      setTimeout(function () { btn.classList.remove('playing'); }, 6000);
+    }
+    synth.speak(u);
+    return true;
+  }
+  function btn(text, cls) {
+    if (!text) return '';
+    return '<button type="button" class="hps-btn' + (cls ? ' ' + cls : '') + '" data-say="' + attr(text) + '" title="Écouter (2e clic : plus lentement)" aria-label="Écouter la prononciation">' + ICON + '</button>';
+  }
+  /* phase de capture : le clic sur 🔊 ne retourne pas la carte et ne démasque pas le mot */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-say]');
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    speak(b.getAttribute('data-say'), b);
+  }, true);
+  return { speak: function (t) { return speak(t, null); }, btn: btn, ok: function () { return !!voice; } };
+})();
+
 /* Themes renommes (numeros de cours retires) : on reporte les choix enregistres. */
 (function () {
   var REN = {"Connecteurs temporels (cours 46)": "Connecteurs temporels", "Désert & Néguev (cours 46-47)": "Désert & Néguev", "Sécurité & danger (cours 48)": "Sécurité & danger", "Divers (cours 51)": "Divers", "Argent (unité 7 · cours 2)": "Argent", "Verbes (cours 40-42)": "Verbes (suite)", "Verbes (cours 43)": "Verbes (suite)", "Verbes (cours 44-47)": "Verbes (suite)", "Verbes (cours 48-49)": "Verbes (suite)"};
@@ -7676,6 +7745,7 @@ function nextQuestion() {
     wordEl.textContent = word.he;
     wordEl.classList.add('hebrew');
     wordEl.setAttribute('dir', 'rtl');
+    if (window.HPS) wordEl.insertAdjacentHTML('beforeend', HPS.btn(word.heVoc || word.he, 'lg'));
   }
 
   const az = document.getElementById('answer-zone');
@@ -7700,7 +7770,7 @@ function reveal() {
   const az = document.getElementById('answer-zone');
   az.classList.remove('empty');
   let html = `<div class="answer-label">Réponse</div>
-    <div class="answer-text ${isHebrew ? 'hebrew' : ''}" ${isHebrew ? 'dir="rtl"' : ''}>${answer}</div>`;
+    <div class="answer-text ${isHebrew ? 'hebrew' : ''}" ${isHebrew ? 'dir="rtl"' : ''}>${answer}${isHebrew && window.HPS ? HPS.btn(heVoc || word.he, 'lg') : ''}</div>`;
   if (showVoc) {
     html += `<div class="answer-voc-label">avec voyelles</div>
       <div class="answer-voc" dir="rtl">${heVoc}</div>`;
@@ -7997,7 +8067,7 @@ refreshGlobalStatsDisplay();
               '<table class="cours-tbl"><tbody>' +
               rows.map(function (e) {
                 var pr = VERB_PRESENT[e[2]] || VERB_PRESENT[e[0]];
-                return '<tr><td class="cours-he">' + esc(e[2] || e[0]) +
+                return '<tr><td class="cours-he">' + esc(e[2] || e[0]) + HPS.btn(e[2] || e[0]) +
                        (pr ? '<span class="cours-pres">אֲנִי ' + esc(pr) + '</span>' : '') +
                        '</td><td class="cours-fr">' + hlFr(e[1], q) + '</td></tr>';
               }).join('') +
@@ -8160,6 +8230,20 @@ refreshGlobalStatsDisplay();
   var modesEl = document.getElementById('flash-modes');
   var typeMode = storage.preferences.flashType === 'type';
   var typed = null, lastIn = null;
+  var autoEl = document.getElementById('flash-auto'), autoSaid = '';
+  function autoOn() { return !!storage.preferences.flashAudio; }
+  function paintAuto() { if (autoEl) { autoEl.classList.toggle('on', autoOn()); autoEl.setAttribute('aria-pressed', autoOn() ? 'true' : 'false'); } }
+  paintAuto();
+  /* son auto : l'hébreu est prononcé dès qu'il est visible (recto hébreu, ou verso après avoir retourné) */
+  function autoSay() {
+    if (!autoOn() || !window.HPS || pos >= deck.length) return;
+    var e = deck[pos];
+    if (!e || e.conj) return;
+    var face = faceOf(pos), visible = face === 'he' || flipped, key = pos + '|' + (face === 'he' ? 'f' : 'b') + '|' + (e[0] || '');
+    if (!visible || key === autoSaid) return;
+    autoSaid = key;
+    setTimeout(function () { HPS.speak(e[2] || e[0]); }, 150);
+  }
   var runTheme = null;   /* thème du lexique en cours : une série complète compte comme un passage */
 
   function esc(s) {
@@ -8222,7 +8306,7 @@ refreshGlobalStatsDisplay();
       : '<div class="conj-line"><span class="conj-form">' + esc(e.pron + ' ' + e.pres) + '</span></div>';
     var line = function (lbl, form) {
       return '<div class="conj-line"><span class="conj-tense">' + lbl +
-             '</span><span class="conj-form">' + esc(e.pron + ' ' + form) + '</span></div>';
+             '</span><span class="conj-form">' + esc(e.pron + ' ' + form) + '</span>' + HPS.btn(e.pron + ' ' + form) + '</div>';
     };
     var back = (face === 'fr' ? line('pr&eacute;sent', e.pres) : '') +
                line('pass&eacute;', e.past) + line('futur', e.fut) +
@@ -8328,7 +8412,7 @@ refreshGlobalStatsDisplay();
         ? '<div class="flash-face-fr">' + esc(e.pronFr) + ' &mdash; ' + esc(e.fr) + '</div>'
         : '<div class="conj-line"><span class="conj-form">' + esc(e.pron + ' ' + e.pres) + '</span></div>';
     }
-    return face === 'fr' ? '<div class="flash-face-fr">' + esc(e[1]) + '</div>' : '<div class="flash-face-he">' + esc(e[2] || e[0]) + '</div>';
+    return face === 'fr' ? '<div class="flash-face-fr">' + esc(e[1]) + '</div>' : '<div class="flash-face-he">' + esc(e[2] || e[0]) + HPS.btn(e[2] || e[0], 'lg') + '</div>';
   }
   function typedHtml(e, face) {
     var fields = fieldsOf(e, face), he = fields[0].lang === 'he';
@@ -8400,7 +8484,7 @@ refreshGlobalStatsDisplay();
     if (e && e.conj) return conjHtml(e, face, showBack);
     var he = esc(e[2] || e[0]);
     var pr = (typeof VERB_PRESENT !== 'undefined') && (VERB_PRESENT[e[2]] || VERB_PRESENT[e[0]]);
-    var heBlock = '<div class="flash-face-he">' + he +
+    var heBlock = '<div class="flash-face-he">' + he + HPS.btn(e[2] || e[0], 'lg') +
       (pr && showBack ? '<div class="flash-pres">אֲנִי ' + esc(pr) + '</div>' : '') + '</div>';
     var frBlock = '<div class="flash-face-fr">' + esc(e[1]) + '</div>';
     var front = face === 'fr' ? frBlock : heBlock;
@@ -8423,6 +8507,7 @@ refreshGlobalStatsDisplay();
     progEl.textContent = 'Carte ' + (pos + 1) + ' / ' + deck.length;
     barEl.style.width = Math.round(100 * pos / deck.length) + '%';
     body.innerHTML = typeMode ? typedHtml(e, faceOf(pos)) : cardHtml(e, faceOf(pos), flipped);
+    autoSay();
     if (typeMode) {
       var first = body.querySelector('.flash-in');
       if (first && !flipped) { lastIn = first; try { first.focus({ preventScroll: true }); } catch (x) { first.focus(); } }
@@ -8545,6 +8630,11 @@ refreshGlobalStatsDisplay();
   ov.addEventListener('click', function (e) {
     if (e.target === ov) return close();
     if (e.target.closest('#flash-close') || e.target.closest('[data-close]')) return close();
+    if (e.target.closest('#flash-auto')) {
+      storage.preferences.flashAudio = !autoOn(); saveData(); paintAuto(); autoSaid = '';
+      if (autoOn()) autoSay();
+      return;
+    }
     var fm = e.target.closest('.flash-mode');
     if (fm) return setMode(fm.dataset.fmode === 'type');
     if (typeMode && pos < deck.length) {
@@ -8613,6 +8703,9 @@ refreshGlobalStatsDisplay();
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); return answer(typed ? typed.sugg : 'again'); }
+    }
+    if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !(e.target && e.target.classList && e.target.classList.contains('flash-in'))) {
+      var sb = body.querySelector('.hps-btn'); if (sb && window.HPS && HPS.ok()) { e.preventDefault(); sb.click(); return; }
     }
     if (!typeMode && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); flipped = !flipped; return draw(); }
     if (!flipped) return;
@@ -10319,7 +10412,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
           (game.done
             ? '<div class="rv-verdict ' + (game.err ? 'bad' : 'ok') + '" role="status">' +
               (game.err ? (game.gaveUp ? '✗ Voici le mot' : '≈ Trouvé, avec ' + plural(game.err, 'erreur')) : '✓ Correct, sans faute') + '</div>' +
-              '<div class="rv-reveal" lang="he" dir="rtl">' + esc(w.voc) + '</div>'
+              '<div class="rv-reveal" lang="he" dir="rtl">' + esc(w.voc) + (window.HPS ? HPS.btn(w.voc, 'lg') : '') + '</div>'
             : '<div class="rv-slots" dir="rtl" aria-label="Ta réponse">' + slots + '</div>' +
               '<div class="rv-letters" dir="rtl">' + game.tiles.map(function (t) {
                 return '<button type="button" class="rv-letter" data-id="' + t.id + '" lang="he">' + t.c + '</button>';
@@ -10413,7 +10506,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
           (q.done ? '<div class="rv-verdict ' + (okPick ? 'ok' : 'bad') + '" role="status">' + (okPick ? '✓ Correct' : '✗ Faux') + '</div>' : '') +
           '<div class="rv-q"><span class="rv-chip">' + esc(q.pr.fr) + '</span><span class="rv-chip">' + q.tn.fr + '</span></div>' +
           '<div class="flash-face-he" lang="he" dir="rtl">' + esc(q.v.i) + '</div><div class="flash-ask">' + esc(q.v.f) + '</div>' +
-          (q.done ? '<div class="rv-sol"><span class="rv-sol-l">' + (okPick ? 'C\'est bien' : 'La bonne réponse') + '</span><span lang="he" dir="rtl">' + esc(q.pr.he + ' ' + q.good) + '</span></div>' : '') + '</div>' +
+          (q.done ? '<div class="rv-sol"><span class="rv-sol-l">' + (okPick ? 'C\'est bien' : 'La bonne réponse') + '</span><span lang="he" dir="rtl">' + esc(q.pr.he + ' ' + q.good) + (window.HPS ? HPS.btn(q.pr.he + ' ' + q.good) : '') + '</span></div>' : '') + '</div>' +
           '<div class="rv-choices">' + q.opts.map(function (f, i) {
             var cls = !q.done ? '' : f === q.good ? ' ok' : f === picked ? ' bad' : '';
             return '<button type="button" class="rv-choice' + cls + '" data-opt="' + i + '" lang="he" dir="rtl"' + (q.done ? ' disabled' : '') + '>' +

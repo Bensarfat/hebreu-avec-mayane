@@ -13,7 +13,7 @@ var HPApp = (function () {
   var cache = { students: [], summaries: {}, contents: {}, docs: [] };
   var sortKey = 'xp7', sortDir = -1, pending = {};
   /* agenda (réservation des cours) : voir agenda-ui.js */
-  var AG = HPAgendaUI({ $: $, $$: $$, esc: esc, cache: cache, modal: modal, toast: toast, busy: busy, errText: errText, fullName: fullName,
+  var AG = HPAgendaUI({ $: $, $$: $$, esc: esc, cache: cache, modal: modal, toast: toast, busy: busy, errText: errText, fullName: fullName, color: stColor,
     plural: plural, bindCopy: bindCopy, render: function () { renderTeacher(); } });
 
   /* ---------- session ---------- */
@@ -64,6 +64,43 @@ var HPApp = (function () {
   }
   function initials(s) { var l = ((s.last || '').match(/\p{L}/u) || [''])[0]; return ((s.first || '?').charAt(0) + l).toUpperCase(); }
   function fullName(s) { return (s.first || '') + (s.last ? ' ' + s.last : ''); }
+  /* couleur et photo de chaque élève : dans les réglages (lisibles par la professeure seulement) */
+  var COLORS = [['#3b6fe0', 'bleu'], ['#7457f5', 'violet'], ['#a64fd6', 'mauve'], ['#d63a7a', 'framboise'], ['#e2574c', 'corail'],
+    ['#d9701a', 'orange'], ['#a57c08', 'moutarde'], ['#1f9d6b', 'vert'], ['#0e93ad', 'turquoise'], ['#56657a', 'ardoise']];
+  function look(id) { return ((cache.settings || {}).looks || {})[id] || {}; }
+  function stColor(id) {
+    var c = look(id).color;
+    if (/^#[0-9a-f]{6}$/i.test(c || '')) return c;
+    var h = 0; String(id).split('').forEach(function (ch) { h = (h * 31 + ch.charCodeAt(0)) >>> 0; });
+    return COLORS[h % COLORS.length][0];
+  }
+  function avatar(s, cls) {
+    var ph = look(s.id).photo;
+    return '<span class="av' + (cls ? ' ' + cls : '') + '" style="background:' + stColor(s.id) + '">' +
+      (/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(ph || '') ? '<img src="' + ph + '" alt="">' : initials(s)) + '</span>';
+  }
+  function setLook(id, patch) {
+    return HPB.getSettings().then(function (st) {
+      var l = st.looks = st.looks || {};
+      l[id] = Object.assign({}, l[id], patch);
+      Object.keys(l[id]).forEach(function (k) { if (!l[id][k]) delete l[id][k]; });
+      return HPB.setSettings(st).then(function () { cache.settings = st; });
+    });
+  }
+  /* photo recadrée en carré et réduite (quelques Ko) */
+  function shrinkPhoto(file) {
+    return new Promise(function (ok, ko) {
+      var u = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var n = 192, c = document.createElement('canvas'), m = Math.min(img.naturalWidth, img.naturalHeight);
+        c.width = c.height = n;
+        c.getContext('2d').drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, n, n);
+        URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); ko(new Error('image illisible')); };
+      img.src = u;
+    });
+  }
   function ago(day) {
     if (!day) return 'jamais';
     var n = Math.round((HP.parseDay(HP.dayKey()) - HP.parseDay(day)) / 864e5);
@@ -514,7 +551,7 @@ var HPApp = (function () {
     }).join('') + '</tr></thead><tbody>' + list.map(function (s) {
       var m = M[s.id], L = HP.levelInfo(m.xp), pd = docsFor(s.id).filter(function (d) { return d.status !== 'done'; }).length;
       return '<tr class="click" data-open="' + s.id + '" tabindex="0" aria-label="Ouvrir la fiche de ' + esc(fullName(s)) + '">' +
-        '<td><div class="who"><span class="av">' + initials(s) + '</span><div><b>' + esc(fullName(s)) + '</b><small class="mono">' + esc(s.login) + '</small></div></div></td>' +
+        '<td><div class="who">' + avatar(s) + '<div><b>' + esc(fullName(s)) + '</b><small class="mono">' + esc(s.login) + '</small></div></div></td>' +
         '<td><span class="lv"><span class="he">' + L.letter + '</span>' + L.level + '</span></td>' +
         '<td class="num">' + fmt(m.xp7) + '</td>' +
         '<td class="num">' + (m.streak ? '🔥 ' + m.streak : '—') + '</td>' +
@@ -545,7 +582,7 @@ var HPApp = (function () {
     var tabs = [['progression', 'Progression'], ['cours', 'Cours' + (nc ? ' (' + nc + ')' : '')], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
     var body = tab === 'cours' ? AG.studentTab(s) : tab === 'documents' ? stDocs(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
     return '<a class="back" href="#/eleves">← Tous les élèves</a>' +
-      '<div class="st-head"><span class="av lg">' + initials(s) + '</span><div style="flex:1;min-width:220px"><h1>' + esc(fullName(s)) +
+      '<div class="st-head">' + avatar(s, 'lg') + '<div style="flex:1;min-width:220px"><h1>' + esc(fullName(s)) +
         (s.active === false ? ' <span class="pill rose">suspendu</span>' : '') + '</h1>' +
         '<div class="meta"><span class="mono">' + esc(s.login) + '</span>' + (s.email ? '<span>✉️ ' + esc(s.email) + '</span>' : '') + (s.phone ? '<span>📱 ' + esc(s.phone) + '</span>' : '') +
         '<span>Niveau ' + L.level + ' · ' + L.title + '</span><span>Dernière activité : ' + ago(m.last) + '</span></div></div>' +
@@ -639,7 +676,7 @@ var HPApp = (function () {
     var docs = cache.docs, pend = docs.filter(function (d) { return d.status !== 'done'; });
     return '<div class="bo-head"><div><h1 class="page-title">Documents</h1><p>Déposez un document une seule fois et attribuez-le à un ou plusieurs élèves.</p></div></div>' +
       '<div class="stack"><div class="card"><h3>Nouveau dépôt</h3><p class="small muted" style="margin:-6px 0 10px">1. Choisissez les élèves concernés</p>' +
-      '<div class="chips" id="targets" role="group" aria-label="Élèves concernés">' + cache.students.map(function (s) { return '<button type="button" class="chip" aria-pressed="false" data-sid="' + s.id + '">' + esc(fullName(s)) + '</button>'; }).join('') +
+      '<div class="chips" id="targets" role="group" aria-label="Élèves concernés">' + cache.students.map(function (s) { return '<button type="button" class="chip" aria-pressed="false" data-sid="' + s.id + '"><i class="dot" style="background:' + stColor(s.id) + '"></i>' + esc(fullName(s)) + '</button>'; }).join('') +
         (cache.students.length > 1 ? '<button type="button" class="chip" aria-pressed="false" data-sid="*" style="border-style:dashed">Toute la classe</button>' : '') + '</div>' +
       '<p class="small muted" style="margin:14px 0 10px">2. Déposez les documents</p>' + dropZone('') + '</div>' +
       '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">À intégrer <small>' + pend.length + '</small></h3>' + analyseAllBtn(pend) + '</div>' + (pend.length ? '<div class="docs">' + pend.map(function (d) { return docRow(d, { showStudents: true }); }).join('') + '</div>' : '<p class="hp-empty">Tout est intégré. 👌</p>') + '</div>' +
@@ -681,6 +718,13 @@ var HPApp = (function () {
         (s.pw ? accessCard(s, s.pw) : '<p class="small muted">Mot de passe non enregistré pour ce compte : définissez-en un ci-dessous.</p>') +
         '<form id="pwf" style="margin-top:16px"><label class="f">Changer le mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" id="pw-new" value="" placeholder="nouveau mot de passe" minlength="6" required autocomplete="off"><button type="button" class="btn small" data-gen title="Proposer un mot de passe">↻</button></span></label>' +
         '<div class="row" style="margin-top:10px"><button class="btn" type="submit">Enregistrer le nouveau mot de passe</button></div></form></div>' +
+      '<div class="card" data-look="' + s.id + '"><h3>Couleur et photo</h3><div class="row" style="gap:16px">' + avatar(s, 'lg') +
+        '<div class="row"><label class="btn small">📷 ' + (look(s.id).photo ? 'Changer la photo' : 'Ajouter une photo') + '<input type="file" accept="image/*" data-photo hidden></label>' +
+        (look(s.id).photo ? '<button type="button" class="btn small ghost" data-nophoto>Retirer la photo</button>' : '') + '</div></div>' +
+        '<div class="swatches" role="group" aria-label="Couleur de ' + esc(s.first) + '">' + COLORS.map(function (c) {
+          return '<button type="button" class="sw' + (c[0] === stColor(s.id) ? ' on' : '') + '" data-color="' + c[0] + '" style="background:' + c[0] + '" title="' + c[1] + '" aria-label="' + c[1] + '" aria-pressed="' + (c[0] === stColor(s.id)) + '"></button>';
+        }).join('') + '</div>' +
+        '<p class="small muted" style="margin:12px 0 0">La couleur repère ' + esc(s.first) + ' dans la liste des élèves et dans l\'agenda. La photo n\'est visible que par vous.</p></div>' +
       '<div class="card"><h3>Accès</h3><div class="row">' +
         (s.active === false ? '<button class="btn" data-act="activate">Réactiver le compte</button>' : '<button class="btn" data-act="suspend">Suspendre le compte</button>') +
         '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
@@ -995,6 +1039,18 @@ var HPApp = (function () {
       drop.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files, targets); });
     }
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
+    $$('[data-look]').forEach(function (card) {
+      var id = card.dataset.look, save = function (patch, msg) {
+        return setLook(id, patch).then(function () { toast(msg); renderTeacher(); }, function (e) { toast('Enregistrement impossible : ' + errText(e), true); });
+      };
+      $$('[data-color]', card).forEach(function (b) { b.onclick = function () { save({ color: b.dataset.color }, 'Couleur enregistrée'); }; });
+      var ph = $('[data-photo]', card), rm = $('[data-nophoto]', card);
+      if (ph) ph.onchange = function () {
+        var f = ph.files && ph.files[0]; ph.value = '';
+        if (f) shrinkPhoto(f).then(function (d) { return save({ photo: d }, 'Photo enregistrée'); }, function () { toast('Cette image n\'a pas pu être lue : essayez une photo en JPEG ou PNG.', true); });
+      };
+      if (rm) rm.onclick = function () { save({ photo: '' }, 'Photo retirée'); };
+    });
     $$('[data-auto]').forEach(function (cb) {
       cb.onchange = function () {
         var id = cb.dataset.auto, on = cb.checked;

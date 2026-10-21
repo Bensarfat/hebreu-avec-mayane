@@ -108,7 +108,7 @@ var HPHome = (function () {
         '<span class="kicker">Cours d\'hébreu en français · tous niveaux</span>' +
         '<h1>Apprendre l\'hébreu,<br>à ton rythme, <span class="grad">avec le sourire</span></h1>' +
         '<div class="mv-he">לוֹמְדִים עִבְרִית בְּיַחַד</div>' +
-        '<p class="mv-lead">Des cours en français, bienveillants et motivants, et un espace de révision rien qu\'à toi : ton vocabulaire, tes règles de grammaire, tes flashcards — préparés à partir de tes propres cours.</p>' +
+        '<p class="mv-lead">Des cours vivants, en français, pour parler hébreu avec plaisir. Après chaque cours, tu retrouves dans ton espace personnel le vocabulaire, la grammaire et les flashcards de ce que tu viens d\'apprendre, pour réviser quand tu veux, à ton rythme.</p>' +
         '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
       '</div><div class="mv-art">' + PORTRAIT +
         '<div class="mv-bubble mv-b1"><span class="he">שָׁלוֹם!</span> Bonjour !</div>' +

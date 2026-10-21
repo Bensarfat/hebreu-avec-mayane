@@ -76,18 +76,40 @@ var HPApp = (function () {
   }
   /* personnages proposés à la place de la photo */
   var CHARS = [
-    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['👩‍✈️', 'pilote'], ['👨‍✈️', 'pilote'],
-      ['👩‍🏫', 'professeure'], ['👨‍🏫', 'professeur'], ['👩‍🔬', 'scientifique'], ['👨‍🔬', 'scientifique'], ['👩‍💻', 'informaticienne'], ['👨‍💻', 'informaticien'],
-      ['👩‍🍳', 'cuisinière'], ['👨‍🍳', 'cuisinier'], ['👩‍⚖️', 'avocate'], ['👨‍⚖️', 'avocat'], ['👩‍🚒', 'pompière'], ['👨‍🚒', 'pompier'],
-      ['👮‍♀️', 'policière'], ['👮‍♂️', 'policier'], ['👷‍♀️', 'architecte'], ['👷‍♂️', 'ingénieur'], ['👩‍🌾', 'agricultrice'], ['👨‍🌾', 'agriculteur'],
-      ['👩‍💼', 'cheffe d\'entreprise'], ['👨‍💼', 'chef d\'entreprise'], ['👩‍🚀', 'astronaute'], ['👨‍🚀', 'astronaute'], ['🕵️‍♀️', 'détective'], ['🕵️‍♂️', 'détective']]],
-    ['Musique et arts', [['👩‍🎤', 'chanteuse'], ['👨‍🎤', 'chanteur'], ['🎸', 'guitare'], ['🎹', 'piano'], ['🎻', 'violon'], ['🥁', 'batterie'], ['🎺', 'trompette'],
-      ['🎷', 'saxophone'], ['👩‍🎨', 'artiste'], ['👨‍🎨', 'artiste'], ['💃', 'danseuse'], ['🕺', 'danseur'], ['🎬', 'cinéma'], ['📸', 'photographe']]],
-    ['Sport', [['⚽', 'football'], ['🏀', 'basket'], ['🎾', 'tennis'], ['🏊', 'natation'], ['🚴', 'vélo'], ['🏃', 'course'], ['🧘', 'yoga'], ['🥋', 'judo'], ['⛷️', 'ski'], ['🏄', 'surf']]],
+    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['💊', 'pharmacien·ne'], ['🐾', 'vétérinaire'],
+      ['👩‍✈️', 'pilote'], ['👨‍✈️', 'pilote'], ['👩‍🚀', 'astronaute'], ['👨‍🚀', 'astronaute'], ['👩‍🏫', 'professeure'], ['👨‍🏫', 'professeur'],
+      ['👩‍🔬', 'chercheuse'], ['👨‍🔬', 'chercheur'], ['👩‍💻', 'informaticienne'], ['👨‍💻', 'informaticien'], ['👩‍🍳', 'cheffe cuisinière'], ['👨‍🍳', 'chef cuisinier'],
+      ['👩‍⚖️', 'avocate'], ['👨‍⚖️', 'avocat'], ['👩‍💼', 'cheffe d\'entreprise'], ['👨‍💼', 'chef d\'entreprise'], ['👩‍🚒', 'pompière'], ['👨‍🚒', 'pompier'],
+      ['👮‍♀️', 'policière'], ['👮‍♂️', 'policier'], ['👷‍♀️', 'ingénieure'], ['👷‍♂️', 'ingénieur'], ['👩‍🔧', 'mécanicienne'], ['👨‍🔧', 'mécanicien'],
+      ['👩‍🌾', 'agricultrice'], ['👨‍🌾', 'agriculteur'], ['🕵️‍♀️', 'détective'], ['🕵️‍♂️', 'détective'], ['👩‍🎓', 'étudiante'], ['👨‍🎓', 'étudiant'],
+      ['🏛️', 'architecte'], ['📚', 'bibliothécaire'], ['📰', 'journaliste'], ['✂️', 'coiffeur·se'], ['🪖', 'soldat'], ['⚓', 'marin']]],
+    ['Musique et arts', [['👩‍🎤', 'chanteuse'], ['👨‍🎤', 'chanteur'], ['🎤', 'micro'], ['🎧', 'DJ'], ['🎸', 'guitariste'], ['🎹', 'pianiste'],
+      ['🎻', 'violoniste'], ['🥁', 'batteur·se'], ['🎺', 'trompettiste'], ['🎷', 'saxophoniste'], ['🪕', 'banjo'], ['🪗', 'accordéon'],
+      ['🎼', 'compositeur·rice'], ['👩‍🎨', 'peintre'], ['👨‍🎨', 'peintre'], ['🎨', 'palette'], ['💃', 'danseuse'], ['🕺', 'danseur'],
+      ['🩰', 'danse classique'], ['🎭', 'théâtre'], ['🎬', 'cinéma'], ['📸', 'photographe'], ['✍️', 'écrivain·e'], ['🧶', 'tricot']]],
+    ['Sport', [['⚽', 'football'], ['🏀', 'basket'], ['🎾', 'tennis'], ['🏐', 'volley'], ['🏓', 'ping-pong'], ['🏈', 'football américain'],
+      ['⚾', 'baseball'], ['🏊‍♀️', 'nageuse'], ['🏊‍♂️', 'nageur'], ['🚴‍♀️', 'cycliste'], ['🚴‍♂️', 'cycliste'], ['🏃‍♀️', 'coureuse'],
+      ['🏃‍♂️', 'coureur'], ['🧘‍♀️', 'yoga'], ['🤸', 'gymnastique'], ['🥋', 'judo / karaté'], ['🥊', 'boxe'], ['🏋️', 'musculation'],
+      ['🧗', 'escalade'], ['⛷️', 'ski'], ['🏂', 'snowboard'], ['🏄', 'surf'], ['🛹', 'skate'], ['🏇', 'équitation'],
+      ['⛳', 'golf'], ['♟️', 'échecs']]],
+    ['Personnes', [['👧', 'fille'], ['👦', 'garçon'], ['👩', 'femme'], ['👨', 'homme'], ['👩‍🦰', 'rousse'], ['👨‍🦰', 'roux'],
+      ['👱‍♀️', 'blonde'], ['👱‍♂️', 'blond'], ['👩‍🦱', 'cheveux bouclés'], ['👨‍🦱', 'cheveux bouclés'], ['🧔', 'barbe'], ['👩‍🦳', 'cheveux blancs'],
+      ['👵', 'grand-mère'], ['👴', 'grand-père'], ['🧕', 'foulard'], ['👳', 'turban'], ['🧑‍🦯', 'canne'], ['👶', 'bébé']]],
     ['Imaginaire', [['🦸‍♀️', 'super-héroïne'], ['🦸‍♂️', 'super-héros'], ['🧙‍♀️', 'magicienne'], ['🧙‍♂️', 'magicien'], ['🧚', 'fée'], ['🧜‍♀️', 'sirène'],
-      ['👸', 'princesse'], ['🤴', 'prince'], ['🥷', 'ninja'], ['🤖', 'robot'], ['👽', 'extraterrestre'], ['🦄', 'licorne']]],
-    ['Animaux', [['🦁', 'lion'], ['🐯', 'tigre'], ['🐻', 'ours'], ['🐼', 'panda'], ['🐨', 'koala'], ['🦊', 'renard'], ['🐱', 'chat'], ['🐶', 'chien'],
-      ['🐰', 'lapin'], ['🐵', 'singe'], ['🐸', 'grenouille'], ['🦉', 'chouette'], ['🐧', 'pingouin'], ['🐬', 'dauphin'], ['🦋', 'papillon'], ['🐢', 'tortue']]]
+      ['🧞', 'génie'], ['🧝', 'elfe'], ['🧛', 'vampire'], ['👸', 'princesse'], ['🤴', 'prince'], ['🥷', 'ninja'],
+      ['🏴‍☠️', 'pirate'], ['🤠', 'cow-boy'], ['🤖', 'robot'], ['👽', 'extraterrestre'], ['👻', 'fantôme'], ['🦄', 'licorne'],
+      ['🐉', 'dragon'], ['🦖', 'dinosaure']]],
+    ['Animaux', [['🦁', 'lion'], ['🐯', 'tigre'], ['🐻', 'ours'], ['🐼', 'panda'], ['🐨', 'koala'], ['🦊', 'renard'],
+      ['🐺', 'loup'], ['🐱', 'chat'], ['🐶', 'chien'], ['🐰', 'lapin'], ['🐹', 'hamster'], ['🐭', 'souris'],
+      ['🐵', 'singe'], ['🦒', 'girafe'], ['🐘', 'éléphant'], ['🦓', 'zèbre'], ['🐮', 'vache'], ['🐷', 'cochon'],
+      ['🐴', 'cheval'], ['🐸', 'grenouille'], ['🦉', 'chouette'], ['🦜', 'perroquet'], ['🐧', 'pingouin'], ['🦩', 'flamant rose'],
+      ['🐬', 'dauphin'], ['🐳', 'baleine'], ['🦈', 'requin'], ['🐙', 'pieuvre'], ['🐢', 'tortue'], ['🦔', 'hérisson'],
+      ['🦋', 'papillon'], ['🐝', 'abeille'], ['🐞', 'coccinelle'], ['🐌', 'escargot']]],
+    ['Nature et objets', [['🌸', 'fleur'], ['🌻', 'tournesol'], ['🌈', 'arc-en-ciel'], ['⭐', 'étoile'], ['🌙', 'lune'], ['☀️', 'soleil'],
+      ['🔥', 'feu'], ['❄️', 'flocon'], ['🌵', 'cactus'], ['🍀', 'trèfle'], ['🍉', 'pastèque'], ['🍓', 'fraise'],
+      ['🍕', 'pizza'], ['🍦', 'glace'], ['🧁', 'cupcake'], ['☕', 'café'], ['🚀', 'fusée'], ['✈️', 'avion'],
+      ['🚗', 'voiture'], ['🏍️', 'moto'], ['⛵', 'voilier'], ['🎈', 'ballon'], ['🎁', 'cadeau'], ['💎', 'diamant'],
+      ['👑', 'couronne'], ['💡', 'idée'], ['🧩', 'puzzle'], ['🎮', 'jeux vidéo'], ['🪐', 'planète']]]
   ];
   var CHAR_OK = {}; CHARS.forEach(function (g) { g[1].forEach(function (c) { CHAR_OK[c[0]] = 1; }); });
   function avatar(s, cls) {
@@ -1071,11 +1093,12 @@ var HPApp = (function () {
       var ch = $('[data-chars]', card);
       if (ch) ch.onclick = function () {
         var cur = look(id).char;
-        var m = modal('<h2>Choisir un personnage</h2>' + CHARS.map(function (g) {
+        var m = modal('<h2>Choisir un personnage</h2><div class="char-tabs">' + CHARS.map(function (g, i) { return '<button type="button" class="chip" data-cg="' + i + '">' + g[0] + '</button>'; }).join('') + '</div>' + CHARS.map(function (g) {
           return '<h4 class="char-h">' + g[0] + '</h4><div class="chars">' + g[1].map(function (c) {
-            return '<button type="button" class="char' + (c[0] === cur ? ' on' : '') + '" data-char="' + c[0] + '" title="' + esc(c[1]) + '" aria-label="' + esc(c[1]) + '">' + c[0] + '</button>';
+            return '<button type="button" class="char' + (c[0] === cur ? ' on' : '') + '" data-char="' + c[0] + '" aria-label="' + esc(c[1]) + '"><span class="e" aria-hidden="true">' + c[0] + '</span><small>' + esc(c[1]) + '</small></button>';
           }).join('') + '</div>';
         }).join(''));
+        $$('[data-cg]', m).forEach(function (b) { b.onclick = function () { $$('.char-h', m)[+b.dataset.cg].scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
         $$('[data-char]', m).forEach(function (b) { b.onclick = function () { m.remove(); save({ char: b.dataset.char, photo: '' }, 'Personnage enregistré'); }; });
       };
     });

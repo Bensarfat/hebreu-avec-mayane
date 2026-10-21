@@ -9,8 +9,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%237457f5%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23b86cf2%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22url(%23g)%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2245%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%22%20font-weight%3D%22700%22%20font-size%3D%2238%22%20fill%3D%22%23fff%22%3E%D7%9E%3C%2Ftext%3E%3C%2Fsvg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&family=Noto+Color+Emoji&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=Noto+Sans+Hebrew:wght@400;500;600;700&family=Noto+Color+Emoji&display=swap"></noscript>
 <style>
   :root {
     /* Charte « doux & lumineux » : fond pêche → rose → lavande, cartes blanches,
@@ -322,11 +322,14 @@
   .av { width: 36px; height: 36px; flex: none; border-radius: 12px; display: grid; place-items: center; font: 800 14px var(--font-display); color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
   .av.lg { width: 64px; height: 64px; border-radius: 20px; font-size: 24px; }
   .av { overflow: hidden; } .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .av.emo span { font-size: 22px; line-height: 1; } .av.emo.lg span { font-size: 40px; }
-  .chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; }
-  .char { height: 52px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--paper); font-size: 30px; line-height: 1; cursor: pointer; padding: 0; }
-  .char:hover { background: var(--hover); border-color: var(--accent-soft); } .char.on { border-color: var(--accent); background: var(--accent-tint); }
-  h4.char-h { margin: 16px 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .av.emo span, .char .e { font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif; line-height: 1; }
+  .av.emo span { font-size: 27px; } .av.emo.lg span { font-size: 46px; }
+  .char-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+  .chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+  .char { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 8px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--paper); cursor: pointer; color: var(--ink-soft); }
+  .char .e { font-size: 40px; } .char small { font-size: 11.5px; font-weight: 600; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+  .char:hover { background: var(--hover); border-color: var(--accent-soft); } .char.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
+  h4.char-h { margin: 18px 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; scroll-margin-top: 8px; }
   .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .sw { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--paper); box-shadow: 0 0 0 1.5px var(--line-strong); cursor: pointer; padding: 0; }
   .sw.on { box-shadow: 0 0 0 2.5px var(--ink); }
@@ -575,7 +578,7 @@
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"f3443479d9"};
+var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"c5639f2180"};
 </script>
 <script>
 /* =====================================================================
@@ -3024,18 +3027,40 @@ var HPApp = (function () {
   }
   /* personnages proposés à la place de la photo */
   var CHARS = [
-    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['👩‍✈️', 'pilote'], ['👨‍✈️', 'pilote'],
-      ['👩‍🏫', 'professeure'], ['👨‍🏫', 'professeur'], ['👩‍🔬', 'scientifique'], ['👨‍🔬', 'scientifique'], ['👩‍💻', 'informaticienne'], ['👨‍💻', 'informaticien'],
-      ['👩‍🍳', 'cuisinière'], ['👨‍🍳', 'cuisinier'], ['👩‍⚖️', 'avocate'], ['👨‍⚖️', 'avocat'], ['👩‍🚒', 'pompière'], ['👨‍🚒', 'pompier'],
-      ['👮‍♀️', 'policière'], ['👮‍♂️', 'policier'], ['👷‍♀️', 'architecte'], ['👷‍♂️', 'ingénieur'], ['👩‍🌾', 'agricultrice'], ['👨‍🌾', 'agriculteur'],
-      ['👩‍💼', 'cheffe d\'entreprise'], ['👨‍💼', 'chef d\'entreprise'], ['👩‍🚀', 'astronaute'], ['👨‍🚀', 'astronaute'], ['🕵️‍♀️', 'détective'], ['🕵️‍♂️', 'détective']]],
-    ['Musique et arts', [['👩‍🎤', 'chanteuse'], ['👨‍🎤', 'chanteur'], ['🎸', 'guitare'], ['🎹', 'piano'], ['🎻', 'violon'], ['🥁', 'batterie'], ['🎺', 'trompette'],
-      ['🎷', 'saxophone'], ['👩‍🎨', 'artiste'], ['👨‍🎨', 'artiste'], ['💃', 'danseuse'], ['🕺', 'danseur'], ['🎬', 'cinéma'], ['📸', 'photographe']]],
-    ['Sport', [['⚽', 'football'], ['🏀', 'basket'], ['🎾', 'tennis'], ['🏊', 'natation'], ['🚴', 'vélo'], ['🏃', 'course'], ['🧘', 'yoga'], ['🥋', 'judo'], ['⛷️', 'ski'], ['🏄', 'surf']]],
+    ['Métiers', [['👩‍⚕️', 'médecin'], ['👨‍⚕️', 'médecin'], ['🩺', 'chirurgien·ne'], ['🦷', 'dentiste'], ['💊', 'pharmacien·ne'], ['🐾', 'vétérinaire'],
+      ['👩‍✈️', 'pilote'], ['👨‍✈️', 'pilote'], ['👩‍🚀', 'astronaute'], ['👨‍🚀', 'astronaute'], ['👩‍🏫', 'professeure'], ['👨‍🏫', 'professeur'],
+      ['👩‍🔬', 'chercheuse'], ['👨‍🔬', 'chercheur'], ['👩‍💻', 'informaticienne'], ['👨‍💻', 'informaticien'], ['👩‍🍳', 'cheffe cuisinière'], ['👨‍🍳', 'chef cuisinier'],
+      ['👩‍⚖️', 'avocate'], ['👨‍⚖️', 'avocat'], ['👩‍💼', 'cheffe d\'entreprise'], ['👨‍💼', 'chef d\'entreprise'], ['👩‍🚒', 'pompière'], ['👨‍🚒', 'pompier'],
+      ['👮‍♀️', 'policière'], ['👮‍♂️', 'policier'], ['👷‍♀️', 'ingénieure'], ['👷‍♂️', 'ingénieur'], ['👩‍🔧', 'mécanicienne'], ['👨‍🔧', 'mécanicien'],
+      ['👩‍🌾', 'agricultrice'], ['👨‍🌾', 'agriculteur'], ['🕵️‍♀️', 'détective'], ['🕵️‍♂️', 'détective'], ['👩‍🎓', 'étudiante'], ['👨‍🎓', 'étudiant'],
+      ['🏛️', 'architecte'], ['📚', 'bibliothécaire'], ['📰', 'journaliste'], ['✂️', 'coiffeur·se'], ['🪖', 'soldat'], ['⚓', 'marin']]],
+    ['Musique et arts', [['👩‍🎤', 'chanteuse'], ['👨‍🎤', 'chanteur'], ['🎤', 'micro'], ['🎧', 'DJ'], ['🎸', 'guitariste'], ['🎹', 'pianiste'],
+      ['🎻', 'violoniste'], ['🥁', 'batteur·se'], ['🎺', 'trompettiste'], ['🎷', 'saxophoniste'], ['🪕', 'banjo'], ['🪗', 'accordéon'],
+      ['🎼', 'compositeur·rice'], ['👩‍🎨', 'peintre'], ['👨‍🎨', 'peintre'], ['🎨', 'palette'], ['💃', 'danseuse'], ['🕺', 'danseur'],
+      ['🩰', 'danse classique'], ['🎭', 'théâtre'], ['🎬', 'cinéma'], ['📸', 'photographe'], ['✍️', 'écrivain·e'], ['🧶', 'tricot']]],
+    ['Sport', [['⚽', 'football'], ['🏀', 'basket'], ['🎾', 'tennis'], ['🏐', 'volley'], ['🏓', 'ping-pong'], ['🏈', 'football américain'],
+      ['⚾', 'baseball'], ['🏊‍♀️', 'nageuse'], ['🏊‍♂️', 'nageur'], ['🚴‍♀️', 'cycliste'], ['🚴‍♂️', 'cycliste'], ['🏃‍♀️', 'coureuse'],
+      ['🏃‍♂️', 'coureur'], ['🧘‍♀️', 'yoga'], ['🤸', 'gymnastique'], ['🥋', 'judo / karaté'], ['🥊', 'boxe'], ['🏋️', 'musculation'],
+      ['🧗', 'escalade'], ['⛷️', 'ski'], ['🏂', 'snowboard'], ['🏄', 'surf'], ['🛹', 'skate'], ['🏇', 'équitation'],
+      ['⛳', 'golf'], ['♟️', 'échecs']]],
+    ['Personnes', [['👧', 'fille'], ['👦', 'garçon'], ['👩', 'femme'], ['👨', 'homme'], ['👩‍🦰', 'rousse'], ['👨‍🦰', 'roux'],
+      ['👱‍♀️', 'blonde'], ['👱‍♂️', 'blond'], ['👩‍🦱', 'cheveux bouclés'], ['👨‍🦱', 'cheveux bouclés'], ['🧔', 'barbe'], ['👩‍🦳', 'cheveux blancs'],
+      ['👵', 'grand-mère'], ['👴', 'grand-père'], ['🧕', 'foulard'], ['👳', 'turban'], ['🧑‍🦯', 'canne'], ['👶', 'bébé']]],
     ['Imaginaire', [['🦸‍♀️', 'super-héroïne'], ['🦸‍♂️', 'super-héros'], ['🧙‍♀️', 'magicienne'], ['🧙‍♂️', 'magicien'], ['🧚', 'fée'], ['🧜‍♀️', 'sirène'],
-      ['👸', 'princesse'], ['🤴', 'prince'], ['🥷', 'ninja'], ['🤖', 'robot'], ['👽', 'extraterrestre'], ['🦄', 'licorne']]],
-    ['Animaux', [['🦁', 'lion'], ['🐯', 'tigre'], ['🐻', 'ours'], ['🐼', 'panda'], ['🐨', 'koala'], ['🦊', 'renard'], ['🐱', 'chat'], ['🐶', 'chien'],
-      ['🐰', 'lapin'], ['🐵', 'singe'], ['🐸', 'grenouille'], ['🦉', 'chouette'], ['🐧', 'pingouin'], ['🐬', 'dauphin'], ['🦋', 'papillon'], ['🐢', 'tortue']]]
+      ['🧞', 'génie'], ['🧝', 'elfe'], ['🧛', 'vampire'], ['👸', 'princesse'], ['🤴', 'prince'], ['🥷', 'ninja'],
+      ['🏴‍☠️', 'pirate'], ['🤠', 'cow-boy'], ['🤖', 'robot'], ['👽', 'extraterrestre'], ['👻', 'fantôme'], ['🦄', 'licorne'],
+      ['🐉', 'dragon'], ['🦖', 'dinosaure']]],
+    ['Animaux', [['🦁', 'lion'], ['🐯', 'tigre'], ['🐻', 'ours'], ['🐼', 'panda'], ['🐨', 'koala'], ['🦊', 'renard'],
+      ['🐺', 'loup'], ['🐱', 'chat'], ['🐶', 'chien'], ['🐰', 'lapin'], ['🐹', 'hamster'], ['🐭', 'souris'],
+      ['🐵', 'singe'], ['🦒', 'girafe'], ['🐘', 'éléphant'], ['🦓', 'zèbre'], ['🐮', 'vache'], ['🐷', 'cochon'],
+      ['🐴', 'cheval'], ['🐸', 'grenouille'], ['🦉', 'chouette'], ['🦜', 'perroquet'], ['🐧', 'pingouin'], ['🦩', 'flamant rose'],
+      ['🐬', 'dauphin'], ['🐳', 'baleine'], ['🦈', 'requin'], ['🐙', 'pieuvre'], ['🐢', 'tortue'], ['🦔', 'hérisson'],
+      ['🦋', 'papillon'], ['🐝', 'abeille'], ['🐞', 'coccinelle'], ['🐌', 'escargot']]],
+    ['Nature et objets', [['🌸', 'fleur'], ['🌻', 'tournesol'], ['🌈', 'arc-en-ciel'], ['⭐', 'étoile'], ['🌙', 'lune'], ['☀️', 'soleil'],
+      ['🔥', 'feu'], ['❄️', 'flocon'], ['🌵', 'cactus'], ['🍀', 'trèfle'], ['🍉', 'pastèque'], ['🍓', 'fraise'],
+      ['🍕', 'pizza'], ['🍦', 'glace'], ['🧁', 'cupcake'], ['☕', 'café'], ['🚀', 'fusée'], ['✈️', 'avion'],
+      ['🚗', 'voiture'], ['🏍️', 'moto'], ['⛵', 'voilier'], ['🎈', 'ballon'], ['🎁', 'cadeau'], ['💎', 'diamant'],
+      ['👑', 'couronne'], ['💡', 'idée'], ['🧩', 'puzzle'], ['🎮', 'jeux vidéo'], ['🪐', 'planète']]]
   ];
   var CHAR_OK = {}; CHARS.forEach(function (g) { g[1].forEach(function (c) { CHAR_OK[c[0]] = 1; }); });
   function avatar(s, cls) {
@@ -4019,11 +4044,12 @@ var HPApp = (function () {
       var ch = $('[data-chars]', card);
       if (ch) ch.onclick = function () {
         var cur = look(id).char;
-        var m = modal('<h2>Choisir un personnage</h2>' + CHARS.map(function (g) {
+        var m = modal('<h2>Choisir un personnage</h2><div class="char-tabs">' + CHARS.map(function (g, i) { return '<button type="button" class="chip" data-cg="' + i + '">' + g[0] + '</button>'; }).join('') + '</div>' + CHARS.map(function (g) {
           return '<h4 class="char-h">' + g[0] + '</h4><div class="chars">' + g[1].map(function (c) {
-            return '<button type="button" class="char' + (c[0] === cur ? ' on' : '') + '" data-char="' + c[0] + '" title="' + esc(c[1]) + '" aria-label="' + esc(c[1]) + '">' + c[0] + '</button>';
+            return '<button type="button" class="char' + (c[0] === cur ? ' on' : '') + '" data-char="' + c[0] + '" aria-label="' + esc(c[1]) + '"><span class="e" aria-hidden="true">' + c[0] + '</span><small>' + esc(c[1]) + '</small></button>';
           }).join('') + '</div>';
         }).join(''));
+        $$('[data-cg]', m).forEach(function (b) { b.onclick = function () { $$('.char-h', m)[+b.dataset.cg].scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
         $$('[data-char]', m).forEach(function (b) { b.onclick = function () { m.remove(); save({ char: b.dataset.char, photo: '' }, 'Personnage enregistré'); }; });
       };
     });

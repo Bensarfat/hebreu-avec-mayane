@@ -248,7 +248,8 @@ var HPApp = (function () {
     }
     if (!s) {
       if (location.hash === '#/connexion') { idle(getTpl); return renderLogin(); }
-      if (root.querySelector('.mv') && HPB.remote) return;   /* accueil déjà affiché */
+      var shown = root.querySelector('.mv');
+      if (shown && HPB.remote && (shown.getAttribute('data-page') || 'home') === HPHome.page() && !/^#\/[\w-]+$/.test(location.hash)) return;   /* accueil déjà affiché */
       return HPHome.render(root, function () { location.hash = '#/connexion'; });
     }
     if (s.role === 'student' && !HPB.remote) return openStudent(s.id, false);

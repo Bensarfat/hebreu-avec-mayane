@@ -6,7 +6,7 @@
    ===================================================================== */
 (function () {
   'use strict';
-  var NIK = /[֑-ׇ]/g;
+  var NIK = /[\u0591-\u05BD\u05BF-\u05C7]/g;
   var data = window.__HP_DATA__ || {}, VOCAB = data.VOCAB || {};
   var words = [];
   Object.keys(VOCAB).forEach(function (t) {

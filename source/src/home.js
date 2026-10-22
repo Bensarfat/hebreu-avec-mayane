@@ -19,21 +19,36 @@ var HPHome = (function () {
 
   /* ---------- test de niveau (#/test) : 15 questions, sans nikoud ---------- */
   var TEST = [
-    ['Décollage', 'Que veut dire « שלום » ?', ['Bonjour, au revoir', 'Merci', 'Pardon', 'S\'il te plaît']],
-    ['Décollage', 'Comment dit-on « merci » ?', ['תודה', 'בבקשה', 'סליחה', 'להתראות']],
-    ['Décollage', 'אני ___ בתל אביב (un homme)', ['גר', 'גרה', 'גרים', 'לגור']],
-    ['Décollage', 'Le pluriel de « ילד » :', ['ילדים', 'ילדות', 'ילדה', 'ילד']],
-    ['Décollage', 'Que veut dire « מה השעה? » ?', ['Quelle heure est-il ?', 'Comment ça va ?', 'Où est la gare ?', 'Combien ça coûte ?']],
-    ['En vol', 'אתמול אנחנו ___ לים', ['הלכנו', 'הולכים', 'נלך', 'הלכתי']],
-    ['En vol', 'מחר היא ___ את החברים שלה', ['תפגוש', 'פגשה', 'פוגשת', 'יפגוש']],
-    ['En vol', 'אני מדבר ___ אמא שלי כל יום', ['עם', 'את', 'על', 'אצל']],
-    ['En vol', 'הבית הזה ___', ['גדול', 'גדולה', 'גדולים', 'גדולות']],
-    ['En vol', 'Que veut dire « יש לי » ?', ['J\'ai', 'Je suis', 'Je veux', 'J\'étais']],
-    ['Atterrissage', 'Le passif de « כתב » :', ['נכתב', 'הכתיב', 'התכתב', 'כיתב']],
-    ['Atterrissage', '« La maison de l\'enseignant » :', ['בית המורה', 'הבית המורה', 'בית המורה של', 'הבית מורה']],
-    ['Atterrissage', 'אילו ___ זמן, הייתי בא', ['היה לי', 'יש לי', 'יהיה לי', 'הייתי']],
-    ['Atterrissage', 'Que veut dire « זה על הפנים » ?', ['C\'est nul, raté', 'C\'est parfait', 'C\'est en face', 'C\'est évident']],
-    ['Atterrissage', 'Que veut dire « בהתאם ל » ?', ['Conformément à', 'Malgré', 'À cause de', 'Au lieu de']]
+    ['Décollage', '___ רופא או אח?', ['אתה', 'את', 'היא']],
+    ['Décollage', '- מאין אתה?\n- אני ___ צרפת.', ['מ...', 'ב...', 'ל...']],
+    ['Décollage', 'הספר ___ על השולחן.', ['נמצא', 'נמצאת', 'נמצאים']],
+    ['Décollage', '- איפה ___ גרים?\n- אנחנו גרים בחיפה.', ['אתם', 'אנחנו', 'הם']],
+    ['Décollage', 'זאת ___ שלי, רותי.', ['חברה', 'חבר', 'חברים']],
+    ['Décollage', 'יש לי שני ___.', ['ילדים', 'ילד', 'ילדות']],
+    ['Décollage', '- אתה רוצה קפה?\n- לא, תודה. אני לא ___ קפה.', ['שותה', 'אוכל', 'קורא']],
+    ['Décollage', 'הם ___ בבנק.', ['עובדים', 'עובד', 'עובדת']],
+    ['Décollage', 'המשפחה שלי גרה ___ ירושלים.', ['ב...', 'מ...', 'את']],
+    ['Décollage', '- כמה זה עולה?\n- עשרים ___.', ['שקלים', 'שקל', 'שקלה']],
+    ['En vol', 'אתמול ___ סרט בקולנוע.', ['ראיתי', 'רואה', 'אראה']],
+    ['En vol', 'בשבוע הבא הם ___ לאילת.', ['ייסעו', 'נסעו', 'נסענו']],
+    ['En vol', 'הילדים ___ בגן כל בוקר.', ['משחקים', 'שיחקה', 'תשחק']],
+    ['En vol', 'אני צריך ___ לרופא.', ['ללכת', 'הולך', 'הלכתי']],
+    ['En vol', 'החדר הזה ___ מדי.', ['קטן', 'קטנה', 'קטנים']],
+    ['En vol', '- למה לא באת?\n- כי ___ חולה.', ['הייתי', 'היה', 'תהיה']],
+    ['En vol', 'אני מחכה ___ אוטובוס כבר חצי שעה.', ['ל...', 'את', 'על']],
+    ['En vol', 'הבית ___ ההורים שלי ליד הים.', ['של', 'את', 'עם']],
+    ['En vol', 'היא ___ עברית כבר שנתיים.', ['לומדת', 'למדה', 'תלמד']],
+    ['En vol', '___ אתה לא עונה לטלפון?', ['למה', 'מה', 'מי']],
+    ['Atterrissage', 'הספר ___ על ידי סופר ישראלי.', ['נכתב', 'כתב', 'יכתוב']],
+    ['Atterrissage', 'אילו ___ לי זמן, הייתי בא איתכם.', ['היה', 'יש', 'יהיה']],
+    ['Atterrissage', 'הוא ___ לי שהוא יגיע מאוחר.', ['הודיע', 'נודע', 'התוודע']],
+    ['Atterrissage', '___ הגשם, יצאנו לטייל.', ['למרות', 'בגלל', 'כדי']],
+    ['Atterrissage', '___ המורה לא הגיעה, השיעור בוטל.', ['מכיוון ש...', 'למרות ש...', 'כדי ש...']],
+    ['Atterrissage', 'אני ___ לעבור דירה בקיץ.', ['מתכנן', 'מתוכנן', 'תכנן']],
+    ['Atterrissage', 'דירת ___ גדולה מדי בשבילנו.', ['ההורים', 'הורים של', 'של ההורים']],
+    ['Atterrissage', 'התלמידים ___ לבחינה כל השבוע.', ['התכוננו', 'הכינו', 'הוכנו']],
+    ['Atterrissage', 'כדאי ___ את המסמכים מראש.', ['להכין', 'מכין', 'הכנה']],
+    ['Atterrissage', 'Que veut dire « זה לא בא בחשבון » ?', ['Hors de question', 'Ça compte beaucoup', 'C\'est dans le calcul']]
   ];
   var LEVELS = [
     ['✈️', 'Décollage', 'Débutant', 'Les lettres, les sons, les premières phrases : on part ensemble, en douceur.'],
@@ -58,7 +73,7 @@ var HPHome = (function () {
         '<div style="height: 8px; background: #FFFFFF; border-radius: 99px; overflow: hidden; margin-bottom: 22px"><div style="height: 100%; width: ' + Math.round(i / TEST.length * 100) + '%; background: #2E9AAE; border-radius: 99px"></div></div>' +
         '<div style="background: #FFFFFF; border-radius: 26px; padding: 28px 24px; box-shadow: 0 18px 40px -28px rgba(31,78,121,.6)">' +
         (/[A-Za-zÀ-ÿ]/.test(t[1]) ? '<h2 style="margin: 0 0 20px; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 26px; color: #1F4E79; line-height: 1.35">' + he(t[1]) + '</h2>'
-          : '<p style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #5B6B7B">Complète la phrase :</p><h2 lang="he" dir="rtl" style="margin: 0 0 20px; font-family: Rubik, sans-serif; font-weight: 500; font-size: 28px; color: #1F4E79; line-height: 1.4; text-align: right">' + esc(t[1]) + '</h2>') +
+          : '<p style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #5B6B7B">Complète :</p><h2 lang="he" dir="rtl" style="margin: 0 0 20px; font-family: Rubik, sans-serif; font-weight: 500; font-size: 26px; color: #1F4E79; line-height: 1.5; text-align: right">' + t[1].split('\n').map(esc).join('<br>') + '</h2>') +
         '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px">' + opts.map(function (o) {
           return '<button type="button" data-a="' + esc(o) + '" style="font: inherit; cursor: pointer; text-align: center; padding: 15px 14px; border-radius: 16px; border: 2px solid #D7E6EE; background: #FFFFFF; color: #1F4E79; font-weight: 700; font-size: ' + (/[\u05D0-\u05EA]/.test(o) ? '21px; font-family: Rubik, sans-serif' : '16px') + '">' + he(o) + '</button>';
         }).join('') + '</div>' +
@@ -70,7 +85,7 @@ var HPHome = (function () {
       window.scrollTo(0, 0);
     }
     function result() {
-      var L = LEVELS[score <= 5 ? 0 : score <= 10 ? 1 : 2];
+      var L = LEVELS[score <= 12 ? 0 : score <= 22 ? 1 : 2];
       box.innerHTML = '<div style="background: #FFFFFF; border-radius: 26px; padding: 34px 26px; text-align: center; box-shadow: 0 18px 40px -28px rgba(31,78,121,.6)">' +
         '<p style="margin: 0; font-size: 15px; font-weight: 700; color: #1B7385">Ton résultat : ' + score + ' / ' + TEST.length + '</p>' +
         '<p style="margin: 14px 0 0; font-size: 54px; line-height: 1">' + L[0] + '</p>' +

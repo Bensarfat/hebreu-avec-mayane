@@ -28,7 +28,7 @@
   }
   var defs = words.filter(function (w) { return w.def; });
   var clozes = words.filter(function (w) { return blank(w); });
-  if (defs.length < 4 && clozes.length < 4) return;   /* pas encore assez de matière : le bouton reste caché */
+  var ready = defs.length >= 4 || clozes.length >= 4;   /* pas encore assez de matière : cartes grisées, bouton caché */
 
   /* ---------- voix ---------- */
   var voice = null;
@@ -118,8 +118,10 @@
       '<button class="hpx-next" data-next>' + (i + 1 < serie.length ? 'Suivant →' : 'Voir mon score') + '</button>';
     say(w.voc);
   }
-  function open() {
-    if (root) return;
+  function open(m) {
+    if (root || !ready) return;
+    if (m === 'def' && defs.length >= 4) mode = 'def';
+    if (m === 'cloze' && clozes.length >= 4) mode = 'cloze';
     if (!document.getElementById('hpx-css')) { var s = document.createElement('style'); s.id = 'hpx-css'; s.textContent = css; document.head.appendChild(s); }
     root = document.createElement('div'); root.className = 'hpx';
     root.innerHTML = '<div class="hpx-in"><div class="hpx-top"><b>🧩 Définitions & phrases</b><button class="x" data-close>✕ Fermer</button></div>' +
@@ -138,7 +140,27 @@
     start(mode);
   }
   function close() { if (root) { root.remove(); root = null; } try { speechSynthesis.cancel(); } catch (e) {} }
-  window.HPX = { open: open, close: close };
-  function showBtn() { var b = document.getElementById('hp-px-btn'); if (b) b.hidden = false; }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showBtn); else showBtn();
+  window.HPX = { open: function () { open(); }, close: close };
+  /* deux cartes dans « Jeux courts » (onglet Réviser), à côté des jeux du site */
+  function card(m, ic, title, txt, n) {
+    var ok = n >= 4;
+    return '<button type="button" class="rv-game" data-hpx="' + m + '"' + (ok ? '' : ' disabled style="opacity:.55;cursor:default"') + '><span class="rv-ic" aria-hidden="true">' + ic + '</span><b>' + title + '</b>' +
+      '<span>' + txt + '</span><small>' + (ok ? '🔊 Avec audio · ' + n + ' mots' : 'Bientôt : ta professeure les prépare') + '</small></button>';
+  }
+  function addCards() {
+    document.querySelectorAll('.rv-games').forEach(function (g) {
+      if (g.querySelector('[data-hpx]')) return;
+      g.insertAdjacentHTML('beforeend',
+        card('def', '🧩', 'Mot ↔ définition', 'Lis une définition simple en hébreu et trouve le bon mot. 10 questions.', defs.length) +
+        card('cloze', '✍️', 'Phrase à compléter', 'Une phrase en hébreu, un mot manque : lequel ? 10 questions.', clozes.length));
+    });
+  }
+  function init() {
+    var b = document.getElementById('hp-px-btn'); if (b && ready) b.hidden = false;
+    addCards();
+    /* l'onglet Réviser se redessine : on remet les cartes à chaque fois */
+    new MutationObserver(function () { addCards(); }).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('click', function (e) { var c = e.target.closest && e.target.closest('[data-hpx]'); if (c && !c.disabled) open(c.dataset.hpx); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

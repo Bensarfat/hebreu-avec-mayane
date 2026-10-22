@@ -121,8 +121,7 @@ var HPB = (function () {
         l.push(rec); return set('leveltests', l.slice(-200));
       });
     },
-    listLevelTests: function () { return get('leveltests').then(function (l) { return (l || []).map(function (r) { return r.id; }).sort().reverse(); }); },
-    getLevelTest: function (id) { return get('leveltests').then(function (l) { return (l || []).filter(function (r) { return r.id === id; })[0] || null; }); },
+    listLevelTests: function () { return get('leveltests').then(function (l) { return (l || []).slice().sort(function (a, b) { return a.id < b.id ? 1 : -1; }); }); },
     deleteLevelTest: function (id) { return get('leveltests').then(function (l) { return set('leveltests', (l || []).filter(function (r) { return r.id !== id; })); }); },
 
     listStudents: function () { return get('students').then(function (l) { return l || []; }); },

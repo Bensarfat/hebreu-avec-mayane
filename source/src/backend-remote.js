@@ -181,16 +181,10 @@
     },
     reset: function () { return Promise.resolve(); },
 
-    /* ---------- tests de niveau (fichiers déposés par /api/test, lisibles par la professeure seule) ---------- */
+    /* ---------- tests de niveau (fichiers déposés par /api/test ; lus et supprimés par le serveur, pour la professeure seule) ---------- */
     addLevelTest: function (rec) { return post('/api/test', rec); },
-    listLevelTests: function () {
-      return q(sbc.storage.from('documents').list('tests-de-niveau', { limit: 500, sortBy: { column: 'name', order: 'desc' } }))
-        .then(function (l) { return (l || []).filter(function (f) { return /\.json$/.test(f.name); }).map(function (f) { return f.name.replace(/\.json$/, ''); }); });
-    },
-    getLevelTest: function (id) {
-      return q(sbc.storage.from('documents').download('tests-de-niveau/' + id + '.json')).then(function (b) { return b.text(); }).then(function (t) { var r = JSON.parse(t); r.id = id; return r; });
-    },
-    deleteLevelTest: function (id) { return q(sbc.storage.from('documents').remove(['tests-de-niveau/' + id + '.json'])); },
+    listLevelTests: function () { return post('/api/test', { action: 'list' }).then(function (r) { return r.tests || []; }); },
+    deleteLevelTest: function (id) { return post('/api/test', { action: 'delete', id: id }); },
 
     /* ---------- agenda ---------- */
     listBookings: function (from, to) {

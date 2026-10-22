@@ -1,6 +1,7 @@
 /* Test de niveau public (#/test) : le résultat est enregistré pour Maayane seulement.
-   Chaque test devient un petit fichier JSON dans le dossier privé « documents » (Supabase Storage),
-   que seule la professeure peut lire : pas de nouvelle table, rien n'est renvoyé à l'élève. */
+   Chaque test devient un petit fichier JSON dans le dossier privé « documents » (Supabase Storage) :
+   pas de nouvelle table, rien n'est renvoyé à l'élève.
+   action « list » / « delete » : réservées à la professeure (lecture et suppression par le serveur). */
 const sb = require('./_supabase');
 
 async function readBody(req) {
@@ -9,6 +10,7 @@ async function readBody(req) {
   return {};
 }
 function clean(v, max) { return String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max); }
+const DIR = 'tests-de-niveau';
 const LEVELS = ['Embarquement', 'Décollage', 'En vol', 'Atterrissage'];
 function pair(v, max) { return Array.isArray(v) && v.length === 2 && v[1] === max && Number.isInteger(v[0]) && v[0] >= 0 && v[0] <= max ? v : null; }
 
@@ -17,7 +19,30 @@ module.exports = async function handler(req, res) {
   if (!sb.configured()) { res.status(503).json({ error: 'not_configured' }); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed' }); return; }
   const b = await readBody(req);
-  if (b.website) { res.status(200).json({ ok: true }); return; }   /* champ piège rempli par les robots */
+  if (b.action === 'list' || b.action === 'delete') {
+    const who = await sb.caller(req);
+    if (!who || !sb.isStaff(who.role)) { res.status(403).json({ error: 'not_teacher' }); return; }
+    try {
+      if (b.action === 'delete') {
+        if (!/^[\w-]{10,80}$/.test(String(b.id || ''))) { res.status(400).json({ error: 'invalid' }); return; }
+        await sb.call('/storage/v1/object/documents', { method: 'DELETE', body: { prefixes: [DIR + '/' + b.id + '.json'] } });
+        res.status(200).json({ ok: true }); return;
+      }
+      const files = await sb.call('/storage/v1/object/list/documents', { method: 'POST', body: { prefix: DIR, limit: 200, offset: 0, sortBy: { column: 'name', order: 'desc' } } });
+      const names = (files || []).map(function (f) { return f.name; }).filter(function (n) { return /\.json$/.test(n); }).slice(0, 100);
+      const tests = await Promise.all(names.map(function (n) {
+        return sb.call('/storage/v1/object/' + 'documents/' + DIR + '/' + n).then(function (r) {
+          if (typeof r === 'string') r = JSON.parse(r);
+          r.id = n.replace(/\.json$/, ''); return r;
+        }).catch(function () { return null; });
+      }));
+      res.status(200).json({ tests: tests.filter(Boolean) });
+    } catch (e) {
+      console.error('tests de niveau (liste)', e.message);
+      res.status(500).json({ error: 'server', detail: e.message });
+    }
+    return;
+  }
   const name = clean(b.name, 80), contact = clean(b.contact, 120);
   if (!name || contact.length < 5 || LEVELS.indexOf(b.level) < 0) { res.status(400).json({ error: 'invalid' }); return; }
   const s = b.scores || {};
@@ -31,10 +56,10 @@ module.exports = async function handler(req, res) {
   };
   const id = rec.at.replace(/[:.]/g, '-') + '-' + Math.random().toString(36).slice(2, 8);
   try {
-    await sb.call('/storage/v1/object/documents/tests-de-niveau/' + id + '.json', { method: 'POST', body: rec });
-    res.status(200).json({ ok: true });
+    await sb.call('/storage/v1/object/documents/' + DIR + '/' + id + '.json', { method: 'POST', body: rec, headers: { 'content-type': 'application/octet-stream' } });   /* fichier brut : le serveur de fichiers ne cherche pas à lire le JSON */
+    res.status(200).json({ ok: true, id: id });
   } catch (e) {
     console.error('test de niveau', e.message);
-    res.status(500).json({ error: 'server' });
+    res.status(500).json({ error: 'server', detail: e.message });
   }
 };

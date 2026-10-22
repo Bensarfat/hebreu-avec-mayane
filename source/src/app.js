@@ -271,7 +271,7 @@ var HPApp = (function () {
 
   function loadAll() {
     var slow = setTimeout(function () { document.body.classList.add('is-loading'); }, 250);
-    return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load(), HPB.listLevelTests().catch(function () { return []; })]).then(function (r) {
+    return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load(), HPB.listLevelTests().then(function (l) { cache.testsError = ''; return l; }, function (e) { cache.testsError = errText(e); return []; })]).then(function (r) {
       cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2]; cache.tests = r[4];
       HPA.setCode(r[2].analyseCode || '');
       if (HPB.me && (HPB.me.role === 'teacher' || HPB.me.role === 'admin')) cache.teacherLogin = HPB.me.login;
@@ -756,12 +756,12 @@ var HPApp = (function () {
 
   /* ---------- tests de niveau (page publique #/test) ---------- */
   function seenTest(v) { try { if (v) localStorage.setItem('hp-lt-seen', v); return localStorage.getItem('hp-lt-seen') || ''; } catch (e) { return v || ''; } }
-  function newTests() { var s = seenTest(); return cache.tests.filter(function (id) { return id > s; }).length; }
+  function newTests() { var s = seenTest(); return cache.tests.filter(function (t) { return t.id > s; }).length; }
   var LT_PARTS = [['lettres', 'Lettres'], ['dec', 'Décollage'], ['vol', 'En vol'], ['att', 'Atterrissage'], ['lect', 'Lecture']];
   var LT_PILL = { 'Embarquement': 'rose', 'Décollage': 'gold', 'En vol': 'green', 'Atterrissage': 'grey' };
   function testsPage() {
     return '<div class="bo-head"><div><h1 class="page-title">Tests de niveau</h1><p>Les réponses au test de la page d\'accueil. Vous seule les voyez : la personne reçoit seulement un message de remerciement.</p></div></div>' +
-      '<div class="stack" id="lt-list">' + (cache.tests.length ? '<p class="muted">Chargement…</p>' : '<div class="card"><p class="hp-empty">Aucun test pour l\'instant. Lien à partager : <b>' + esc(location.origin + location.pathname) + '#/test</b></p></div>') + '</div>';
+      '<div class="stack" id="lt-list">' + (cache.testsError ? '<div class="card"><div class="err">Impossible de lire les tests : ' + esc(cache.testsError) + '</div></div>' : '') + (cache.tests.length ? cache.tests.map(testCard).join('') : '<div class="card"><p class="hp-empty">Aucun test pour l\'instant. Lien à partager : <b>' + esc(location.origin + location.pathname) + '#/test</b></p></div>') + '</div>';
   }
   function testCard(t) {
     var Q = (window.HPHome && HPHome.test && HPHome.test.questions) || [], sc = t.scores || {};
@@ -786,23 +786,19 @@ var HPApp = (function () {
       (rows ? '<details style="margin-top:12px"><summary class="small"><b>Voir les réponses</b></summary><ol style="list-style:none;padding:0;margin:10px 0 0">' + rows + '</ol></details>' : '') + '</div>';
   }
   function bindTests() {
-    var box = $('#lt-list'); if (!box || !cache.tests.length) return;
-    if (cache.tests[0] > seenTest()) seenTest(cache.tests[0]);
-    Promise.all(cache.tests.slice(0, 100).map(function (id) { return HPB.getLevelTest(id).catch(function () { return null; }); })).then(function (l) {
-      if (!box.isConnected) return;
-      box.innerHTML = l.filter(Boolean).map(testCard).join('') || '<div class="card"><p class="hp-empty">Aucun test.</p></div>';
-      $$('[data-rmtest]').forEach(function (b) {
-        b.onclick = function () {
-          var m = modal('<h2>Supprimer ce test ?</h2><p>Les réponses seront effacées définitivement.</p>' +
-            '<div class="row" style="margin-top:16px"><button class="btn danger" data-yes>Supprimer</button><button class="btn" data-no>Annuler</button></div>');
-          $('[data-no]', m).onclick = function () { m.remove(); };
-          $('[data-yes]', m).onclick = function () {
-            busy($('[data-yes]', m), HPB.deleteLevelTest(b.dataset.rmtest), 'Suppression impossible').then(function () {
-              m.remove(); cache.tests = cache.tests.filter(function (id) { return id !== b.dataset.rmtest; }); renderTeacher();
-            }).catch(function () {});
-          };
+    if (!cache.tests.length) return;
+    if (cache.tests[0].id > seenTest()) seenTest(cache.tests[0].id);
+    $$('[data-rmtest]').forEach(function (b) {
+      b.onclick = function () {
+        var m = modal('<h2>Supprimer ce test ?</h2><p>Les réponses seront effacées définitivement.</p>' +
+          '<div class="row" style="margin-top:16px"><button class="btn danger" data-yes>Supprimer</button><button class="btn" data-no>Annuler</button></div>');
+        $('[data-no]', m).onclick = function () { m.remove(); };
+        $('[data-yes]', m).onclick = function () {
+          busy($('[data-yes]', m), HPB.deleteLevelTest(b.dataset.rmtest), 'Suppression impossible').then(function () {
+            m.remove(); cache.tests = cache.tests.filter(function (t) { return t.id !== b.dataset.rmtest; }); renderTeacher();
+          }).catch(function () {});
         };
-      });
+      };
     });
   }
 

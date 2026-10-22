@@ -21,7 +21,8 @@ var HPHome = (function () {
      1. prénom + contact ; 2. « Sais-tu lire ? » ; 3. trois lettres ; 4. 30 questions ; 5. texte + 5 vrai/faux.
      Le résultat part chez Maayane seulement (api/test.js) : l'élève voit juste un message de remerciement.
      Format : [partie, phrase (\n = dialogue), [bonne réponse, autres…]] ; lecture : ['Lecture', affirmation, vrai ?] */
-  var LETTERS = [['ש', ['ch', 'm', 'r']], ['מ', ['m', 'n', 't']], ['ר', ['r', 'd', 'k']]];
+  /* lettre écrite à la main (police Gveret Levin, licence OFL) → la même lettre en imprimé */
+  var LETTERS = [['ש', ['ש', 'ע', 'צ']], ['ג', ['ג', 'נ', 'ז']], ['ק', ['ק', 'ה', 'ח']]];
   var TEST = [
     ['Décollage', '___ תלמיד או מורה?', ['אתה', 'את', 'היא']],
     ['Décollage', 'דנה ___ עברית באולפן.', ['לומדת', 'שותה', 'נחה']],
@@ -32,7 +33,7 @@ var HPHome = (function () {
     ['Décollage', '- אתה רוצה קפה?\n- לא תודה, אני לא ___ קפה.', ['שותה', 'אוכל', 'קורא']],
     ['Décollage', 'הם ___ בבנק.', ['עובדים', 'עובד', 'עובדת']],
     ['Décollage', 'יש לי ___ ילדים.', ['שני', 'שתי', 'שניים', 'שתיים']],
-    ['Décollage', 'אני גר ברחוב ___.', ['גדול', 'גדולה', 'גדולים']],
+    ['Décollage', 'הן מטיילות ברחובות ___.', ['גדולים', 'גדולות', 'גדול', 'גדולה']],
     ['Décollage', '- ___ היא הולכת?\n- ___מסעדה.', ['לאן / ל...', 'איפה / ב...', 'איך / מ...']],
     ['Décollage', 'הם אוהבים ___ ישראל.', ['את', 'ה...', '(rien)']],
     ['En vol', 'אתמול ___ סרט בקולנוע.', ['ראיתי', 'רואה', 'אראה']],
@@ -41,7 +42,7 @@ var HPHome = (function () {
     ['En vol', '- למה לא באת?\n- כי ___ חולה.', ['הייתי', 'היה', 'תהיה']],
     ['En vol', 'אני מחכה ___ אוטובוס כבר חצי שעה.', ['ל...', 'את', 'על']],
     ['En vol', 'הבית ___ ההורים שלי ליד הים.', ['של', 'את', 'עם']],
-    ['En vol', 'כשהייתי ילד, ___ ברגל לבית הספר.', ['הלכתי', 'הולך', 'אלך']],
+    ['En vol', 'כשהייתי ילד, ___ ברגל לבית הספר.', ['הייתי הולך', 'הולך', 'אלך']],
     ['En vol', '___ אתה לא עונה לטלפון?', ['למה', 'מה', 'מי']],
     ['En vol', 'אין לי זמן, ___ אני לא יכול לבוא.', ['לכן', 'כי', 'אבל']],
     ['En vol', 'אני ___ אליך מחר בערב.', ['אתקשר', 'התקשרתי', 'מתקשר']],
@@ -85,6 +86,8 @@ var HPHome = (function () {
       '<a href="#/" style="font-weight: 700; text-decoration: none">← Accueil</a></nav>' +
       '<div style="max-width: 760px; margin: 0 auto; padding: 10px 20px 60px"><div id="lt-box"></div></div></div>';
     box = root.querySelector('#lt-box');
+    var font = (window.ASSETS && ASSETS.img && ASSETS.img['gveret-levin']) || '';
+    if (font && !document.getElementById('lt-font')) { var fs = document.createElement('style'); fs.id = 'lt-font'; fs.textContent = "@font-face{font-family:'Gveret Levin';src:url('" + font + "') format('woff2');font-display:block}"; document.head.appendChild(fs); }
     function show(html) { box.innerHTML = html; window.scrollTo(0, 0); }
     function bar(n, total, label) {
       return '<p style="margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #1B7385">' + label + '</p>' +
@@ -92,7 +95,7 @@ var HPHome = (function () {
     }
     function choices(opts, big) {
       return '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(' + (big ? '120px' : '220px') + ', 1fr)); gap: 10px">' + opts.map(function (o) {
-        return '<button type="button" data-a="' + esc(o) + '" style="' + BTN + (/[א-ת]/.test(o) || big ? '21px; font-family: Rubik, sans-serif' : '16px') + '">' + he(o) + '</button>';
+        return '<button type="button" data-a="' + esc(o) + '" style="' + BTN + (big ? '36px; padding: 8px; font-family: Rubik, sans-serif' : /[א-ת]/.test(o) ? '21px; font-family: Rubik, sans-serif' : '16px') + '">' + he(o) + '</button>';
       }).join('') + '</div>';
     }
     function onPick(fn) {
@@ -132,8 +135,8 @@ var HPHome = (function () {
       if (k >= LETTERS.length) return letters < 2 ? send(true) : q();
       var L = LETTERS[k];
       show(bar(k, LETTERS.length, 'Les lettres · ' + (k + 1) + ' / ' + LETTERS.length) +
-        '<div style="' + CARD + '"><p style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #5B6B7B">Quel son fait cette lettre ?</p>' +
-        '<p lang="he" dir="rtl" style="margin: 0 0 20px; text-align: center; font-family: Rubik, sans-serif; font-size: 72px; line-height: 1.2; color: #1F4E79">' + L[0] + '</p>' +
+        '<div style="' + CARD + '"><p style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #5B6B7B">Cette lettre est écrite à la main. Quelle est la même lettre en imprimé ?</p>' +
+        '<p lang="he" dir="rtl" style="margin: 0 0 20px; text-align: center; font-family: \'Gveret Levin\', cursive; font-size: 96px; line-height: 1.2; color: #1F4E79">' + L[0] + '</p>' +
         choices(shuffle(L[1]), true) + SKIP + '</div>');
       onPick(function (a) { if (a === L[1][0]) letters++; letter(k + 1); });
     }

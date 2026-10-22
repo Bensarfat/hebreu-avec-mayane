@@ -111,13 +111,12 @@ var HPHome = (function () {
         '<form id="lt-who" autocomplete="on">' +
         '<label style="display: block; font-weight: 700; margin-bottom: 14px">Ton prénom et ton nom<input name="name" required maxlength="80" autocomplete="name" style="' + INPUT + '"></label>' +
         '<label style="display: block; font-weight: 700; margin-bottom: 14px">Ton téléphone ou ton e-mail<input name="contact" required maxlength="120" autocomplete="email" style="' + INPUT + '"></label>' +
-        '<input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position: absolute; left: -9999px; width: 1px; height: 1px">' +
         '<p id="lt-err" role="alert" style="margin: 0 0 12px; color: #B5502F; font-weight: 700"></p>' +
         '<button type="submit" style="' + MAIN + '">Commencer</button></form></div>');
       var f = box.querySelector('#lt-who');
       f.onsubmit = function (e) {
         e.preventDefault();
-        var el = function (k) { return f.elements.namedItem(k).value; }; who.name = el('name').trim(); who.contact = el('contact').trim(); who.website = el('website');
+        var el = function (k) { return f.elements.namedItem(k).value; }; who.name = el('name').trim(); who.contact = el('contact').trim();
         if (!who.name || who.contact.length < 5) { box.querySelector('#lt-err').textContent = 'Indique ton nom et un téléphone ou un e-mail pour que Maayane puisse te répondre.'; return; }
         reads();
       };
@@ -162,11 +161,12 @@ var HPHome = (function () {
     /* envoi à Maayane ; l'élève ne voit pas son score */
     function send(readsHebrew) {
       var sc = { reads: readsHebrew, lettres: readsHebrew ? [letters, 3] : null, dec: [count('Décollage'), 12], vol: [count('En vol'), 10], att: [count('Atterrissage'), 8], lect: [count('Lecture'), 5] };
-      var rec = { name: who.name, contact: who.contact, website: who.website || '', reads: readsHebrew, level: levelOf(sc), scores: { lettres: sc.lettres, dec: sc.dec, vol: sc.vol, att: sc.att, lect: sc.lect }, answers: ans, minutes: (Date.now() - t0) / 60000 };
+      var rec = { name: who.name, contact: who.contact, reads: readsHebrew, level: levelOf(sc), scores: { lettres: sc.lettres, dec: sc.dec, vol: sc.vol, att: sc.att, lect: sc.lect }, answers: ans, minutes: (Date.now() - t0) / 60000 };
       show('<div style="' + CARD + '; text-align: center"><p style="font-size: 17px; color: #33475B">Envoi en cours…</p></div>');
       var p = window.HPB && HPB.addLevelTest ? HPB.addLevelTest(rec) : Promise.reject(new Error('indisponible'));
-      p.then(done, function () {
+      p.then(done, function (e) {
         show('<div style="' + CARD + '; text-align: center"><h2 style="' + H2 + '">Oups, l\'envoi n\'a pas marché</h2><p style="font-size: 17px; color: #33475B">Vérifie ta connexion internet, puis réessaie : tes réponses sont gardées.</p>' +
+          '<p style="font-size: 12px; color: #8A99A8">' + esc((e && e.message) || '') + '</p>' +
           '<button type="button" data-retry style="' + MAIN + '">Réessayer</button></div>');
         box.querySelector('[data-retry]').onclick = function () { send(readsHebrew); };
       });

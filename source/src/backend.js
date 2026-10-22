@@ -113,6 +113,18 @@ var HPB = (function () {
     getSettings: function () { return get('settings').then(function (s) { return s || {}; }); },
     setSettings: function (s) { return set('settings', s); },
 
+    /* ---------- tests de niveau (démo : gardés dans ce navigateur) ---------- */
+    addLevelTest: function (rec) {
+      return get('leveltests').then(function (l) {
+        l = l || []; rec = JSON.parse(JSON.stringify(rec)); rec.at = new Date().toISOString();
+        rec.id = rec.at.replace(/[:.]/g, '-') + '-' + Math.random().toString(36).slice(2, 8);
+        l.push(rec); return set('leveltests', l.slice(-200));
+      });
+    },
+    listLevelTests: function () { return get('leveltests').then(function (l) { return (l || []).map(function (r) { return r.id; }).sort().reverse(); }); },
+    getLevelTest: function (id) { return get('leveltests').then(function (l) { return (l || []).filter(function (r) { return r.id === id; })[0] || null; }); },
+    deleteLevelTest: function (id) { return get('leveltests').then(function (l) { return set('leveltests', (l || []).filter(function (r) { return r.id !== id; })); }); },
+
     listStudents: function () { return get('students').then(function (l) { return l || []; }); },
     getStudent: function (id) { return api.listStudents().then(function (l) { return l.filter(function (s) { return s.id === id; })[0] || null; }); },
     saveStudent: function (st, pw) {

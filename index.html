@@ -578,7 +578,7 @@
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"4dfd62d711","img":{"dunk":"assets/dunk.10a9649735.webp"}};
+var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"f4bfd0a2a4","img":{"dunk":"assets/dunk.10a9649735.webp"}};
 </script>
 <script>
 /* =====================================================================
@@ -2249,7 +2249,7 @@ var HPHome = (function () {
     '.mv-art{position:relative;container-type:inline-size;width:100%}.mv-portrait{width:100%;height:auto;display:block;filter:drop-shadow(0 30px 40px rgba(84,52,150,.25))}' +
     '.mv-bubble{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:10px 14px;box-shadow:var(--shadow-card);font-size:13.5px;font-weight:700;color:var(--ink);display:flex;gap:8px;align-items:center;animation:mvFloat 5s ease-in-out infinite}' +
     '.mv-bubble .he{color:var(--accent);font-size:16px}' +
-    '.mv-bubble .e{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:18px;line-height:1}.mv-bubble{max-width:230px;line-height:1.25}' +
+    '.mv-bubble .e{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:18px;line-height:1}.mv-bubble{max-width:230px;line-height:1.25;transition:opacity .35s}.mv-bubble.out{opacity:0}' +
     '.mv-b1{left:-14%;top:0}.mv-b2{right:-12%;top:9%;animation-delay:-2s}.mv-b3{left:-16%;bottom:8%;animation-delay:-3.5s}.mv-b4{right:-8%;bottom:-6%;animation-delay:-1s}' +
     '@media (max-width:860px){.mv-bubble{font-size:11.5px;padding:7px 9px;max-width:140px;border-radius:14px}.mv-bubble .e{font-size:14px}.mv-b1{left:-22%;top:20%}.mv-b2,.mv-b3{display:none}.mv-b4{right:-22%;bottom:-6%}}' +
     '.mv-scene{aspect-ratio:4/5;border-radius:46% 46% 32px 32px / 38% 38% 32px 32px;overflow:hidden;background:radial-gradient(120% 80% at 30% 20%,#4f86f7,#2a56c6 60%,#22449e);box-shadow:0 30px 60px -30px #2a56c6}.mv-scene img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:9% 3% 0 3%}' +
@@ -2275,6 +2275,33 @@ var HPHome = (function () {
     '.mv-band .btn{background:var(--paper);color:var(--accent);border-color:transparent;font-weight:800;padding:13px 26px}' +
     '.mv-foot{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 30px}.mv-foot .he{color:var(--accent)}.mv-credit{display:inline-block;margin-top:6px;font-size:11.5px;color:var(--muted)}';
 
+  /* petites victoires d'élèves : chaque bulle fait défiler celles de son thème */
+  var WINS = [
+    [['💬', 'J\'ai tenu toute une conversation !'], ['☕', 'J\'ai commandé au café sans hésiter'], ['📞', 'Mon premier appel en hébreu'], ['😂', 'J\'ai compris la blague !']],
+    [['💼', 'Entretien d’embauche réussi !'], ['📧', 'Mon premier mail pro en hébreu'], ['🤝', 'J\'ai animé ma réunion en hébreu'], ['📈', 'Promotion obtenue !']],
+    [['🏡', 'Tout compris chez le médecin'], ['🏦', 'Compte ouvert à la banque, tout(e) seul(e) !'], ['🏫', 'Réunion parents-profs : tout compris'], ['📺', 'Les infos sans sous-titres !']],
+    [['❤️', 'Mes enfants me répondent en hébreu !'], ['👵', 'Une vraie discussion avec ma belle-mère'], ['🎶', 'Je chante en hébreu !'], ['📖', 'Mon premier livre en hébreu']]
+  ];
+  function bubble(i) { return '<div class="mv-bubble mv-b' + (i + 1) + '"><span class="e">' + WINS[i][0][0] + '</span><span class="t">' + WINS[i][0][1] + '</span></div>'; }
+  function rotateWins(root) {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var step = 0, els = [1, 2, 3, 4].map(function (n) { return root.querySelector('.mv-b' + n); });
+    var timer = setInterval(function () {
+      if (!els[0] || !els[0].isConnected) { clearInterval(timer); return; }
+      step++;
+      els.forEach(function (el, i) {
+        setTimeout(function () {
+          el.classList.add('out');
+          setTimeout(function () {
+            var w = WINS[i][step % WINS[i].length];
+            el.querySelector('.e').textContent = w[0]; el.querySelector('.t').textContent = w[1];
+            el.classList.remove('out');
+          }, 350);
+        }, i * 700);
+      });
+    }, 4500);
+  }
+
   function render(root, go) {
     if (!document.getElementById('mv-css')) { var s = document.createElement('style'); s.id = 'mv-css'; s.textContent = CSS; document.head.appendChild(s); }
     document.title = 'Hébreu avec Maayane · cours en hébreu, avec le soutien du français';
@@ -2289,10 +2316,7 @@ var HPHome = (function () {
         '<p class="mv-lead">Des cours en hébreu, avec le français pour t’aider quand tu en as besoin, à ton rythme et avec le sourire. Et un espace de révision rien qu’à toi : ton vocabulaire, tes règles de grammaire, tes flashcards, préparés à partir de tes propres cours.</p>' +
         '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
       '</div><div class="mv-art">' + scene() +
-        '<div class="mv-bubble mv-b1"><span class="e">💬</span>J\'ai tenu toute une conversation !</div>' +
-        '<div class="mv-bubble mv-b2"><span class="e">💼</span>Entretien d’embauche réussi !</div>' +
-        '<div class="mv-bubble mv-b3"><span class="e">🏡</span>Tout compris chez le médecin</div>' +
-        '<div class="mv-bubble mv-b4"><span class="e">❤️</span>Mes enfants me répondent en hébreu !</div>' +
+        bubble(0) + bubble(1) + bubble(2) + bubble(3) +
       '</div></section>' +
 
       '<section class="mv-sec"><div class="mv-feats mv-four">' +
@@ -2328,6 +2352,7 @@ var HPHome = (function () {
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
     var a = root.querySelector('a[href="#comment"]');
     if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
+    rotateWins(root);
     window.scrollTo(0, 0);
   }
   return { render: render };

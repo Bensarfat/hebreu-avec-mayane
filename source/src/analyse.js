@@ -52,17 +52,17 @@ var HPA = (function () {
         var text = out.map(function (o) { return '--- page ' + o.page + ' ---\n' + o.text.trim(); }).join('\n\n');
         var chars = out.reduce(function (s, o) { return s + o.text.trim().length; }, 0);
         if (chars > 80 * n) return { text: text, images: [], pages: n };
-        /* PDF scanné (peu de texte) : on envoie les pages en image */
-        var imgs = [], max = Math.min(n, 40), j = 0;
-        function snap() {
-          if (j >= max) return Promise.resolve();
-          onStep && onStep('Préparation de la page ' + (j + 1) + ' (document scanné)');
-          var pg = out[j].p, vp = pg.getViewport({ scale: 1.6 });
-          var c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
-          return pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise
-            .then(function () { return canvasBlob(c); }).then(function (b) { imgs.push(b); j++; return snap(); });
-        }
-        return snap().then(function () { return { text: chars ? text : '', images: imgs, pages: n, scanned: true, cut: n > max }; });
+        /* PDF scanné (peu de texte) : toutes les pages partent en image. Chaque page n'est dessinée
+           qu'au moment de son envoi, pour ne pas garder des centaines d'images en mémoire. */
+        var max = Math.min(n, 400);
+        var imgs = out.slice(0, max).map(function (o) {
+          return function () {
+            var vp = o.p.getViewport({ scale: 1.6 }), c = document.createElement('canvas');
+            c.width = vp.width; c.height = vp.height;
+            return o.p.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function () { return canvasBlob(c); });
+          };
+        });
+        return { text: chars ? text : '', images: imgs, pages: n, scanned: true, cut: n > max };
       });
     });
   }
@@ -115,6 +115,28 @@ var HPA = (function () {
       r.onerror = rej; r.readAsDataURL(blob);
     });
   }
+  function getBlob(x) { return typeof x === 'function' ? Promise.resolve(x()) : Promise.resolve(x); }
+  /* coupe une image trop chargée en deux (haut / bas, avec un léger recouvrement) */
+  function splitImage(x) {
+    var half = function (top) {
+      return function () {
+        return getBlob(x).then(function (blob) {
+          return new Promise(function (res) {
+            var u = URL.createObjectURL(blob), im = new Image();
+            im.onload = function () {
+              var h = Math.ceil(im.height * 0.55), y = top ? 0 : im.height - h, c = document.createElement('canvas');
+              c.width = im.width; c.height = h;
+              c.getContext('2d').drawImage(im, 0, y, im.width, h, 0, 0, im.width, h); URL.revokeObjectURL(u);
+              c.toBlob(function (b) { res(b || blob); }, 'image/jpeg', 0.85);
+            };
+            im.onerror = function () { URL.revokeObjectURL(u); res(blob); };
+            im.src = u;
+          });
+        });
+      };
+    };
+    return [half(true), half(false)];
+  }
   function toJpeg(blob) {
     return new Promise(function (res) {
       var u = URL.createObjectURL(blob), im = new Image();
@@ -136,7 +158,7 @@ var HPA = (function () {
   var MAX_BODY = 3400000;   // Vercel refuse les requêtes de plus de 4,5 Mo
   function viaServer(ex, prompt, signal, onStep) {
     var imgs = ex.images.slice(0, 6);
-    return Promise.all([Promise.all(imgs.map(function (b) { return toJpeg(b).then(b64); })), authFn ? authFn() : null]).then(function (r) {
+    return Promise.all([Promise.all(imgs.map(function (b) { return getBlob(b).then(toJpeg).then(b64); })), authFn ? authFn() : null]).then(function (r) {
       var list = [], total = prompt.system.length + prompt.prompt.length;
       r[0].forEach(function (x) { if (total + x.length < MAX_BODY) { list.push(x); total += x.length; } });
       if (r[0].length && !list.length) { var big = new Error('too_large'); big.code = 'too_large'; throw big; }
@@ -175,7 +197,7 @@ var HPA = (function () {
      (un résumé de cours dense en vocabulaire la dépasse vite). Le texte est coupé en morceaux,
      aux changements de page si possible ; si une réponse est quand même coupée, le morceau est
      redivisé en deux et réanalysé, jusqu'à ce que ça passe. Les pages scannées partent par 3. */
-  var CHUNK = 9000, MIN_SPLIT = 1200, IMG_BATCH = 3;
+  var CHUNK = 9000, MIN_SPLIT = 400, IMG_BATCH = 3;
   function chunks(text) {
     if (text.length <= CHUNK) return [text];
     var parts = text.split(/(?=--- page \d+ ---)/), out = [], cur = '';
@@ -224,6 +246,17 @@ var HPA = (function () {
       var total = done + queue.length + 1;
       return total > 1 ? t.replace('…', '… partie ' + (done + 1) + ' sur ' + total + ' (document long, analysé en plusieurs fois)') : t;
     }
+    var skipped = 0, lastErr = null;
+    var FATAL = { cancelled: 1, spend_limit: 1, not_teacher: 1, bad_code: 1, no_server: 1 };
+    function wait(ms, t) {
+      return new Promise(function (res, rej) {
+        var end = Date.now() + ms, iv = setInterval(function () {
+          if (signal && signal.aborted) { clearInterval(iv); var c = new Error('cancelled'); c.code = 'cancelled'; rej(c); return; }
+          var left = Math.ceil((end - Date.now()) / 1000);
+          if (left <= 0) { clearInterval(iv); res(); } else onStep && onStep(label(t + ' Nouvel essai dans ' + left + ' s…'));
+        }, 1000);
+      });
+    }
     function next() {
       if (!queue.length) return Promise.resolve();
       var part = queue.shift();
@@ -232,20 +265,42 @@ var HPA = (function () {
         n.themes.forEach(function (t) { if (themesSoFar.indexOf(t.name) < 0) themesSoFar.push(t.name); });   /* mêmes noms de thèmes d'un morceau à l'autre */
         return next();
       }, function (e) {
+        if (FATAL[e.code]) throw e;
+        /* Claude occupé, coupure réseau, erreur passagère : on réessaie la même partie (3 fois au plus) */
+        var tries = part.tries || 0;
+        if ((e.code === 'busy' || e.code === 'rate_limited' || e.code === 'network' || e.code === 'server_error' || e.code === 'invalid_json') && tries < 3) {
+          part.tries = tries + 1; queue.unshift(part);
+          return wait([5000, 15000, 30000][tries], 'Claude est très sollicité…').then(next);
+        }
         /* réponse coupée ou trop longue à produire : on redivise ce morceau */
-        if ((e.code !== 'truncated' && e.code !== 'timeout') || part.depth >= 6) throw e;
-        /* réponse trop longue : on redivise ce morceau et on recommence */
-        if (part.images.length > 1) {
-          var h = Math.ceil(part.images.length / 2);
-          queue.unshift({ text: '', images: part.images.slice(0, h), depth: part.depth + 1 }, { text: '', images: part.images.slice(h), depth: part.depth + 1 });
-        } else if (part.text.length > MIN_SPLIT) {
-          var hv = halves(part.text);
-          queue.unshift({ text: hv[0], images: part.images, depth: part.depth + 1 }, { text: hv[1], images: [], depth: part.depth + 1 });
-        } else throw e;
+        if ((e.code === 'truncated' || e.code === 'timeout' || e.code === 'invalid_json') && part.depth < 6) {
+          if (part.images.length > 1) {
+            var h = Math.ceil(part.images.length / 2);
+            queue.unshift({ text: '', images: part.images.slice(0, h), depth: part.depth + 1 }, { text: '', images: part.images.slice(h), depth: part.depth + 1 });
+            return next();
+          }
+          if (part.images.length === 1 && part.depth < 4) {
+            var sp = splitImage(part.images[0]);
+            queue.unshift({ text: '', images: [sp[0]], depth: part.depth + 1 }, { text: '', images: [sp[1]], depth: part.depth + 1 });
+            return next();
+          }
+          if (part.text.length > MIN_SPLIT) {
+            var hv = halves(part.text);
+            queue.unshift({ text: hv[0], images: part.images, depth: part.depth + 1 }, { text: hv[1], images: [], depth: part.depth + 1 });
+            return next();
+          }
+        }
+        /* cette partie n'a vraiment pas pu être lue : on continue avec la suite, et on le signale à la fin */
+        skipped++; lastErr = e; done++;
         return next();
       });
     }
-    return next().then(function () { return results.length === 1 ? results[0] : combine(results); });
+    return next().then(function () {
+      if (!results.length) throw lastErr || new Error('Analyse impossible.');
+      var r = results.length === 1 ? results[0] : combine(results);
+      if (skipped) r.skipped = skipped;
+      return r;
+    });
   }
 
   function analyse(doc, blob, existingThemes, onStep, signal) {
@@ -271,10 +326,9 @@ var HPA = (function () {
             (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).');
           onStep && onStep('Analyse par Claude…');
           var opts = { modelTier: 'complex', signal: signal, cache: false };
-          if (imgs.length) opts.images = imgs;
-          return sample.json(prompt, opts);
+          return Promise.all(imgs.map(getBlob)).then(function (bl) { if (bl.length) opts.images = bl; return sample.json(prompt, opts); });
         });
-      }).then(function (r) { return normalise(r); });
+      }).then(function (r) { var n = normalise(r); if (r && r.skipped) n.skipped = r.skipped; return n; });
     });
   }
 

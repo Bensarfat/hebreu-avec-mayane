@@ -202,8 +202,10 @@ var HPA = (function () {
      (un résumé de cours dense en vocabulaire la dépasse vite). Le texte est coupé en morceaux,
      aux changements de page si possible ; si une réponse est quand même coupée, le morceau est
      redivisé en deux et réanalysé, jusqu'à ce que ça passe. Les pages scannées partent par 3. */
-  var CHUNK = 9000, MIN_SPLIT = 400, IMG_BATCH = 3;
-  function chunks(text) {
+  /* avec la définition et la phrase d'exemple de chaque mot, les réponses sont plus longues : morceaux plus petits */
+  var CHUNK_DOC = 6000, CHUNK_LIST = 1300, MIN_SPLIT = 300, IMG_BATCH = 2;
+  function chunks(text, size) {
+    var CHUNK = size || CHUNK_DOC;
     if (text.length <= CHUNK) return [text];
     var parts = text.split(/(?=--- page \d+ ---)/), out = [], cur = '';
     parts.forEach(function (p) {
@@ -240,10 +242,10 @@ var HPA = (function () {
     });
     return { themes: order.map(function (n) { return themes[n]; }).filter(function (t) { return t.words.length; }), grammar: grammar, summary: summaries.join(' ').slice(0, 400) };
   }
-  function viaServerChunked(ex, existingThemes, docName, signal, onStep, sys) {
+  function viaServerChunked(ex, existingThemes, docName, signal, onStep, sys, size) {
     /* file d'attente des morceaux : texte d'abord, puis les pages scannées par paquets */
     var queue = [];
-    (ex.text.trim() ? chunks(ex.text) : []).forEach(function (t) { queue.push({ text: t, images: [], depth: 0 }); });
+    (ex.text.trim() ? chunks(ex.text, size) : []).forEach(function (t) { queue.push({ text: t, images: [], depth: 0 }); });
     for (var i = 0; i < ex.images.length; i += IMG_BATCH) queue.push({ text: '', images: ex.images.slice(i, i + IMG_BATCH), depth: 0 });
     if (!queue.length) queue.push({ text: '', images: [], depth: 0 });
     var results = [], done = 0, themesSoFar = (existingThemes || []).slice();
@@ -325,7 +327,7 @@ var HPA = (function () {
     var list = missingExtras(content);
     if (!list.length) return Promise.resolve({ themes: [], grammar: [], summary: '' });
     var text = list.map(function (w) { return w.he + ' = ' + w.fr + ' [' + w.theme + ']'; }).join('\n');
-    return viaServerChunked({ text: text, images: [] }, Object.keys(content.VOCAB), 'vocabulaire existant', signal, onStep, enrichRules()).then(function (r) {
+    return viaServerChunked({ text: text, images: [] }, Object.keys(content.VOCAB), 'vocabulaire existant', signal, onStep, enrichRules(), CHUNK_LIST).then(function (r) {
       /* on retrouve chaque mot d'origine (l'orthographe avec nikoud peut différer légèrement) */
       var byHe = {}, byFr = {};
       list.forEach(function (o) { byHe[bare(o.he)] = o; byHe[bare(o.key)] = o; byFr[o.theme + '|' + String(o.fr).trim().toLowerCase()] = o; });

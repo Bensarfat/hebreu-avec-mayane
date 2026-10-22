@@ -17,6 +17,76 @@ var HPHome = (function () {
     '@media (max-width:640px){.lp .lp-nl{display:none}}' +
     '.lp-sante>span{transition:transform .15s,box-shadow .15s}.lp-sante:hover>span{transform:translateY(-2px);box-shadow:0 14px 30px -18px #1F4E79}';   /* téléphone : seulement « Embarquer » et « Mon espace » */
 
+  /* ---------- test de niveau (#/test) : 15 questions, sans nikoud ---------- */
+  var TEST = [
+    ['Décollage', 'Que veut dire « שלום » ?', ['Bonjour, au revoir', 'Merci', 'Pardon', 'S\'il te plaît']],
+    ['Décollage', 'Comment dit-on « merci » ?', ['תודה', 'בבקשה', 'סליחה', 'להתראות']],
+    ['Décollage', 'אני ___ בתל אביב (un homme)', ['גר', 'גרה', 'גרים', 'לגור']],
+    ['Décollage', 'Le pluriel de « ילד » :', ['ילדים', 'ילדות', 'ילדה', 'ילד']],
+    ['Décollage', 'Que veut dire « מה השעה? » ?', ['Quelle heure est-il ?', 'Comment ça va ?', 'Où est la gare ?', 'Combien ça coûte ?']],
+    ['En vol', 'אתמול אנחנו ___ לים', ['הלכנו', 'הולכים', 'נלך', 'הלכתי']],
+    ['En vol', 'מחר היא ___ את החברים שלה', ['תפגוש', 'פגשה', 'פוגשת', 'יפגוש']],
+    ['En vol', 'אני מדבר ___ אמא שלי כל יום', ['עם', 'את', 'על', 'אצל']],
+    ['En vol', 'הבית הזה ___', ['גדול', 'גדולה', 'גדולים', 'גדולות']],
+    ['En vol', 'Que veut dire « יש לי » ?', ['J\'ai', 'Je suis', 'Je veux', 'J\'étais']],
+    ['Atterrissage', 'Le passif de « כתב » :', ['נכתב', 'הכתיב', 'התכתב', 'כיתב']],
+    ['Atterrissage', '« La maison de l\'enseignant » :', ['בית המורה', 'הבית המורה', 'בית המורה של', 'הבית מורה']],
+    ['Atterrissage', 'אילו ___ זמן, הייתי בא', ['היה לי', 'יש לי', 'יהיה לי', 'הייתי']],
+    ['Atterrissage', 'Que veut dire « זה על הפנים » ?', ['C\'est nul, raté', 'C\'est parfait', 'C\'est en face', 'C\'est évident']],
+    ['Atterrissage', 'Que veut dire « בהתאם ל » ?', ['Conformément à', 'Malgré', 'À cause de', 'Au lieu de']]
+  ];
+  var LEVELS = [
+    ['✈️', 'Décollage', 'Débutant', 'Les lettres, les sons, les premières phrases : on part ensemble, en douceur.'],
+    ['☁️', 'En vol', 'Intermédiaire', 'Tu te débrouilles déjà : on t\'emmène vers des conversations fluides et naturelles.'],
+    ['🛬', 'Atterrissage', 'Avancé', 'Tu as de belles bases : on affine pour que tu te sentes à l\'aise partout, au travail comme au quotidien.']
+  ];
+  function esc(x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function he(x) { return /[\u05D0-\u05EA]/.test(x) && !/[A-Za-zÀ-ÿ]/.test(x) ? '<span lang="he" dir="rtl">' + esc(x) + '</span>' : esc(x).replace(/« ([^»]*[\u05D0-\u05EA][^»]*) »/g, '« <span lang="he" dir="rtl">$1</span> »'); }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function testPage(root) {
+    var i = 0, score = 0, box;
+    root.innerHTML = '<div class="lp mv" data-page="test" style="font-family: Nunito, system-ui, sans-serif; color: #24323F; background: #EAF6FB; min-height: 100vh">' +
+      '<nav style="max-width: 760px; margin: 0 auto; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px">' +
+      '<a href="#/" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #1F4E79"><span style="width: 40px; height: 40px; border-radius: 50%; background: #F7C948; display: flex; align-items: center; justify-content: center; font-family: Rubik, sans-serif; font-size: 22px">א</span><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; font-weight: 600">Hébreu avec Maayane</span></a>' +
+      '<a href="#/" style="font-weight: 700; text-decoration: none">← Accueil</a></nav>' +
+      '<div style="max-width: 760px; margin: 0 auto; padding: 10px 20px 60px"><div id="lt-box"></div></div></div>';
+    box = root.querySelector('#lt-box');
+    function q() {
+      if (i >= TEST.length) return result();
+      var t = TEST[i], opts = shuffle(t[2]);
+      box.innerHTML = '<p style="margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #1B7385">Teste ton niveau · question ' + (i + 1) + ' / ' + TEST.length + '</p>' +
+        '<div style="height: 8px; background: #FFFFFF; border-radius: 99px; overflow: hidden; margin-bottom: 22px"><div style="height: 100%; width: ' + Math.round(i / TEST.length * 100) + '%; background: #2E9AAE; border-radius: 99px"></div></div>' +
+        '<div style="background: #FFFFFF; border-radius: 26px; padding: 28px 24px; box-shadow: 0 18px 40px -28px rgba(31,78,121,.6)">' +
+        (/[A-Za-zÀ-ÿ]/.test(t[1]) ? '<h2 style="margin: 0 0 20px; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 26px; color: #1F4E79; line-height: 1.35">' + he(t[1]) + '</h2>'
+          : '<p style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #5B6B7B">Complète la phrase :</p><h2 lang="he" dir="rtl" style="margin: 0 0 20px; font-family: Rubik, sans-serif; font-weight: 500; font-size: 28px; color: #1F4E79; line-height: 1.4; text-align: right">' + esc(t[1]) + '</h2>') +
+        '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px">' + opts.map(function (o) {
+          return '<button type="button" data-a="' + esc(o) + '" style="font: inherit; cursor: pointer; text-align: center; padding: 15px 14px; border-radius: 16px; border: 2px solid #D7E6EE; background: #FFFFFF; color: #1F4E79; font-weight: 700; font-size: ' + (/[\u05D0-\u05EA]/.test(o) ? '21px; font-family: Rubik, sans-serif' : '16px') + '">' + he(o) + '</button>';
+        }).join('') + '</div>' +
+        '<button type="button" data-skip style="font: inherit; cursor: pointer; margin-top: 16px; background: none; border: 0; color: #5B6B7B; text-decoration: underline; font-size: 14px">Je ne sais pas</button></div>';
+      Array.prototype.forEach.call(box.querySelectorAll('[data-a]'), function (b) {
+        b.onclick = function () { if (b.getAttribute('data-a') === t[2][0]) score++; i++; q(); };
+      });
+      box.querySelector('[data-skip]').onclick = function () { i++; q(); };
+      window.scrollTo(0, 0);
+    }
+    function result() {
+      var L = LEVELS[score <= 5 ? 0 : score <= 10 ? 1 : 2];
+      box.innerHTML = '<div style="background: #FFFFFF; border-radius: 26px; padding: 34px 26px; text-align: center; box-shadow: 0 18px 40px -28px rgba(31,78,121,.6)">' +
+        '<p style="margin: 0; font-size: 15px; font-weight: 700; color: #1B7385">Ton résultat : ' + score + ' / ' + TEST.length + '</p>' +
+        '<p style="margin: 14px 0 0; font-size: 54px; line-height: 1">' + L[0] + '</p>' +
+        '<h2 style="margin: 10px 0 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 38px; color: #1F4E79">' + L[1] + '</h2>' +
+        '<p style="margin: 4px 0 0; font-weight: 700; color: #B5502F">Niveau ' + L[2].toLowerCase() + '</p>' +
+        '<p style="margin: 16px auto 0; max-width: 460px; font-size: 17px; line-height: 1.65; color: #33475B">' + L[3] + '</p>' +
+        '<p style="margin: 12px auto 0; max-width: 460px; font-size: 14.5px; line-height: 1.6; color: #5B6B7B">Ce test donne une première idée. Le cours d\'essai permet de faire le point plus précisément, avec Maayane.</p>' +
+        '<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 24px">' +
+        '<a href="#/embarquer" style="text-decoration: none; background: #F7C948; color: #1F4E79; font-weight: 700; font-size: 17px; padding: 15px 26px; border-radius: 999px">Je réserve mon cours d\'essai</a>' +
+        '<button type="button" data-again style="font: inherit; cursor: pointer; color: #1F4E79; font-weight: 700; font-size: 17px; padding: 13px 22px; border-radius: 999px; border: 2px solid #1F4E79; background: #FFFFFF">Refaire le test</button></div></div>';
+      box.querySelector('[data-again]').onclick = function () { i = 0; score = 0; q(); };
+      window.scrollTo(0, 0);
+    }
+    q();
+  }
+
   function render(root, go) {
     if (!document.getElementById('lp-css')) {
       var s = document.createElement('style'); s.id = 'lp-css'; s.textContent = CSS; document.head.appendChild(s);
@@ -24,6 +94,11 @@ var HPHome = (function () {
     }
     document.title = 'Hébreu avec Maayane · Parle, travaille, aime, vis… en hébreu';
     var img = (window.ASSETS && ASSETS.img) || {};
+    if (location.hash === '#/test') {
+      if (!document.getElementById('lp-css')) { var s0 = document.createElement('style'); s0.id = 'lp-css'; s0.textContent = CSS; document.head.appendChild(s0); var l0 = document.createElement('link'); l0.rel = 'stylesheet'; l0.href = FONTS; document.head.appendChild(l0); }
+      document.title = 'Teste ton niveau d\'hébreu · Hébreu avec Maayane';
+      return testPage(root);
+    }
     var sante = location.hash === '#/sante';
     if (sante) document.title = 'Hébreu médical · médecins, dentistes, infirmiers · Hébreu avec Maayane';
     root.innerHTML = String((sante ? window.HP_SANTE_HTML : window.HP_HOME_HTML) || '').replace(/\{\{img:([\w-]+)\}\}/g, function (m, k) { return img[k] || ''; });
@@ -40,9 +115,9 @@ var HPHome = (function () {
       });
     });
     /* #/embarquer, #/faq… : on arrive directement sur la bonne section */
-    var m = /^#\/([\w-]+)$/.exec(location.hash), el = m && m[1] !== 'sante' ? document.getElementById(m[1]) : null;
+    var m = /^#\/([\w-]+)$/.exec(location.hash), el = m && m[1] !== 'sante' && m[1] !== 'test' ? document.getElementById(m[1]) : null;
     if (el) setTimeout(function () { el.scrollIntoView(); }, 30); else window.scrollTo(0, 0);
   }
-  function page() { return location.hash === '#/sante' ? 'sante' : 'home'; }
+  function page() { return location.hash === '#/sante' ? 'sante' : location.hash === '#/test' ? 'test' : 'home'; }
   return { render: render, page: page };
 })();

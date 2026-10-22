@@ -2,6 +2,8 @@
   :root { --bg: #d9eaff; --bg-1: #a6d0ff; --bg-2: #b3c8ff; --bg-3: #bfdcff; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0b1730; --bg-1: #12305e; --bg-2: #172a5c; --bg-3: #0c2448; } }
   :root[data-theme="dark"] { --bg: #0b1730; --bg-1: #12305e; --bg-2: #172a5c; --bg-3: #0c2448; }
+  /* le site reste clair : on refuse l'assombrissement automatique de certains téléphones (Chrome, Samsung Internet) */
+  :root { color-scheme: only light; }
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; font-family: var(--font-ui); color: var(--ink); background-color: var(--bg); }
   body { -webkit-font-smoothing: antialiased; font-size: 15px; line-height: 1.5; min-height: 100vh; }

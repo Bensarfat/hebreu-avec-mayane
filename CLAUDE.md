@@ -31,9 +31,17 @@ Réponds toujours en français, en mots simples, sans jargon. Explique ce que tu
 
 ## Ce qui ne se modifie pas ici
 
-- **Les exercices de l'espace élève** (quiz, flashcards, conjugaison, grammaire, statistiques, XP, badges) viennent du site de Benjamin (`Bensarfat/hebreu`).
-  `source/src/original.html` est remplacé toutes les heures par sa version, et le bloc « HP » (`progress.js`, `game.js`) de son site a priorité.
-  Une modification faite ici sur ces parties serait écrasée. Si Maayane demande un changement dans les exercices, explique-lui qu'il faut le demander à Benjamin (ou le faire dans le dépôt `Bensarfat/hebreu`).
+- **Les exercices de l'espace élève** (quiz, flashcards, onglet « Réviser » et ses jeux, conjugaison, grammaire, statistiques, XP, badges)
+  viennent du site de Benjamin, dépôt **`Bensarfat/hebreu`** (site perso https://hebreu-eight.vercel.app).
+  `source/src/original.html` en est une copie remplacée toutes les heures, et le bloc « HP » (`progress.js`, `game.js`) de son site a priorité :
+  une modification de ces parties faite **ici** serait écrasée.
+  **Benjamin autorise Maayane à les modifier elle-même** : Maayane est collaboratrice de `Bensarfat/hebreu`.
+  Quand elle demande une nouvelle révision, un nouveau jeu ou un changement dans les exercices, travaille dans **`Bensarfat/hebreu`**
+  (ajoute ce dépôt à la session si besoin) en suivant son propre `CLAUDE.md` : branche + pull request, vérification que ce site-ci se construit toujours.
+  Une fois fusionnée là-bas, la modification apparaît sur le site perso de Benjamin tout de suite, et ici dans l'heure
+  (ou tout de suite : onglet **Actions** de ce dépôt › « Synchroniser avec le site de Benjamin » › **Run workflow**).
+  Si la révision a besoin d'une nouvelle donnée produite par l'analyse des documents (définition, phrase d'exemple…),
+  fais en plus, ici, une pull request séparée : `source/src/analyse.js` (la produire) et le chargeur de `source/src/build_templates.js` (la transmettre).
 - **La base de données** : si un changement exige une nouvelle colonne ou table, écris un nouveau fichier `supabase/migration-AAAA-MM-JJ-<sujet>.sql`
   et dis clairement à Maayane que Benjamin doit l'exécuter dans Supabase **avant** la fusion. Ne fusionne rien qui dépend d'une migration non exécutée.
 - `.github/workflows/` et `vercel.json` : ne pas modifier sans demande explicite de Benjamin.

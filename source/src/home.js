@@ -14,7 +14,8 @@ var HPHome = (function () {
     '.lp .arrow-wobble{transform-box:view-box;transform-origin:240px 220px;animation:arrowWobble 7s ease-out infinite}' +
     '.lp .hit-ring{transform-box:fill-box;transform-origin:center;opacity:0;animation:hitRing 7s ease-out infinite}' +
     '@media (prefers-reduced-motion: reduce){.lp .arrow-fly,.lp .arrow-wobble,.lp .hit-ring{animation:none}}' +
-    '@media (max-width:640px){.lp .lp-nl{display:none}}';   /* téléphone : seulement « Embarquer » et « Mon espace » */
+    '@media (max-width:640px){.lp .lp-nl{display:none}}' +
+    '.lp-sante>span{transition:transform .15s,box-shadow .15s}.lp-sante:hover>span{transform:translateY(-2px);box-shadow:0 14px 30px -18px #1F4E79}';   /* téléphone : seulement « Embarquer » et « Mon espace » */
 
   function render(root, go) {
     if (!document.getElementById('lp-css')) {
@@ -23,10 +24,13 @@ var HPHome = (function () {
     }
     document.title = 'Hébreu avec Maayane · Parle, travaille, aime, vis… en hébreu';
     var img = (window.ASSETS && ASSETS.img) || {};
-    root.innerHTML = String(window.HP_HOME_HTML || '').replace(/\{\{img:([\w-]+)\}\}/g, function (m, k) { return img[k] || ''; });
+    var sante = location.hash === '#/sante';
+    if (sante) document.title = 'Hébreu médical · médecins, dentistes, infirmiers · Hébreu avec Maayane';
+    root.innerHTML = String((sante ? window.HP_SANTE_HTML : window.HP_HOME_HTML) || '').replace(/\{\{img:([\w-]+)\}\}/g, function (m, k) { return img[k] || ''; });
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
     /* liens internes (#methode…) : on fait défiler sans changer l'adresse (elle sert à la navigation du site) */
-    Array.prototype.forEach.call(root.querySelectorAll('.lp a[href^="#"]'), function (a) {
+    /* les liens « #/page » changent de page ; les autres (#methode…) font défiler */
+    Array.prototype.forEach.call(root.querySelectorAll('.lp a[href^="#"]:not([href^="#/"])'), function (a) {
       a.addEventListener('click', function (e) {
         var id = a.getAttribute('href').slice(1);
         e.preventDefault();
@@ -35,7 +39,10 @@ var HPHome = (function () {
         if (el) el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' }); else window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
       });
     });
-    window.scrollTo(0, 0);
+    /* #/embarquer, #/faq… : on arrive directement sur la bonne section */
+    var m = /^#\/([\w-]+)$/.exec(location.hash), el = m && m[1] !== 'sante' ? document.getElementById(m[1]) : null;
+    if (el) setTimeout(function () { el.scrollIntoView(); }, 30); else window.scrollTo(0, 0);
   }
-  return { render: render };
+  function page() { return location.hash === '#/sante' ? 'sante' : 'home'; }
+  return { render: render, page: page };
 })();

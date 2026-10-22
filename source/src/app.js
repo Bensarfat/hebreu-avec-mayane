@@ -389,7 +389,7 @@ var HPApp = (function () {
           if (Array.isArray(prog.preferences[k])) prog.preferences[k] = prog.preferences[k].filter(function (t) { return content.VOCAB[t]; });
         });
       }
-      var head = '<script>window.__HP_DATA__=' + JSON.stringify(content).replace(/</g, '\\u003c') +
+      var head = '<script>window.__HP_DATA__=' + JSON.stringify(noNikud(content)).replace(/</g, '\\u003c') +
         ';window.__HP_KEY__=' + JSON.stringify(preview ? 'hp_preview' : 'hp_cache_' + id) +
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
@@ -423,6 +423,29 @@ var HPApp = (function () {
     }).catch(function (e) { if (!root.querySelector('#student-frame')) renderFatal('Impossible d\'ouvrir l\'espace (' + errText(e) + '). Rechargez la page.'); });
   }
   function HPAstats(c) { return HPA.stats(c); }
+  /* demande de Maayane : pas de nikoud dans les exercices des élèves. Les données enregistrées gardent
+     les voyelles (on peut revenir en arrière) ; seul ce qui est envoyé à l'espace élève en est privé.
+     Les fiches de grammaire et le cours « Passé & futur » ne sont pas touchés. */
+  function noNikud(c) {
+    var N = /[\u0591-\u05BD\u05BF-\u05C7]/g;   /* garde le makaf ־ */
+    function st(x) {
+      if (typeof x === 'string') return x.replace(N, '');
+      if (Array.isArray(x)) return x.map(st);
+      if (x && typeof x === 'object') return Object.keys(x).reduce(function (o, k) { o[k.replace(N, '')] = st(x[k]); return o; }, {});
+      return x;
+    }
+    var o = JSON.parse(JSON.stringify(c || {}));
+    Object.keys(o.VOCAB || {}).forEach(function (t) {
+      o.VOCAB[t] = (o.VOCAB[t] || []).map(function (e) {
+        var r = e.slice(); if (r.length > 2) r[2] = '';
+        if (r[3]) r[3] = st(r[3]); if (r[4]) r[4] = st(r[4]);
+        return r;
+      });
+    });
+    if (o.CONJ) o.CONJ = st(o.CONJ);
+    if (o.VERB_PRESENT) o.VERB_PRESENT = st(o.VERB_PRESENT);
+    return o;
+  }
   function sendAgendaInfo(fr, id) {
     if (!HPB.agendaState) return;
     AG.barInfo(id).then(function (info) { if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'agenda-info', show: !!info.show, next: info.next }, '*'); });

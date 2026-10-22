@@ -1,132 +1,40 @@
 /* =====================================================================
-   Page d'accueil publique — cours d'hébreu en français avec Maayane
+   Page d'accueil publique — design « voyage » (cible, valises, carte d'embarquement)
+   Le contenu est dans home.html (inséré par le build dans HP_HOME_HTML).
    ===================================================================== */
 var HPHome = (function () {
   'use strict';
-
-  /* Illustration d'accueil : un joueur de basket (n° 23) marque un panier (Freepik, retouchée) */
-  function scene() {
-    var src = window.ASSETS && ASSETS.img && ASSETS.img.dunk;
-    return '<div class="mv-scene">' + (src ? '<img src="' + src + '" alt="Un joueur de basket, maillot rouge n° 23, s\'élance et marque un panier" width="720" height="905">' : '') + '</div>';
-  }
-
-  var CSS = '' +
-    '.mv{min-height:100vh}' +
-    '.mv-top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:0 auto;padding:18px 16px}' +
-    '.mv-hero{max-width:1120px;margin:0 auto;padding:24px 16px 56px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}' +
-    '@media (max-width:860px){.mv-hero{grid-template-columns:1fr;gap:20px}.mv-art{order:-1;width:100%;max-width:250px;margin:6px auto 0}}' +
-    '.mv-hero h1{font:900 clamp(36px,6vw,62px)/1.04 var(--font-display);letter-spacing:-.025em;margin:14px 0 0;text-wrap:balance}' +
-    '.mv-hero h1 .grad{display:inline-block}' +
-    '.mv-lead{font-size:clamp(16px,2vw,19px);color:var(--ink-soft);margin:18px 0 26px;max-width:560px}' +
-    '.mv-he{font:700 clamp(22px,3vw,30px) var(--font-he);color:var(--he);margin-top:10px;direction:rtl;text-align:left}' +
-    '.mv-cta{display:flex;gap:10px;flex-wrap:wrap}.mv-cta .btn{padding:14px 24px;font-size:15.5px}' +
-    '.mv-art{position:relative;container-type:inline-size;width:100%}.mv-portrait{width:100%;height:auto;display:block;filter:drop-shadow(0 30px 40px rgba(84,52,150,.25))}' +
-    '.mv-bubble{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:10px 14px;box-shadow:var(--shadow-card);font-size:13.5px;font-weight:700;color:var(--ink);display:flex;gap:8px;align-items:center;animation:mvFloat 5s ease-in-out infinite}' +
-    '.mv-bubble .he{color:var(--accent);font-size:16px}' +
-    '.mv-bubble .e{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:18px;line-height:1}.mv-bubble{max-width:230px;line-height:1.25;transition:opacity .35s}.mv-bubble.out{opacity:0}' +
-    '.mv-b1{right:-14%;top:2%}.mv-b2{right:-16%;top:19%;animation-delay:-2s}.mv-b3{left:-16%;bottom:8%;animation-delay:-3.5s}.mv-b4{right:-8%;bottom:-6%;animation-delay:-1s}' +
-    '@media (max-width:860px){.mv-bubble{font-size:11.5px;padding:7px 9px;max-width:140px;border-radius:14px}.mv-bubble .e{font-size:14px}.mv-b1{left:-22%;right:auto;top:auto;bottom:8%}.mv-b2,.mv-b3{display:none}.mv-b4{right:-22%;bottom:-6%}}' +
-    '.mv-scene{aspect-ratio:4/5;border-radius:46% 46% 32px 32px / 38% 38% 32px 32px;overflow:hidden;background:radial-gradient(120% 80% at 30% 20%,#4f86f7,#2a56c6 60%,#22449e);box-shadow:0 30px 60px -30px #2a56c6}.mv-scene img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:13% 6% 0 6%}' +
-    '@keyframes mvFloat{50%{transform:translateY(-8px)}}' +
-    '@media (prefers-reduced-motion:reduce){.mv-bubble{animation:none}}' +
-    '.mv-sec{max-width:1120px;margin:0 auto;padding:30px 16px}' +
-    '.mv-sec h2{font:900 clamp(26px,4vw,36px)/1.1 var(--font-display);letter-spacing:-.02em;margin:0 0 8px;text-align:center}' +
-    '.mv-sec .mv-sub{color:var(--muted);text-align:center;margin:0 auto 28px;max-width:620px}' +
-    '.mv-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}@media (max-width:860px){.mv-steps{grid-template-columns:1fr}}' +
-    '.mv-step{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:var(--shadow-card)}' +
-    '.mv-step .n{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:900 20px var(--font-display);margin-bottom:14px}' +
-    '.mv-step h3{font:800 18px var(--font-display);margin:0 0 6px}.mv-step p{margin:0;color:var(--ink-soft);font-size:14.5px}' +
-    '.mv-feats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media (max-width:860px){.mv-feats{grid-template-columns:1fr 1fr}}' +
-    '.mv-feat{border-radius:22px;padding:18px;background:var(--glass);border:1px solid var(--line)}.mv-feat .ic{font-size:26px}.mv-feat b{display:block;margin:8px 0 2px;font-family:var(--font-display);font-size:16px}.mv-feat span{font-size:13.5px;color:var(--ink-soft)}.mv-four .mv-feat b .he{color:var(--he);font-size:15px;margin-left:6px}' +
-    '.mv-about{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:var(--shadow-card)}' +
-    '@media (max-width:700px){.mv-about{grid-template-columns:1fr;text-align:center}.mv-about .mv-face{margin:0 auto}}' +
-    '.mv-face{width:240px;aspect-ratio:600/462;border-radius:28px;overflow:hidden;background:var(--accent-tint)}.mv-face img{display:block;width:100%;height:100%;object-fit:cover}' +
-    '.mv-about h3{font:900 24px var(--font-display);margin:0 0 6px}.mv-about p{margin:0 0 10px;color:var(--ink-soft)}' +
-    '.mv-tags{display:flex;gap:6px;flex-wrap:wrap}@media (max-width:700px){.mv-tags{justify-content:center}}' +
-    '.mv-band{max-width:1120px;margin:20px auto 0;padding:0 16px 60px}' +
-    '.mv-band>div{border-radius:30px;padding:34px 24px;text-align:center;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent)}' +
-    '.mv-band h2{font:900 clamp(24px,4vw,34px) var(--font-display);margin:0 0 6px}.mv-band p{margin:0 0 18px;opacity:.9}' +
-    '.mv-band .btn{background:var(--paper);color:var(--accent);border-color:transparent;font-weight:800;padding:13px 26px}' +
-    '.mv-foot{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 30px}.mv-foot .he{color:var(--accent)}.mv-credit{display:inline-block;margin-top:6px;font-size:11.5px;color:var(--muted)}';
-
-  /* petites victoires d'élèves : chaque bulle fait défiler celles de son thème */
-  var WINS = [
-    [['💬', 'J\'ai tenu toute une conversation !'], ['☕', 'J\'ai commandé au café sans hésiter'], ['📞', 'Mon premier appel en hébreu'], ['😂', 'J\'ai compris la blague !']],
-    [['💼', 'Entretien d’embauche réussi !'], ['📧', 'Mon premier mail pro en hébreu'], ['🤝', 'J\'ai animé ma réunion en hébreu'], ['📈', 'Promotion obtenue !']],
-    [['🏡', 'Tout compris chez le médecin'], ['🏦', 'Compte ouvert à la banque, tout(e) seul(e) !'], ['🏫', 'Réunion parents-profs : tout compris'], ['📺', 'Les infos sans sous-titres !']],
-    [['❤️', 'Mes enfants me répondent en hébreu !'], ['👵', 'Une vraie discussion avec ma belle-mère'], ['🎶', 'Je chante en hébreu !'], ['📖', 'Mon premier livre en hébreu']]
-  ];
-  function bubble(i) { return '<div class="mv-bubble mv-b' + (i + 1) + '"><span class="e">' + WINS[i][0][0] + '</span><span class="t">' + WINS[i][0][1] + '</span></div>'; }
-  function rotateWins(root) {
-    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var step = 0, els = [1, 2, 3, 4].map(function (n) { return root.querySelector('.mv-b' + n); });
-    var timer = setInterval(function () {
-      if (!els[0] || !els[0].isConnected) { clearInterval(timer); return; }
-      step++;
-      els.forEach(function (el, i) {
-        setTimeout(function () {
-          el.classList.add('out');
-          setTimeout(function () {
-            var w = WINS[i][step % WINS[i].length];
-            el.querySelector('.e').textContent = w[0]; el.querySelector('.t').textContent = w[1];
-            el.classList.remove('out');
-          }, 350);
-        }, i * 700);
-      });
-    }, 4500);
-  }
+  var FONTS = 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito:wght@400;600;700&family=Rubik:wght@400;500&display=swap';
+  /* styles du design, limités à la page d'accueil (.lp) */
+  var CSS = '.lp a{color:#1F4E79}.lp a:hover{color:#163A5C}.lp summary{cursor:pointer}.lp img{max-width:100%}' +
+    '@keyframes arrowFly{0%{transform:translate(-300px,-173px);opacity:0}4%{opacity:1}16%{transform:translate(0,0)}88%{transform:translate(0,0);opacity:1}96%,100%{transform:translate(0,0);opacity:0}}' +
+    '@keyframes arrowWobble{0%,16%{transform:rotate(0)}19%{transform:rotate(-3deg)}22%{transform:rotate(2deg)}25%{transform:rotate(-1deg)}28%,100%{transform:rotate(0)}}' +
+    '@keyframes hitRing{0%,15%{transform:scale(1);opacity:0}16%{opacity:1}32%,100%{transform:scale(1.9);opacity:0}}' +
+    '.lp .arrow-fly{animation:arrowFly 7s cubic-bezier(.25,.8,.3,1) infinite}' +
+    '.lp .arrow-wobble{transform-box:view-box;transform-origin:240px 220px;animation:arrowWobble 7s ease-out infinite}' +
+    '.lp .hit-ring{transform-box:fill-box;transform-origin:center;opacity:0;animation:hitRing 7s ease-out infinite}' +
+    '@media (prefers-reduced-motion: reduce){.lp .arrow-fly,.lp .arrow-wobble,.lp .hit-ring{animation:none}}' +
+    '@media (max-width:640px){.lp .lp-nl{display:none}}';   /* téléphone : seulement « Embarquer » et « Mon espace » */
 
   function render(root, go) {
-    if (!document.getElementById('mv-css')) { var s = document.createElement('style'); s.id = 'mv-css'; s.textContent = CSS; document.head.appendChild(s); }
-    document.title = 'Hébreu avec Maayane · cours en hébreu, avec le soutien du français';
-    root.innerHTML =
-      '<div class="mv">' +
-      '<header class="mv-top"><a class="brand" href="#"><span class="logo">מ</span>Hébreu avec Maayane</a>' +
-        '<button class="btn" data-go="login">Mon espace</button></header>' +
-      '<section class="mv-hero"><div>' +
-        '<span class="kicker">Cours en hébreu, avec le soutien du français · tous niveaux</span>' +
-        '<h1>Parler, travailler, vivre, aimer… <span class="grad">en hébreu</span></h1>' +
-        '<div class="mv-he" lang="he" dir="rtl">לְדַבֵּר, לַעֲבוֹד, לִחְיוֹת, לֶאֱהוֹב – בְּעִבְרִית</div>' +
-        '<p class="mv-lead">Des cours en hébreu, avec le français pour t’aider quand tu en as besoin, à ton rythme et avec le sourire. Et un espace de révision rien qu’à toi : ton vocabulaire, tes règles de grammaire, tes flashcards, préparés à partir de tes propres cours.</p>' +
-        '<div class="mv-cta"><button class="btn primary" data-go="login">Accéder à mon espace</button><a class="btn" href="#comment">Comment ça marche ?</a></div>' +
-      '</div><div class="mv-art">' + scene() +
-        bubble(0) + bubble(1) + bubble(2) + bubble(3) +
-      '</div></section>' +
-
-      '<section class="mv-sec"><div class="mv-feats mv-four">' +
-        '<div class="mv-feat"><div class="ic">💬</div><b>Parler <span class="he" lang="he" dir="rtl">לְדַבֵּר</span></b><span>Oser la conversation du quotidien, sans traduire dans ta tête.</span></div>' +
-        '<div class="mv-feat"><div class="ic">💼</div><b>Travailler <span class="he" lang="he" dir="rtl">לַעֲבוֹד</span></b><span>L’hébreu des réunions, des mails et des entretiens.</span></div>' +
-        '<div class="mv-feat"><div class="ic">🏡</div><b>Vivre <span class="he" lang="he" dir="rtl">לִחְיוֹת</span></b><span>La banque, le médecin, l’école des enfants. Se sentir chez soi.</span></div>' +
-        '<div class="mv-feat"><div class="ic">❤️</div><b>Aimer <span class="he" lang="he" dir="rtl">לֶאֱהוֹב</span></b><span>Parler avec ta famille, tes enfants, tes amis… et tomber amoureux de la langue.</span></div>' +
-      '</div></section>' +
-
-      '<section class="mv-sec" id="comment"><h2>Comment ça marche</h2><p class="mv-sub">Le cours, puis la révision : tout ce que tu vois en classe se retrouve dans ton espace.</p>' +
-        '<div class="mv-steps">' +
-          '<div class="mv-step"><div class="n" style="background:var(--accent-tint);color:var(--accent)">1</div><h3>Ton cours avec Maayane</h3><p>On parle hébreu ensemble, et le français est là pour t’expliquer quand c’est nécessaire, avec des explications claires et beaucoup d\'encouragements.</p></div>' +
-          '<div class="mv-step"><div class="n" style="background:var(--mint);color:var(--olive)">2</div><h3>Ton espace se remplit</h3><p>Après chaque cours, Maayane y dépose ses fiches : ton vocabulaire et ta grammaire, rien que ce que tu as vu.</p></div>' +
-          '<div class="mv-step"><div class="n" style="background:var(--peach);color:var(--gold)">3</div><h3>Tu révises en jouant</h3><p>Quiz, flashcards, conjugaison : tu gagnes des XP, tu montes de niveau et tu débloques des badges.</p></div>' +
-        '</div></section>' +
-
-      '<section class="mv-sec"><div class="mv-feats">' +
-        '<div class="mv-feat"><div class="ic">🃏</div><b>Flashcards</b><span>Français → hébreu, hébreu → français, avec nikoud.</span></div>' +
-        '<div class="mv-feat"><div class="ic">📖</div><b>Grammaire</b><span>Des fiches courtes, avec les exemples du cours.</span></div>' +
-        '<div class="mv-feat"><div class="ic">🎯</div><b>Objectif du jour</b><span>Quelques minutes par jour, une série qui grandit.</span></div>' +
-        '<div class="mv-feat"><div class="ic">📈</div><b>Ta progression</b><span>Mots maîtrisés, régularité, points à revoir.</span></div>' +
-      '</div></section>' +
-
-      '<section class="mv-sec"><div class="mv-about"><div class="mv-face">' + (window.ASSETS && ASSETS.img && ASSETS.img.teacher ? '<img src="' + ASSETS.img.teacher + '" alt="Illustration : une professeure aux cheveux noirs, en veste en jean, devant le tableau" width="600" height="462" loading="lazy">' : '') + '</div><div>' +
-        '<h3>Ta professeure : Maayane</h3>' +
-        '<p>Patiente, à l\'écoute et toujours positive, Maayane adapte chaque cours à ton niveau et à tes envies. Elle suit tes progrès semaine après semaine et t\'aide à garder le rythme — même les jours où la motivation baisse.</p>' +
-        '<div class="mv-tags"><span class="pill">En hébreu, soutien en français</span><span class="pill green">Bienveillance</span><span class="pill gold">Motivation</span><span class="pill rose">Tous niveaux</span></div>' +
-      '</div></div></section>' +
-
-      '<section class="mv-band"><div><h2>Prêt(e) pour ta révision du jour ?</h2><p>Connecte-toi avec les accès que Maayane t\'a envoyés.</p><button class="btn" data-go="login">Accéder à mon espace</button></div></section>' +
-      '<footer class="mv-foot"><span class="he">לְאַט לְאַט</span> · petit à petit · Hébreu avec Maayane<br><a class="mv-credit" href="https://www.freepik.com" target="_blank" rel="noopener">Illustrations : Freepik</a></footer>' +
-      '</div>';
+    if (!document.getElementById('lp-css')) {
+      var s = document.createElement('style'); s.id = 'lp-css'; s.textContent = CSS; document.head.appendChild(s);
+      var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = FONTS; document.head.appendChild(l);
+    }
+    document.title = 'Hébreu avec Maayane · Parle, travaille, aime, vis… en hébreu';
+    var img = (window.ASSETS && ASSETS.img) || {};
+    root.innerHTML = String(window.HP_HOME_HTML || '').replace(/\{\{img:([\w-]+)\}\}/g, function (m, k) { return img[k] || ''; });
     Array.prototype.forEach.call(root.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', go); });
-    var a = root.querySelector('a[href="#comment"]');
-    if (a) a.addEventListener('click', function (e) { e.preventDefault(); document.getElementById('comment').scrollIntoView({ behavior: window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
-    rotateWins(root);
+    /* liens internes (#methode…) : on fait défiler sans changer l'adresse (elle sert à la navigation du site) */
+    Array.prototype.forEach.call(root.querySelectorAll('.lp a[href^="#"]'), function (a) {
+      a.addEventListener('click', function (e) {
+        var id = a.getAttribute('href').slice(1);
+        e.preventDefault();
+        var el = id && id !== 'accueil' ? document.getElementById(id) : null;
+        var smooth = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (el) el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' }); else window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+      });
+    });
     window.scrollTo(0, 0);
   }
   return { render: render };

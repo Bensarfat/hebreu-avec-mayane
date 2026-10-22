@@ -14,7 +14,22 @@ var HPHome = (function () {
     '.lp .arrow-wobble{transform-box:view-box;transform-origin:240px 220px;animation:arrowWobble 7s ease-out infinite}' +
     '.lp .hit-ring{transform-box:fill-box;transform-origin:center;opacity:0;animation:hitRing 7s ease-out infinite}' +
     '@media (prefers-reduced-motion: reduce){.lp .arrow-fly,.lp .arrow-wobble,.lp .hit-ring{animation:none}}' +
-    '@media (max-width:640px){.lp .lp-nl{display:none}}';   /* téléphone : seulement « Embarquer » et « Mon espace » */
+    '@media (max-width:640px){.lp .lp-nl{display:none}}' +
+    /* encadré « Spécialité » dessiné en ambulance (Magen David Adom) */
+    '.lp .amb-body{position:relative;display:flex;align-items:flex-end;filter:drop-shadow(0 16px 22px rgba(31,78,121,.22))}' +
+    '.lp .amb-box{position:relative;flex:1 1 auto;min-width:0;padding:30px 28px 46px;background:#FFFFFF;border:2px solid #1F4E79;border-radius:24px 8px 8px 24px}' +
+    '.lp .amb-cab{flex:0 0 96px;position:relative;align-self:flex-end;height:min(60%,300px);min-height:170px;background:#FFFFFF;border:2px solid #1F4E79;border-left:0;border-radius:0 46px 14px 0}' +
+    '.lp .amb-win{position:absolute;top:18px;left:10px;right:16px;height:70px;background:linear-gradient(160deg,#BFE3F0,#8CCBE0);border:2px solid #1F4E79;border-radius:6px 22px 6px 6px}' +
+    '.lp .amb-door{position:absolute;top:112px;left:14px;width:10px;height:4px;border-radius:2px;background:#1F4E79}' +
+    '.lp .amb-stripe{position:absolute;left:2px;right:2px;bottom:22px;height:12px;background:#D7262E;border-radius:0 0 0 2px}' +
+    '.lp .amb-siren{position:absolute;top:14px;right:130px;display:flex;gap:2px}' +
+    '.lp .amb-siren i{display:block;width:26px;height:18px;border:2px solid #1F4E79;border-bottom:0;border-radius:8px 8px 0 0;background:#D7262E;animation:ambBlink 1.2s steps(1) infinite}' +
+    '.lp .amb-siren i+i{background:#2E7DD7;animation-delay:.6s}' +
+    '@keyframes ambBlink{50%{filter:brightness(1.6)}}' +
+    '.lp .amb-wheel{position:absolute;bottom:14px;width:46px;height:46px;border-radius:50%;background:#24323F;border:8px solid #4A5866;box-shadow:inset 0 0 0 7px #24323F,inset 0 0 0 14px #C9D3DB}' +
+    '.lp .amb-wheel.w1{left:52px}.lp .amb-wheel.w2{right:140px}' +
+    '@media (max-width:640px){.lp .amb-cab{display:none}.lp .amb-box{border-radius:22px}.lp .amb-siren{right:40px}.lp .amb-wheel.w2{right:52px}.lp .amb-box{padding:28px 20px 46px}}' +
+    '@media (prefers-reduced-motion: reduce){.lp .amb-siren i{animation:none}}';   /* téléphone : seulement « Embarquer » et « Mon espace » */
 
   function render(root, go) {
     if (!document.getElementById('lp-css')) {

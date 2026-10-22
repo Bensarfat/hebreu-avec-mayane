@@ -5,16 +5,56 @@ var HPHome = (function () {
   'use strict';
 
   /* Illustration d'accueil : « bonne réussite » et les quatre verbes */
-  var SCENE = '<div class="mv-scene" role="img" aria-label="Parler, travailler, vivre, aimer en hébreu">' +
-    '<i class="mv-l l1">א</i><i class="mv-l l2">ש</i><i class="mv-l l3">ל</i><i class="mv-l l4">מ</i>' +
-    '<i class="mv-c c1"></i><i class="mv-c c2"></i><i class="mv-c c3"></i><i class="mv-c c4"></i><i class="mv-c c5"></i>' +
-    '<div class="mv-tiles">' +
-      '<div class="mv-tile t1"><span class="e">💬</span></div>' +
-      '<div class="mv-tile t2"><span class="e">💼</span></div>' +
-      '<div class="mv-tile t3"><span class="e">🏡</span></div>' +
-      '<div class="mv-tile t4"><span class="e">❤️</span></div>' +
-      '<div class="mv-target"><span class="e">🎯</span></div>' +
-    '</div></div>';
+  var SCENE = '' +
+  '<svg class="mv-scene" viewBox="0 0 360 440" role="img" aria-label="Un joueur de basket marque un panier">' +
+    '<defs>' +
+      '<linearGradient id="mvSc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient>' +
+      '<clipPath id="mvScClip"><path d="M30 120 Q30 40 110 30 L250 30 Q330 40 330 120 L330 440 L30 440 Z"/></clipPath>' +
+    '</defs>' +
+    '<path d="M30 120 Q30 40 110 30 L250 30 Q330 40 330 120 L330 440 L30 440 Z" fill="url(#mvSc)"/>' +
+    '<g clip-path="url(#mvScClip)">' +
+      /* lettres en filigrane, confettis */
+      '<g font-family="var(--font-he)" font-weight="700" fill="#fff" opacity=".16"><text x="56" y="112" font-size="40">א</text><text x="60" y="400" font-size="34">ל</text><text x="292" y="330" font-size="36">מ</text></g>' +
+      '<g><circle cx="96" cy="150" r="4" fill="#ffd166"/><circle cx="150" cy="80" r="3" fill="#7cf0c6"/><circle cx="312" cy="230" r="4" fill="#9ad7ff"/><circle cx="210" cy="60" r="3" fill="#ffb3c8"/><circle cx="70" cy="250" r="3" fill="#ffd166"/></g>' +
+      /* sol */
+      '<ellipse cx="170" cy="430" rx="120" ry="14" fill="#000" opacity=".12"/>' +
+      /* panier */
+      '<rect x="236" y="54" width="86" height="62" rx="6" fill="#fff" opacity=".95"/>' +
+      '<rect x="262" y="78" width="34" height="26" fill="none" stroke="#e23b3b" stroke-width="4"/>' +
+      '<path d="M252 128 L258 162 L266 128 M266 128 L272 164 L280 128 M280 128 L286 164 L294 128 M294 128 L300 162 L306 128 M258 146 L300 146" fill="none" stroke="#fff" stroke-width="2" opacity=".9"/>' +
+      '<ellipse cx="279" cy="127" rx="29" ry="6" fill="none" stroke="#ff7a1a" stroke-width="5"/>' +
+      /* éclats autour du panier */
+      '<g stroke="#ffd166" stroke-width="4" stroke-linecap="round"><path d="M226 104 L214 96"/><path d="M228 124 L212 126"/><path d="M318 136 L332 142"/></g>' +
+      /* traits de mouvement */
+      '<g stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".35"><path d="M70 330 L110 318"/><path d="M62 360 L104 352"/><path d="M80 300 L112 290"/></g>' +
+      /* joueur : jambe arrière */
+      '<path d="M176 318 L146 360 L112 372" fill="none" stroke="#8a5536" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M100 366 Q104 382 124 382 L132 374 Q124 362 110 360 Z" fill="#fff"/><path d="M104 376 L126 378" stroke="#e23b3b" stroke-width="3"/>' +
+      /* jambe avant (genou levé) */
+      '<path d="M206 318 L238 344 L222 384" fill="none" stroke="#9a5f3d" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M208 382 Q206 398 226 400 L240 396 Q238 382 226 378 Z" fill="#fff"/><path d="M212 392 L236 392" stroke="#e23b3b" stroke-width="3"/>' +
+      /* short rouge */
+      '<path d="M166 280 L224 276 L236 326 L204 330 L196 312 L188 332 L160 326 Z" fill="#d62828"/>' +
+      '<path d="M166 284 L160 324 M224 280 L232 322" stroke="#fff" stroke-width="4"/>' +
+      /* bras arrière */
+      '<path d="M172 214 L140 244 L126 270" fill="none" stroke="#8a5536" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>' +
+      /* maillot rouge n° 23 */
+      '<path d="M168 200 Q196 186 226 196 L230 220 Q224 252 228 282 L164 286 Q170 252 162 222 Z" fill="#e23b3b"/>' +
+      '<path d="M182 194 Q198 206 214 192" fill="none" stroke="#fff" stroke-width="4"/>' +
+      '<path d="M168 200 L162 222 M226 196 L230 220" stroke="#fff" stroke-width="3"/>' +
+      '<text x="197" y="262" text-anchor="middle" font-family="var(--font-display)" font-weight="900" font-size="38" fill="#fff">23</text>' +
+      /* bras levé vers le panier */
+      '<path d="M222 204 L246 160 L258 132" fill="none" stroke="#9a5f3d" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>' +
+      /* tête */
+      '<rect x="188" y="168" width="18" height="22" rx="6" fill="#8a5536"/>' +
+      '<circle cx="196" cy="152" r="23" fill="#9a5f3d"/>' +
+      '<path d="M174 146 Q178 124 198 126 Q218 128 219 146 Q206 136 190 140 Q180 142 174 146 Z" fill="#2b1a12"/>' +
+      '<path d="M174 146 Q196 140 219 146 L219 151 Q196 146 174 151 Z" fill="#fff"/>' +
+      '<circle cx="205" cy="158" r="2.6" fill="#2b1a12"/><path d="M200 168 Q207 173 213 166" fill="none" stroke="#2b1a12" stroke-width="2.5" stroke-linecap="round"/>' +
+      /* ballon qui entre dans le panier */
+      '<g transform="translate(268 112)"><circle r="17" fill="#f08a24"/><path d="M-17 0 H17 M0 -17 V17 M-12 -12 Q0 0 -12 12 M12 -12 Q0 0 12 12" fill="none" stroke="#7a3b0c" stroke-width="2"/></g>' +
+      '<ellipse cx="279" cy="129" rx="29" ry="5" fill="none" stroke="#ff7a1a" stroke-width="5" stroke-dasharray="46 200" stroke-dashoffset="-20"/>' +
+    '</g></svg>';
 
   /* Illustration : Maayane (grande, brune, yeux marron, souriante) */
   var PORTRAIT = '' +
@@ -87,20 +127,9 @@ var HPHome = (function () {
     '.mv-bubble{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:10px 14px;box-shadow:var(--shadow-card);font-size:13.5px;font-weight:700;color:var(--ink);display:flex;gap:8px;align-items:center;animation:mvFloat 5s ease-in-out infinite}' +
     '.mv-bubble .he{color:var(--accent);font-size:16px}' +
     '.mv-bubble .e{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:18px;line-height:1}.mv-bubble{max-width:230px;line-height:1.25}' +
-    '.mv-b1{left:-12%;top:2%}.mv-b2{right:-10%;top:10%;animation-delay:-2s}.mv-b3{left:-12%;bottom:9%;animation-delay:-3.5s}.mv-b4{right:-8%;bottom:-3%;animation-delay:-1s}' +
-    '@media (max-width:860px){.mv-bubble{font-size:11.5px;padding:7px 9px;max-width:140px;border-radius:14px}.mv-bubble .e{font-size:14px}.mv-b1{left:-20%;top:1%}.mv-b2,.mv-b3{display:none}.mv-b4{right:-20%;bottom:-3%}}' +
-    '.mv-scene{position:relative;container-type:inline-size;aspect-ratio:360/440;border-radius:44% 44% 28px 28px / 28% 28% 28px 28px;overflow:hidden;background:linear-gradient(150deg,var(--accent),var(--accent-2));box-shadow:0 30px 60px -30px var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7cqw;padding:16cqw 10cqw 12cqw}' +
-    '.mv-scene-t{position:relative;display:flex;align-items:center;gap:3cqw;font:800 12cqw/1 var(--font-he);color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.18)}.mv-scene-t .e{font:11cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;text-shadow:none}' +
-    '.mv-tiles{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6cqw;width:88%}' +
-    '.mv-tile{background:#fff;border-radius:6cqw;padding:7cqw 2cqw;display:flex;flex-direction:column;align-items:center;gap:2cqw;box-shadow:0 10px 24px -14px rgba(30,20,60,.55)}' +
-    '.mv-tile .e{font:17cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif}.mv-tile b{font:700 6cqw/1.1 var(--font-he);color:#5a3fe0}' +
-    '.mv-tile.t1{transform:rotate(-4deg);background:#eef4ff}.mv-tile.t2{transform:rotate(3deg);background:#fff3e6}.mv-tile.t3{transform:rotate(2deg);background:#e8f8f0}.mv-tile.t4{transform:rotate(-3deg);background:#ffeef3}' +
-    '.mv-target{position:absolute;left:50%;top:50%;width:21cqw;height:21cqw;margin:-10.5cqw 0 0 -10.5cqw;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 1.6cqw rgba(255,255,255,.35),0 14px 30px -12px rgba(30,20,60,.6);animation:mvPop 3.2s ease-in-out infinite}' +
-    '.mv-target .e{font:14cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif}' +
-    '@keyframes mvPop{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}@media (prefers-reduced-motion:reduce){.mv-target{animation:none}}' +
-    '.mv-medal-x{position:absolute;left:50%;margin-left:-8.5cqw;top:5cqw;width:17cqw;height:17cqw;border-radius:50%;background:#fff;display:grid;place-items:center;font:10cqw/1 "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;box-shadow:0 8px 20px -8px rgba(0,0,0,.35);transform:rotate(10deg)}' +
-    '.mv-l{position:absolute;font:700 11cqw var(--font-he);color:#fff;opacity:.16;font-style:normal}.mv-l.l1{left:8cqw;top:10cqw}.mv-l.l2{right:30cqw;top:4cqw;font-size:8cqw}.mv-l.l3{left:5cqw;bottom:14cqw;font-size:9cqw}.mv-l.l4{right:7cqw;bottom:8cqw}' +
-    '.mv-c{position:absolute;width:2.6cqw;height:2.6cqw;border-radius:50%;background:#ffd166;opacity:.9}.mv-c.c1{left:22cqw;top:20cqw}.mv-c.c2{right:24cqw;top:28cqw;background:#7cf0c6}.mv-c.c3{left:12cqw;top:36cqw;background:#ffb3c8;width:2cqw;height:2cqw}.mv-c.c4{right:12cqw;bottom:30cqw;background:#9ad7ff}.mv-c.c5{left:46cqw;bottom:5cqw;background:#ffd166;width:2cqw;height:2cqw}' +
+    '.mv-b1{left:-14%;top:4%}.mv-b2{right:-12%;top:47%;animation-delay:-2s}.mv-b3{left:-16%;top:30%;animation-delay:-3.5s}.mv-b4{right:-6%;bottom:-7%;animation-delay:-1s}' +
+    '@media (max-width:860px){.mv-bubble{font-size:11.5px;padding:7px 9px;max-width:140px;border-radius:14px}.mv-bubble .e{font-size:14px}.mv-b1{left:-22%;top:20%}.mv-b2,.mv-b3{display:none}.mv-b4{right:-22%;bottom:-6%}}' +
+    '.mv-scene{display:block;width:100%;height:auto;filter:drop-shadow(0 30px 40px rgba(80,50,160,.35))}' +
     '@keyframes mvFloat{50%{transform:translateY(-8px)}}' +
     '@media (prefers-reduced-motion:reduce){.mv-bubble{animation:none}}' +
     '.mv-sec{max-width:1120px;margin:0 auto;padding:30px 16px}' +

@@ -7,7 +7,7 @@ var HPHome = (function () {
   /* Illustration d'accueil : un joueur de basket (n° 23) marque un panier (Freepik, retouchée) */
   function scene() {
     var src = window.ASSETS && ASSETS.img && ASSETS.img.dunk;
-    return '<div class="mv-scene">' + (src ? '<img src="' + src + '" alt="Un joueur de basket, maillot rouge n° 23, s\'élance et marque un panier" width="760" height="860">' : '') + '</div>';
+    return '<div class="mv-scene">' + (src ? '<img src="' + src + '" alt="Un joueur de basket, maillot rouge n° 23, s\'élance et marque un panier" width="720" height="905">' : '') + '</div>';
   }
 
   /* Illustration : Maayane (grande, brune, yeux marron, souriante) */
@@ -83,7 +83,7 @@ var HPHome = (function () {
     '.mv-bubble .e{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:18px;line-height:1}.mv-bubble{max-width:230px;line-height:1.25;transition:opacity .35s}.mv-bubble.out{opacity:0}' +
     '.mv-b1{right:-14%;top:2%}.mv-b2{right:-16%;top:19%;animation-delay:-2s}.mv-b3{left:-16%;bottom:8%;animation-delay:-3.5s}.mv-b4{right:-8%;bottom:-6%;animation-delay:-1s}' +
     '@media (max-width:860px){.mv-bubble{font-size:11.5px;padding:7px 9px;max-width:140px;border-radius:14px}.mv-bubble .e{font-size:14px}.mv-b1{left:-22%;right:auto;top:auto;bottom:8%}.mv-b2,.mv-b3{display:none}.mv-b4{right:-22%;bottom:-6%}}' +
-    '.mv-scene{aspect-ratio:7/8;border-radius:46% 46% 32px 32px / 38% 38% 32px 32px;overflow:hidden;background:radial-gradient(120% 80% at 30% 20%,#4f86f7,#2a56c6 60%,#22449e);box-shadow:0 30px 60px -30px #2a56c6}.mv-scene img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:12% 5% 0 5%}' +
+    '.mv-scene{aspect-ratio:4/5;border-radius:46% 46% 32px 32px / 38% 38% 32px 32px;overflow:hidden;background:radial-gradient(120% 80% at 30% 20%,#4f86f7,#2a56c6 60%,#22449e);box-shadow:0 30px 60px -30px #2a56c6}.mv-scene img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:13% 6% 0 6%}' +
     '@keyframes mvFloat{50%{transform:translateY(-8px)}}' +
     '@media (prefers-reduced-motion:reduce){.mv-bubble{animation:none}}' +
     '.mv-sec{max-width:1120px;margin:0 auto;padding:30px 16px}' +

@@ -10,7 +10,7 @@ var HPApp = (function () {
   var DEMO = { teacher: ['mayane', 'mayane2026'], students: [['benjamin', 'ivrit2026'], ['lea', 'lea2026'], ['noam', 'noam2026']] };
   var DEMO_TEACHER = DEMO.teacher.slice();   /* identifiants de départ, pour « Réinitialiser la démo » */
   var results = {};                          /* analyses terminées pendant que la page affichait autre chose */
-  var cache = { students: [], summaries: {}, contents: {}, docs: [] };
+  var cache = { students: [], summaries: {}, contents: {}, docs: [], tests: [] };
   var sortKey = 'xp7', sortDir = -1, pending = {};
   /* agenda (réservation des cours) : voir agenda-ui.js */
   var AG = HPAgendaUI({ $: $, $$: $$, esc: esc, cache: cache, modal: modal, toast: toast, busy: busy, errText: errText, fullName: fullName, color: stColor,
@@ -271,8 +271,8 @@ var HPApp = (function () {
 
   function loadAll() {
     var slow = setTimeout(function () { document.body.classList.add('is-loading'); }, 250);
-    return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load()]).then(function (r) {
-      cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2];
+    return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load(), HPB.listLevelTests().catch(function () { return []; })]).then(function (r) {
+      cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2]; cache.tests = r[4];
       HPA.setCode(r[2].analyseCode || '');
       if (HPB.me && (HPB.me.role === 'teacher' || HPB.me.role === 'admin')) cache.teacherLogin = HPB.me.login;
       var ids = r[0].map(function (s) { return s.id; });
@@ -512,8 +512,8 @@ var HPApp = (function () {
   /* ================= BACK-OFFICE ================= */
   function nav(cur) {
     var pendingDocs = cache.docs.filter(function (d) { return d.status !== 'done'; }).length;
-    var nb = AG.badge();
-    var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
+    var nb = AG.badge(), nt = newTests();
+    var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['tests', 'Tests de niveau' + (nt ? '<span class="count">' + nt + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
       '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Maayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '"' + (cur === it[0] ? ' aria-current="page"' : '') + '>' + it[1] + '</a>'; }).join('') +
@@ -529,6 +529,7 @@ var HPApp = (function () {
     else if (page === 'documents') body = docsPage();
     else if (page === 'agenda') body = AG.page(h[1]);
     else if (page === 'reglages') body = settingsPage();
+    else if (page === 'tests') body = testsPage();
     else { page = 'tableau'; body = dashboard(); }
     root.innerHTML = nav(page === 'eleve' ? 'eleves' : page) + '<main class="bo-main">' + body + '</main>';
     $('#lo').onclick = logout;
@@ -751,6 +752,58 @@ var HPApp = (function () {
       '<p class="small muted" style="margin:14px 0 10px">2. Déposez les documents</p>' + dropZone('') + '</div>' +
       '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">À intégrer <small>' + pend.length + '</small></h3>' + analyseAllBtn(pend) + '</div>' + (pend.length ? '<div class="docs">' + pend.map(function (d) { return docRow(d, { showStudents: true }); }).join('') + '</div>' : '<p class="hp-empty">Tout est intégré. 👌</p>') + '</div>' +
       '<div class="card"><h3>Déjà intégrés <small>' + (docs.length - pend.length) + '</small></h3>' + (docs.length - pend.length ? '<div class="docs">' + docs.filter(function (d) { return d.status === 'done'; }).map(function (d) { return docRow(d, { showStudents: true }); }).join('') + '</div>' : '<p class="hp-empty">Aucun.</p>') + '</div></div>';
+  }
+
+  /* ---------- tests de niveau (page publique #/test) ---------- */
+  function seenTest(v) { try { if (v) localStorage.setItem('hp-lt-seen', v); return localStorage.getItem('hp-lt-seen') || ''; } catch (e) { return v || ''; } }
+  function newTests() { var s = seenTest(); return cache.tests.filter(function (id) { return id > s; }).length; }
+  var LT_PARTS = [['lettres', 'Lettres'], ['dec', 'Décollage'], ['vol', 'En vol'], ['att', 'Atterrissage'], ['lect', 'Lecture']];
+  var LT_PILL = { 'Embarquement': 'rose', 'Décollage': 'gold', 'En vol': 'green', 'Atterrissage': 'grey' };
+  function testsPage() {
+    return '<div class="bo-head"><div><h1 class="page-title">Tests de niveau</h1><p>Les réponses au test de la page d\'accueil. Vous seule les voyez : la personne reçoit seulement un message de remerciement.</p></div></div>' +
+      '<div class="stack" id="lt-list">' + (cache.tests.length ? '<p class="muted">Chargement…</p>' : '<div class="card"><p class="hp-empty">Aucun test pour l\'instant. Lien à partager : <b>' + esc(location.origin + location.pathname) + '#/test</b></p></div>') + '</div>';
+  }
+  function testCard(t) {
+    var Q = (window.HPHome && HPHome.test && HPHome.test.questions) || [], sc = t.scores || {};
+    var mail = /@/.test(t.contact), tel = String(t.contact || '').replace(/[^\d+]/g, '');
+    var parts = t.reads === false ? '<span class="pill rose">Ne lit pas encore l\'hébreu</span>' : LT_PARTS.filter(function (p) { return sc[p[0]]; }).map(function (p) {
+      var v = sc[p[0]], ok = v[0] / v[1] >= 0.65;
+      return '<span class="pill ' + (ok ? 'green' : 'grey') + '">' + p[1] + ' ' + v[0] + ' / ' + v[1] + '</span>';
+    }).join(' ');
+    var rows = (t.answers || []).map(function (a) {
+      var q = Q[a.q]; if (!q) return '';
+      var good = q[0] === 'Lecture' ? (q[2] ? 'נכון' : 'לא נכון') : q[2][0];
+      return '<li style="margin:6px 0">' + (a.ok ? '✅' : a.a == null ? '⬜' : '❌') + ' <span class="small muted">' + (a.q + 1) + '.</span> ' + (/[A-Za-z]/.test(q[1]) ? esc(q[1]) : '<span lang="he" dir="rtl" style="display:block;text-align:right">' + q[1].split('\n').map(esc).join('<br>') + '</span>') +
+        (a.ok ? '' : '<br><span class="small muted">Réponse : ' + (a.a == null ? 'je ne sais pas' : '<span lang="he" dir="rtl">' + esc(a.a) + '</span>') + ' · attendu : <span lang="he" dir="rtl">' + esc(good) + '</span></span>') + '</li>';
+    }).join('');
+    return '<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">' +
+      '<div><h3 style="margin:0">' + esc(t.name) + ' <span class="pill ' + (LT_PILL[t.level] || 'grey') + '">' + esc(t.level) + '</span></h3>' +
+      '<p class="small muted" style="margin:4px 0 0">' + new Date(t.at).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) + (t.minutes != null ? ' · ' + Math.max(1, Math.round(t.minutes)) + ' min' : '') + ' · ' +
+      '<a href="' + (mail ? 'mailto:' + esc(t.contact) : 'tel:' + esc(tel)) + '">' + esc(t.contact) + '</a>' +
+      (!mail && tel.length >= 9 ? ' · <a href="https://wa.me/' + esc(tel.replace(/^\+/, '').replace(/^0/, '972')) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</p></div>' +
+      '<button class="btn small ghost" data-rmtest="' + esc(t.id) + '" title="Supprimer ce test" aria-label="Supprimer le test de ' + esc(t.name) + '">🗑</button></div>' +
+      '<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:12px">' + parts + '</div>' +
+      (rows ? '<details style="margin-top:12px"><summary class="small"><b>Voir les réponses</b></summary><ol style="list-style:none;padding:0;margin:10px 0 0">' + rows + '</ol></details>' : '') + '</div>';
+  }
+  function bindTests() {
+    var box = $('#lt-list'); if (!box || !cache.tests.length) return;
+    if (cache.tests[0] > seenTest()) seenTest(cache.tests[0]);
+    Promise.all(cache.tests.slice(0, 100).map(function (id) { return HPB.getLevelTest(id).catch(function () { return null; }); })).then(function (l) {
+      if (!box.isConnected) return;
+      box.innerHTML = l.filter(Boolean).map(testCard).join('') || '<div class="card"><p class="hp-empty">Aucun test.</p></div>';
+      $$('[data-rmtest]').forEach(function (b) {
+        b.onclick = function () {
+          var m = modal('<h2>Supprimer ce test ?</h2><p>Les réponses seront effacées définitivement.</p>' +
+            '<div class="row" style="margin-top:16px"><button class="btn danger" data-yes>Supprimer</button><button class="btn" data-no>Annuler</button></div>');
+          $('[data-no]', m).onclick = function () { m.remove(); };
+          $('[data-yes]', m).onclick = function () {
+            busy($('[data-yes]', m), HPB.deleteLevelTest(b.dataset.rmtest), 'Suppression impossible').then(function () {
+              m.remove(); cache.tests = cache.tests.filter(function (id) { return id !== b.dataset.rmtest; }); renderTeacher();
+            }).catch(function () {});
+          };
+        };
+      });
+    });
   }
 
   /* ---------- contenu du site de l'élève ---------- */
@@ -1273,6 +1326,7 @@ var HPApp = (function () {
         });
       };
     }
+    if (page === 'tests') bindTests();
     if (page === 'reglages') {
       var tf = $('#tpw');
       tf.addEventListener('submit', function (e) {

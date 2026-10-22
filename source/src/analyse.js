@@ -81,15 +81,20 @@ var HPA = (function () {
 
   /* ---------- consigne envoyée à Claude ---------- */
   var SCHEMA = '{\n' +
-    '  "themes": [ { "name": "Nom du thème en français", "words": [ { "he_nikud": "mot avec nikoud", "fr": "traduction française", "nature": "n" } ] } ],\n' +
+    '  "themes": [ { "name": "Nom du thème en français", "words": [ { "he_nikud": "mot avec nikoud", "fr": "traduction française", "nature": "n", "def_he": "définition simple en hébreu", "ex_he": "phrase courte en hébreu qui contient le mot" } ] } ],\n' +
     '  "grammar": [ { "category": "Catégorie", "title": "Titre de la fiche", "he": "titre en hébreu", "html": "<p>…</p>" } ],\n' +
     '  "summary": "une phrase qui résume le contenu du document"\n}';
+  /* définition et phrase d'exemple : seuls ajouts autorisés avec le nikoud, pour les exercices « mot ↔ définition » et « phrase à compléter » */
+  var EXTRA = 'Pour chaque mot, deux aides d\'exercice (seuls ajouts autorisés, avec le nikoud) :\n' +
+    '- "def_he" : une définition TRÈS simple en hébreu facile (4 à 10 mots, avec nikoud), compréhensible par un élève de niveau débutant/intermédiaire, sans utiliser le mot lui-même ni un mot de la même racine. Pour un mot-outil, un nombre ou une expression où une définition n\'a pas de sens, mets "".\n' +
+    '- "ex_he" : une phrase courte et naturelle en hébreu (4 à 10 mots, avec nikoud) qui contient le mot EXACTEMENT sous la forme de "he_nikud" (mêmes lettres, sans préfixe collé comme ה, ו, ב, ל, מ, ש, כ), pour qu\'on puisse le cacher dans un exercice à trous. Si le document donne un exemple qui convient, reprends-le. Si c\'est impossible, mets "".\n\n';
   /* consigne fixe (identique pour tous les morceaux d'un document : mise en cache par l'API) */
   function rules() {
     return 'Tu prépares le contenu de révision d\'un élève de Maayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
       'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
       'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +
+      EXTRA +
       'Grammaire : une fiche par règle expliquée dans le document, en français, comme une fiche de révision claire : "html" n\'utilise que <p>, <ul>, <li>, <strong>, <em>, <br> et <div class="example"> pour les exemples, avec l\'hébreu dans <span class="he-inline">…</span>. Reprends les exemples du document.\n\n' +
       'Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
   }
@@ -187,9 +192,9 @@ var HPA = (function () {
       var e = new Error('network'); e.code = 'network'; throw e;
     });
   }
-  function buildPrompt(ex, existingThemes, docName) {
+  function buildPrompt(ex, existingThemes, docName, sys) {
     var text = ex.text.length > 180000 ? ex.text.slice(0, 180000) : ex.text;
-    return { system: rules(), prompt: context(existingThemes, docName) +
+    return { system: sys || rules(), prompt: context(existingThemes, docName) +
       (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).') };
   }
 
@@ -235,7 +240,7 @@ var HPA = (function () {
     });
     return { themes: order.map(function (n) { return themes[n]; }).filter(function (t) { return t.words.length; }), grammar: grammar, summary: summaries.join(' ').slice(0, 400) };
   }
-  function viaServerChunked(ex, existingThemes, docName, signal, onStep) {
+  function viaServerChunked(ex, existingThemes, docName, signal, onStep, sys) {
     /* file d'attente des morceaux : texte d'abord, puis les pages scannées par paquets */
     var queue = [];
     (ex.text.trim() ? chunks(ex.text) : []).forEach(function (t) { queue.push({ text: t, images: [], depth: 0 }); });
@@ -260,7 +265,7 @@ var HPA = (function () {
     function next() {
       if (!queue.length) return Promise.resolve();
       var part = queue.shift();
-      return viaServer(part, buildPrompt(part, themesSoFar, docName), signal, function (t) { onStep && onStep(label(t)); }).then(function (r) {
+      return viaServer(part, buildPrompt(part, themesSoFar, docName, sys), signal, function (t) { onStep && onStep(label(t)); }).then(function (r) {
         var n = normalise(r); results.push(n); done++;
         n.themes.forEach(function (t) { if (themesSoFar.indexOf(t.name) < 0) themesSoFar.push(t.name); });   /* mêmes noms de thèmes d'un morceau à l'autre */
         return next();
@@ -300,6 +305,37 @@ var HPA = (function () {
       var r = results.length === 1 ? results[0] : combine(results);
       if (skipped) r.skipped = skipped;
       return r;
+    });
+  }
+
+  /* vocabulaire déjà présent : prépare définitions et phrases d'exemple pour les mots qui n'en ont pas */
+  function enrichRules() {
+    return 'Tu prépares des aides d\'exercice pour le vocabulaire d\'un élève de Maayane, professeure d\'hébreu.\n' +
+      'On te donne une liste de mots (hébreu = français [thème]). Renvoie EXACTEMENT les mêmes mots, sans en ajouter ni en retirer, groupés par le même thème : recopie "he_nikud" et "fr" tels quels, "nature" = v, n, a, d, o, c ou x.\n\n' + EXTRA +
+      'Mets "grammar": [] et un "summary" court. Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
+  }
+  function missingExtras(content) {
+    var out = [];
+    Object.keys((content && content.VOCAB) || {}).forEach(function (t) {
+      content.VOCAB[t].forEach(function (e) { if (!e[3] && !e[4]) out.push({ theme: t, he: e[2] || e[0], fr: e[1], key: e[0] }); });
+    });
+    return out;
+  }
+  function enrich(content, onStep, signal) {
+    var list = missingExtras(content);
+    if (!list.length) return Promise.resolve({ themes: [], grammar: [], summary: '' });
+    var text = list.map(function (w) { return w.he + ' = ' + w.fr + ' [' + w.theme + ']'; }).join('\n');
+    return viaServerChunked({ text: text, images: [] }, Object.keys(content.VOCAB), 'vocabulaire existant', signal, onStep, enrichRules()).then(function (r) {
+      /* on retrouve chaque mot d'origine (l'orthographe avec nikoud peut différer légèrement) */
+      var byHe = {}, byFr = {};
+      list.forEach(function (o) { byHe[bare(o.he)] = o; byHe[bare(o.key)] = o; byFr[o.theme + '|' + String(o.fr).trim().toLowerCase()] = o; });
+      var n = normalise(r);
+      n.themes.forEach(function (t) { t.words.forEach(function (w) {
+        var o = byFr[t.name + '|' + w.fr.trim().toLowerCase()] || byHe[bare(w.heVoc)] || byHe[w.he];
+        if (o) { w.he = o.key; w.fr = o.fr; }
+        w.keep = false;
+      }); });
+      return n;
     });
   }
 
@@ -367,7 +403,7 @@ var HPA = (function () {
         words: (Array.isArray(t && t.words) ? t.words : []).map(function (w) {
           /* accepte aussi un résultat déjà nettoyé (heVoc) : un second passage ne perd pas les voyelles */
           var he = bare(str(w && w.he) || str(w && w.he_nikud) || str(w && w.heVoc)), hv = str(w && w.he_nikud) || str(w && w.heVoc) || he, fr = str(w && w.fr), n = str(w && w.nature).charAt(0).toLowerCase();
-          return { he: he, heVoc: hv, fr: fr, nature: NAT[n] ? n : 'n' };
+          return { he: he, heVoc: hv, fr: fr, nature: NAT[n] ? n : 'n', def: str(w && (w.def_he != null ? w.def_he : w.def), 200), ex: str(w && (w.ex_he != null ? w.ex_he : w.ex), 200) };
         }).filter(function (w) { return w.he && w.fr; })
       };
     }).filter(function (t) { return t.words.length; });
@@ -391,7 +427,10 @@ var HPA = (function () {
     var c = content ? JSON.parse(JSON.stringify(content)) : emptyContent();
     ['VOCAB', 'NATURE', 'VERB_PRESENT'].forEach(function (k) { if (!c[k]) c[k] = {}; });
     ['CONJ', 'CORE_THEMES', 'ADVANCED_THEMES', 'GRAMMAR_CATEGORIES', 'sources'].forEach(function (k) { if (!Array.isArray(c[k])) c[k] = []; });
-    var keys = existingKeys(c), nw = 0, ng = 0, nv = 0;
+    var keys = existingKeys(c), nw = 0, ng = 0, nv = 0, nd = 0;
+    /* toutes les occurrences d'un mot (il peut figurer dans plusieurs thèmes) */
+    var occ = {};
+    Object.keys(c.VOCAB).forEach(function (t) { c.VOCAB[t].forEach(function (e) { var k = wkey(e[0], e[1]); (occ[k] = occ[k] || []).push(e); }); });
     result.themes.forEach(function (t) {
       t.words.forEach(function (w) {
         var k = wkey(w.he, w.fr);
@@ -401,11 +440,20 @@ var HPA = (function () {
             if (wkey(e[0], e[1]) === k && !/[\u0591-\u05C7]/.test(e[2] || '')) { e[2] = w.heVoc; nv++; }
           });
         }
+        /* mot déjà présent sans définition ou sans phrase : on les complète */
+        if (keys[k] && (w.def || w.ex)) {
+          (occ[k] || []).forEach(function (e) {
+            var add = false;
+            if (w.def && !e[3]) { while (e.length < 3) e.push(''); e[3] = w.def; add = true; }
+            if (w.ex && !e[4]) { while (e.length < 4) e.push(''); e[4] = w.ex; add = true; }
+            if (add) nd++;
+          });
+        }
         if (!w.keep || keys[k]) return;
         if (!c.VOCAB[t.name]) { c.VOCAB[t.name] = []; c.NATURE[t.name] = ''; if (c.CORE_THEMES.indexOf(t.name) < 0) c.CORE_THEMES.push(t.name); }
         var len = c.VOCAB[t.name].length;
         c.NATURE[t.name] = String(c.NATURE[t.name] || '').padEnd(len, 'n').slice(0, len) + w.nature;
-        c.VOCAB[t.name].push([w.he, w.fr, w.heVoc]);
+        c.VOCAB[t.name].push(w.def || w.ex ? [w.he, w.fr, w.heVoc, w.def || '', w.ex || ''] : [w.he, w.fr, w.heVoc]);
         keys[k] = t.name; nw++;
       });
     });
@@ -417,7 +465,7 @@ var HPA = (function () {
       cat.items.push({ title: g.title, he: g.he, body: g.body }); ng++;
     });
     if (docName && c.sources.indexOf(docName) < 0) c.sources.push(docName);
-    return { content: c, words: nw, grammar: ng, vowels: nv };
+    return { content: c, words: nw, grammar: ng, vowels: nv, enriched: nd };
   }
   /* contents : contenu de chaque élève visé ; un mot n'est « déjà présent » que si TOUS l'ont */
   function markDuplicates(result, contents) {
@@ -443,7 +491,7 @@ var HPA = (function () {
   }
 
   return {
-    kind: kind, extract: extract, analyse: analyse, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
+    kind: kind, extract: extract, analyse: analyse, enrich: enrich, missingExtras: missingExtras, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
     stats: stats, emptyContent: emptyContent, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();

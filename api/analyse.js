@@ -20,9 +20,10 @@ const OUTPUT_SCHEMA = {
   properties: {
     themes: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['name', 'words'], properties: {
       name: { type: 'string' },
-      words: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['he_nikud', 'fr', 'nature'], properties: {
+      words: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['he_nikud', 'fr', 'nature', 'def_he', 'ex_he'], properties: {
         he_nikud: { type: 'string' }, fr: { type: 'string' },
-        nature: { type: 'string', enum: ['v', 'n', 'a', 'd', 'o', 'c', 'x'] } } } } } } },
+        nature: { type: 'string', enum: ['v', 'n', 'a', 'd', 'o', 'c', 'x'] },
+        def_he: { type: 'string' }, ex_he: { type: 'string' } } } } } } },
     grammar: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['category', 'title', 'he', 'html'], properties: {
       category: { type: 'string' }, title: { type: 'string' }, he: { type: 'string' }, html: { type: 'string' } } } },
     summary: { type: 'string' }

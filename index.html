@@ -579,7 +579,8 @@
 <body>
 <div id="app"></div>
 <script>
-var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"1a38060d99","img":{"dunk":"assets/dunk.762ae12824.webp","teacher":"assets/teacher.942c9ef5b1.webp"}};
+var ASSETS = {"student":"assets/student.7332191892.txt","demo":"assets/demo.b98348612f.json","build":"cfa6afcbaf","img":{"dunk":"assets/dunk.762ae12824.webp","teacher":"assets/teacher.942c9ef5b1.webp"}};
+var HP_PRACTICE = "/* =====================================================================\n   HPX — exercices « Mot ↔ définition » et « Phrase à compléter ».\n   Injecté dans l'espace élève (iframe) par app.js : ne dépend pas du site de Benjamin.\n   Lit le vocabulaire de l'élève (window.__HP_DATA__.VOCAB) : chaque mot est\n   [hébreu, français, hébreu avec nikoud, définition en hébreu, phrase d'exemple].\n   ===================================================================== */\n(function () {\n  'use strict';\n  var NIK = /[֑-ׇ]/g;\n  var data = window.__HP_DATA__ || {}, VOCAB = data.VOCAB || {};\n  var words = [];\n  Object.keys(VOCAB).forEach(function (t) {\n    (VOCAB[t] || []).forEach(function (e) {\n      if (!e || !e[0]) return;\n      words.push({ he: e[0], fr: e[1] || '', voc: e[2] || e[0], def: e[3] || '', ex: e[4] || '', theme: t });\n    });\n  });\n  function bare(s) { return String(s || '').replace(NIK, ''); }\n  function esc(s) { return String(s == null ? '' : s).replace(/[&\u003c>\"']/g, function (c) { return { '&': '&amp;', '\u003c': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]; }); }\n  /* repère le mot dans la phrase, avec ou sans nikoud, et le remplace par un trou */\n  function blank(w) {\n    if (!w.ex) return null;\n    var target = bare(w.voc || w.he).trim(); if (!target) return null;\n    var re = new RegExp(target.split('').map(function (ch) { return ch.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '[\\\\u0591-\\\\u05C7]*'; }).join(''));\n    var m = w.ex.match(re);\n    if (!m) return null;\n    return { before: w.ex.slice(0, m.index), after: w.ex.slice(m.index + m[0].length) };\n  }\n  var defs = words.filter(function (w) { return w.def; });\n  var clozes = words.filter(function (w) { return blank(w); });\n  if (defs.length \u003c 4 && clozes.length \u003c 4) return;   /* pas encore assez de matière : le bouton reste caché */\n\n  /* ---------- voix ---------- */\n  var voice = null;\n  function pickVoice() {\n    try { var v = speechSynthesis.getVoices(); voice = v.filter(function (x) { return /^he|^iw/i.test(x.lang); })[0] || null; } catch (e) {}\n  }\n  try { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}\n  function say(t) {\n    try {\n      speechSynthesis.cancel();\n      var u = new SpeechSynthesisUtterance(t); u.lang = 'he-IL'; if (voice) u.voice = voice; u.rate = 0.9;\n      speechSynthesis.speak(u);\n    } catch (e) {}\n  }\n\n  /* ---------- interface ---------- */\n  var css = '.hpx{position:fixed;inset:0;z-index:9999;background:var(--bg,#f6f7fb);overflow-y:auto;font-family:var(--font-ui,system-ui,sans-serif);color:var(--ink,#222)}' +\n    '.hpx-in{max-width:620px;margin:0 auto;padding:16px 16px 40px}' +\n    '.hpx-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}' +\n    '.hpx-top b{font:800 18px var(--font-display,inherit)}' +\n    '.hpx button{font:inherit;cursor:pointer}' +\n    '.hpx .x{border:1.5px solid var(--line-strong,#ccc);background:var(--paper,#fff);border-radius:999px;padding:7px 14px;font-weight:700;color:var(--ink-soft,#555)}' +\n    '.hpx-modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}' +\n    '.hpx-modes button{border:1.5px solid var(--line,#ddd);background:var(--paper,#fff);border-radius:14px;padding:12px 10px;font-weight:700;color:var(--ink-soft,#555)}' +\n    '.hpx-modes button.on{border-color:var(--accent,#6d4aff);background:var(--accent-tint,#eee9ff);color:var(--accent,#6d4aff)}' +\n    '.hpx-modes button:disabled{opacity:.45;cursor:default}' +\n    '.hpx-card{background:var(--paper,#fff);border:1px solid var(--line,#e5e5e5);border-radius:22px;padding:22px 18px;box-shadow:var(--shadow-card,0 10px 30px -20px rgba(0,0,0,.3))}' +\n    '.hpx-meta{display:flex;justify-content:space-between;font-size:13px;color:var(--muted,#888);font-weight:700;margin-bottom:12px}' +\n    '.hpx-q{direction:rtl;text-align:right;font:600 24px/1.5 var(--font-he,serif);min-height:60px}' +\n    '.hpx-q .gap{display:inline-block;min-width:80px;border-bottom:3px solid var(--accent,#6d4aff);margin:0 4px}' +\n    '.hpx-q .gap.ok{border-color:transparent;color:var(--olive,#188a5c)}' +\n    '.hpx-say{border:0;background:var(--accent-tint,#eee9ff);color:var(--accent,#6d4aff);border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;margin-top:8px}' +\n    '.hpx-ch{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}' +\n    '.hpx-ch button{direction:rtl;border:1.5px solid var(--line-strong,#ccc);background:var(--paper,#fff);border-radius:16px;padding:14px 10px;font:700 21px var(--font-he,serif);color:var(--ink,#222)}' +\n    '.hpx-ch button.good{border-color:var(--olive,#188a5c);background:var(--mint,#ddf6ea);color:var(--olive,#188a5c)}' +\n    '.hpx-ch button.bad{border-color:var(--bad,#d93a45);background:var(--bad-tint,#ffe5e7);color:var(--bad,#d93a45)}' +\n    '.hpx-fb{margin-top:16px;font-size:15px;line-height:1.5;min-height:24px}.hpx-fb .he{font-family:var(--font-he,serif);font-weight:700}' +\n    '.hpx-next{display:block;width:100%;margin-top:14px;border:0;border-radius:999px;padding:14px;font-weight:800;background:linear-gradient(135deg,var(--accent,#6d4aff),var(--accent-2,#b86cf2));color:var(--on-accent,#fff)}' +\n    '.hpx-end{text-align:center}.hpx-end .big{font:900 54px var(--font-display,inherit);color:var(--accent,#6d4aff)}' +\n    '@media(max-width:420px){.hpx-q{font-size:21px}.hpx-ch button{font-size:19px}}';\n  var root = null, mode = defs.length >= 4 ? 'def' : 'cloze', serie = [], i = 0, score = 0, answered = false;\n\n  function shuffle(a) { a = a.slice(); for (var k = a.length - 1; k > 0; k--) { var j = Math.floor(Math.random() * (k + 1)), t = a[k]; a[k] = a[j]; a[j] = t; } return a; }\n  /* 3 mauvaises réponses : de préférence du même thème et de la même nature de mot */\n  function choices(w) {\n    var same = shuffle(words.filter(function (x) { return x.theme === w.theme && bare(x.voc) !== bare(w.voc); }));\n    var other = shuffle(words.filter(function (x) { return x.theme !== w.theme && bare(x.voc) !== bare(w.voc); }));\n    var seen = {}, out = [];\n    same.concat(other).forEach(function (x) { var k = bare(x.voc); if (out.length \u003c 3 && !seen[k]) { seen[k] = 1; out.push(x); } });\n    return shuffle(out.concat([w]));\n  }\n  function start(m) {\n    mode = m;\n    var pool = m === 'def' ? defs : clozes;\n    serie = shuffle(pool).slice(0, Math.min(10, pool.length)); i = 0; score = 0;\n    render();\n  }\n  function render() {\n    if (!root) return;\n    var body;\n    if (i >= serie.length) {\n      body = '\u003cdiv class=\"hpx-card hpx-end\">\u003cdiv class=\"big\">' + score + ' / ' + serie.length + '\u003c/div>' +\n        '\u003cp>' + (score === serie.length ? 'Parfait ! 🎉' : score >= serie.length * 0.7 ? 'Très bien ! 💪' : 'Continue, ça vient ! 🌱') + '\u003c/p>' +\n        '\u003cbutton class=\"hpx-next\" data-again>Rejouer\u003c/button>\u003c/div>';\n    } else {\n      var w = serie[i], q;\n      if (mode === 'def') q = '\u003cdiv class=\"hpx-q\">' + esc(w.def) + '\u003c/div>\u003cbutton class=\"hpx-say\" data-say=\"' + esc(w.def) + '\">🔊 Écouter\u003c/button>';\n      else { var b = blank(w); q = '\u003cdiv class=\"hpx-q\">' + esc(b.before) + '\u003cspan class=\"gap\" id=\"hpx-gap\">&nbsp;\u003c/span>' + esc(b.after) + '\u003c/div>\u003cbutton class=\"hpx-say\" data-say=\"' + esc(w.ex) + '\">🔊 Écouter la phrase\u003c/button>'; }\n      body = '\u003cdiv class=\"hpx-card\">\u003cdiv class=\"hpx-meta\">\u003cspan>' + (mode === 'def' ? 'Quel mot correspond à la définition ?' : 'Quel mot manque ?') + '\u003c/span>\u003cspan>' + (i + 1) + ' / ' + serie.length + ' · ✓ ' + score + '\u003c/span>\u003c/div>' + q +\n        '\u003cdiv class=\"hpx-ch\">' + choices(w).map(function (c) { return '\u003cbutton data-c=\"' + esc(bare(c.voc)) + '\" lang=\"he\">' + esc(c.voc) + '\u003c/button>'; }).join('') + '\u003c/div>' +\n        '\u003cdiv class=\"hpx-fb\" id=\"hpx-fb\">\u003c/div>\u003c/div>';\n    }\n    root.querySelector('.hpx-body').innerHTML = body;\n    root.querySelectorAll('.hpx-modes button').forEach(function (b) { b.classList.toggle('on', b.dataset.m === mode); });\n    answered = false;\n  }\n  function answer(btn) {\n    if (answered) return; answered = true;\n    var w = serie[i], ok = btn.dataset.c === bare(w.voc);\n    if (ok) score++;\n    root.querySelectorAll('.hpx-ch button').forEach(function (b) {\n      if (b.dataset.c === bare(w.voc)) b.classList.add('good'); else if (b === btn) b.classList.add('bad');\n      b.disabled = true;\n    });\n    var gap = root.querySelector('#hpx-gap'); if (gap) { gap.textContent = w.voc; gap.classList.add('ok'); }\n    root.querySelector('#hpx-fb').innerHTML = (ok ? '✅ Bravo ! ' : '❌ C’était ') + '\u003cspan class=\"he\" lang=\"he\" dir=\"rtl\">' + esc(w.voc) + '\u003c/span> = ' + esc(w.fr) +\n      '\u003cbutton class=\"hpx-next\" data-next>' + (i + 1 \u003c serie.length ? 'Suivant →' : 'Voir mon score') + '\u003c/button>';\n    say(w.voc);\n  }\n  function open() {\n    if (root) return;\n    if (!document.getElementById('hpx-css')) { var s = document.createElement('style'); s.id = 'hpx-css'; s.textContent = css; document.head.appendChild(s); }\n    root = document.createElement('div'); root.className = 'hpx';\n    root.innerHTML = '\u003cdiv class=\"hpx-in\">\u003cdiv class=\"hpx-top\">\u003cb>🧩 Définitions & phrases\u003c/b>\u003cbutton class=\"x\" data-close>✕ Fermer\u003c/button>\u003c/div>' +\n      '\u003cdiv class=\"hpx-modes\">\u003cbutton data-m=\"def\"' + (defs.length \u003c 4 ? ' disabled' : '') + '>Mot ↔ définition\u003c/button>\u003cbutton data-m=\"cloze\"' + (clozes.length \u003c 4 ? ' disabled' : '') + '>Phrase à compléter\u003c/button>\u003c/div>' +\n      '\u003cdiv class=\"hpx-body\">\u003c/div>\u003c/div>';\n    document.body.appendChild(root);\n    root.addEventListener('click', function (e) {\n      var t = e.target.closest('button'); if (!t) return;\n      if (t.hasAttribute('data-close')) close();\n      else if (t.dataset.m) start(t.dataset.m);\n      else if (t.dataset.c != null) answer(t);\n      else if (t.hasAttribute('data-next')) { i++; render(); }\n      else if (t.hasAttribute('data-again')) start(mode);\n      else if (t.dataset.say) say(t.dataset.say);\n    });\n    start(mode);\n  }\n  function close() { if (root) { root.remove(); root = null; } try { speechSynthesis.cancel(); } catch (e) {} }\n  window.HPX = { open: open, close: close };\n  function showBtn() { var b = document.getElementById('hp-px-btn'); if (b) b.hidden = false; }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showBtn); else showBtn();\n})();\n";
 </script>
 <script>
 /* =====================================================================
@@ -1632,15 +1633,20 @@ var HPA = (function () {
 
   /* ---------- consigne envoyée à Claude ---------- */
   var SCHEMA = '{\n' +
-    '  "themes": [ { "name": "Nom du thème en français", "words": [ { "he_nikud": "mot avec nikoud", "fr": "traduction française", "nature": "n" } ] } ],\n' +
+    '  "themes": [ { "name": "Nom du thème en français", "words": [ { "he_nikud": "mot avec nikoud", "fr": "traduction française", "nature": "n", "def_he": "définition simple en hébreu", "ex_he": "phrase courte en hébreu qui contient le mot" } ] } ],\n' +
     '  "grammar": [ { "category": "Catégorie", "title": "Titre de la fiche", "he": "titre en hébreu", "html": "<p>…</p>" } ],\n' +
     '  "summary": "une phrase qui résume le contenu du document"\n}';
+  /* définition et phrase d'exemple : seuls ajouts autorisés avec le nikoud, pour les exercices « mot ↔ définition » et « phrase à compléter » */
+  var EXTRA = 'Pour chaque mot, deux aides d\'exercice (seuls ajouts autorisés, avec le nikoud) :\n' +
+    '- "def_he" : une définition TRÈS simple en hébreu facile (4 à 10 mots, avec nikoud), compréhensible par un élève de niveau débutant/intermédiaire, sans utiliser le mot lui-même ni un mot de la même racine. Pour un mot-outil, un nombre ou une expression où une définition n\'a pas de sens, mets "".\n' +
+    '- "ex_he" : une phrase courte et naturelle en hébreu (4 à 10 mots, avec nikoud) qui contient le mot EXACTEMENT sous la forme de "he_nikud" (mêmes lettres, sans préfixe collé comme ה, ו, ב, ל, מ, ש, כ), pour qu\'on puisse le cacher dans un exercice à trous. Si le document donne un exemple qui convient, reprends-le. Si c\'est impossible, mets "".\n\n';
   /* consigne fixe (identique pour tous les morceaux d'un document : mise en cache par l'API) */
   function rules() {
     return 'Tu prépares le contenu de révision d\'un élève de Maayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
       'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
       'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +
+      EXTRA +
       'Grammaire : une fiche par règle expliquée dans le document, en français, comme une fiche de révision claire : "html" n\'utilise que <p>, <ul>, <li>, <strong>, <em>, <br> et <div class="example"> pour les exemples, avec l\'hébreu dans <span class="he-inline">…</span>. Reprends les exemples du document.\n\n' +
       'Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
   }
@@ -1738,9 +1744,9 @@ var HPA = (function () {
       var e = new Error('network'); e.code = 'network'; throw e;
     });
   }
-  function buildPrompt(ex, existingThemes, docName) {
+  function buildPrompt(ex, existingThemes, docName, sys) {
     var text = ex.text.length > 180000 ? ex.text.slice(0, 180000) : ex.text;
-    return { system: rules(), prompt: context(existingThemes, docName) +
+    return { system: sys || rules(), prompt: context(existingThemes, docName) +
       (text.trim() ? '\n\nTEXTE DU DOCUMENT :\n"""\n' + text + '\n"""' : '\n\nLe document est fourni en image(s) ci-jointe(s).') };
   }
 
@@ -1786,7 +1792,7 @@ var HPA = (function () {
     });
     return { themes: order.map(function (n) { return themes[n]; }).filter(function (t) { return t.words.length; }), grammar: grammar, summary: summaries.join(' ').slice(0, 400) };
   }
-  function viaServerChunked(ex, existingThemes, docName, signal, onStep) {
+  function viaServerChunked(ex, existingThemes, docName, signal, onStep, sys) {
     /* file d'attente des morceaux : texte d'abord, puis les pages scannées par paquets */
     var queue = [];
     (ex.text.trim() ? chunks(ex.text) : []).forEach(function (t) { queue.push({ text: t, images: [], depth: 0 }); });
@@ -1811,7 +1817,7 @@ var HPA = (function () {
     function next() {
       if (!queue.length) return Promise.resolve();
       var part = queue.shift();
-      return viaServer(part, buildPrompt(part, themesSoFar, docName), signal, function (t) { onStep && onStep(label(t)); }).then(function (r) {
+      return viaServer(part, buildPrompt(part, themesSoFar, docName, sys), signal, function (t) { onStep && onStep(label(t)); }).then(function (r) {
         var n = normalise(r); results.push(n); done++;
         n.themes.forEach(function (t) { if (themesSoFar.indexOf(t.name) < 0) themesSoFar.push(t.name); });   /* mêmes noms de thèmes d'un morceau à l'autre */
         return next();
@@ -1851,6 +1857,37 @@ var HPA = (function () {
       var r = results.length === 1 ? results[0] : combine(results);
       if (skipped) r.skipped = skipped;
       return r;
+    });
+  }
+
+  /* vocabulaire déjà présent : prépare définitions et phrases d'exemple pour les mots qui n'en ont pas */
+  function enrichRules() {
+    return 'Tu prépares des aides d\'exercice pour le vocabulaire d\'un élève de Maayane, professeure d\'hébreu.\n' +
+      'On te donne une liste de mots (hébreu = français [thème]). Renvoie EXACTEMENT les mêmes mots, sans en ajouter ni en retirer, groupés par le même thème : recopie "he_nikud" et "fr" tels quels, "nature" = v, n, a, d, o, c ou x.\n\n' + EXTRA +
+      'Mets "grammar": [] et un "summary" court. Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
+  }
+  function missingExtras(content) {
+    var out = [];
+    Object.keys((content && content.VOCAB) || {}).forEach(function (t) {
+      content.VOCAB[t].forEach(function (e) { if (!e[3] && !e[4]) out.push({ theme: t, he: e[2] || e[0], fr: e[1], key: e[0] }); });
+    });
+    return out;
+  }
+  function enrich(content, onStep, signal) {
+    var list = missingExtras(content);
+    if (!list.length) return Promise.resolve({ themes: [], grammar: [], summary: '' });
+    var text = list.map(function (w) { return w.he + ' = ' + w.fr + ' [' + w.theme + ']'; }).join('\n');
+    return viaServerChunked({ text: text, images: [] }, Object.keys(content.VOCAB), 'vocabulaire existant', signal, onStep, enrichRules()).then(function (r) {
+      /* on retrouve chaque mot d'origine (l'orthographe avec nikoud peut différer légèrement) */
+      var byHe = {}, byFr = {};
+      list.forEach(function (o) { byHe[bare(o.he)] = o; byHe[bare(o.key)] = o; byFr[o.theme + '|' + String(o.fr).trim().toLowerCase()] = o; });
+      var n = normalise(r);
+      n.themes.forEach(function (t) { t.words.forEach(function (w) {
+        var o = byFr[t.name + '|' + w.fr.trim().toLowerCase()] || byHe[bare(w.heVoc)] || byHe[w.he];
+        if (o) { w.he = o.key; w.fr = o.fr; }
+        w.keep = false;
+      }); });
+      return n;
     });
   }
 
@@ -1918,7 +1955,7 @@ var HPA = (function () {
         words: (Array.isArray(t && t.words) ? t.words : []).map(function (w) {
           /* accepte aussi un résultat déjà nettoyé (heVoc) : un second passage ne perd pas les voyelles */
           var he = bare(str(w && w.he) || str(w && w.he_nikud) || str(w && w.heVoc)), hv = str(w && w.he_nikud) || str(w && w.heVoc) || he, fr = str(w && w.fr), n = str(w && w.nature).charAt(0).toLowerCase();
-          return { he: he, heVoc: hv, fr: fr, nature: NAT[n] ? n : 'n' };
+          return { he: he, heVoc: hv, fr: fr, nature: NAT[n] ? n : 'n', def: str(w && (w.def_he != null ? w.def_he : w.def), 200), ex: str(w && (w.ex_he != null ? w.ex_he : w.ex), 200) };
         }).filter(function (w) { return w.he && w.fr; })
       };
     }).filter(function (t) { return t.words.length; });
@@ -1942,7 +1979,10 @@ var HPA = (function () {
     var c = content ? JSON.parse(JSON.stringify(content)) : emptyContent();
     ['VOCAB', 'NATURE', 'VERB_PRESENT'].forEach(function (k) { if (!c[k]) c[k] = {}; });
     ['CONJ', 'CORE_THEMES', 'ADVANCED_THEMES', 'GRAMMAR_CATEGORIES', 'sources'].forEach(function (k) { if (!Array.isArray(c[k])) c[k] = []; });
-    var keys = existingKeys(c), nw = 0, ng = 0, nv = 0;
+    var keys = existingKeys(c), nw = 0, ng = 0, nv = 0, nd = 0;
+    /* toutes les occurrences d'un mot (il peut figurer dans plusieurs thèmes) */
+    var occ = {};
+    Object.keys(c.VOCAB).forEach(function (t) { c.VOCAB[t].forEach(function (e) { var k = wkey(e[0], e[1]); (occ[k] = occ[k] || []).push(e); }); });
     result.themes.forEach(function (t) {
       t.words.forEach(function (w) {
         var k = wkey(w.he, w.fr);
@@ -1952,11 +1992,20 @@ var HPA = (function () {
             if (wkey(e[0], e[1]) === k && !/[\u0591-\u05C7]/.test(e[2] || '')) { e[2] = w.heVoc; nv++; }
           });
         }
+        /* mot déjà présent sans définition ou sans phrase : on les complète */
+        if (keys[k] && (w.def || w.ex)) {
+          (occ[k] || []).forEach(function (e) {
+            var add = false;
+            if (w.def && !e[3]) { while (e.length < 3) e.push(''); e[3] = w.def; add = true; }
+            if (w.ex && !e[4]) { while (e.length < 4) e.push(''); e[4] = w.ex; add = true; }
+            if (add) nd++;
+          });
+        }
         if (!w.keep || keys[k]) return;
         if (!c.VOCAB[t.name]) { c.VOCAB[t.name] = []; c.NATURE[t.name] = ''; if (c.CORE_THEMES.indexOf(t.name) < 0) c.CORE_THEMES.push(t.name); }
         var len = c.VOCAB[t.name].length;
         c.NATURE[t.name] = String(c.NATURE[t.name] || '').padEnd(len, 'n').slice(0, len) + w.nature;
-        c.VOCAB[t.name].push([w.he, w.fr, w.heVoc]);
+        c.VOCAB[t.name].push(w.def || w.ex ? [w.he, w.fr, w.heVoc, w.def || '', w.ex || ''] : [w.he, w.fr, w.heVoc]);
         keys[k] = t.name; nw++;
       });
     });
@@ -1968,7 +2017,7 @@ var HPA = (function () {
       cat.items.push({ title: g.title, he: g.he, body: g.body }); ng++;
     });
     if (docName && c.sources.indexOf(docName) < 0) c.sources.push(docName);
-    return { content: c, words: nw, grammar: ng, vowels: nv };
+    return { content: c, words: nw, grammar: ng, vowels: nv, enriched: nd };
   }
   /* contents : contenu de chaque élève visé ; un mot n'est « déjà présent » que si TOUS l'ont */
   function markDuplicates(result, contents) {
@@ -1994,7 +2043,7 @@ var HPA = (function () {
   }
 
   return {
-    kind: kind, extract: extract, analyse: analyse, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
+    kind: kind, extract: extract, analyse: analyse, enrich: enrich, missingExtras: missingExtras, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
     stats: stats, emptyContent: emptyContent, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();
@@ -3386,10 +3435,12 @@ var HPApp = (function () {
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
         'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
-        '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';
+        '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>' +
+        (window.HP_PRACTICE ? '<script>' + HP_PRACTICE.replace(/<\/script/gi, '<\\/script') + '<\/script>' : '');
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
+        '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Définitions & phrases</span><span class="s"> Exos</span></button>' +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
@@ -3421,6 +3472,7 @@ var HPApp = (function () {
     '.hp-sbar button{border:1.5px solid var(--line-strong);background:var(--paper);border-radius:999px;padding:6px 14px;font:700 13px var(--font-ui);color:var(--ink-soft);cursor:pointer}' +
     '.hp-sbar .hp-ag{display:flex;align-items:center;gap:10px;margin-left:auto}.hp-sbar .hp-ag small{font-size:12.5px;color:var(--ink-soft);font-weight:600}' +
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
+    '.hp-sbar button.px{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.px .s{display:none}@media(max-width:560px){.hp-sbar button.px .l{display:none}.hp-sbar button.px .s{display:inline}}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
     '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar button.ag:hover{color:var(--on-accent);border-color:transparent;filter:brightness(1.06)}' +
     '@media(max-width:420px){.hp-sbar{flex-wrap:nowrap;gap:8px;padding-left:12px}.hp-sbar .hi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp-sbar button{white-space:nowrap;padding:6px 10px}}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
@@ -3728,6 +3780,10 @@ var HPApp = (function () {
         return '<li><span>' + esc(t) + '</span><span class="row"><span class="pill grey">' + c.VOCAB[t].length + ' mots</span><button class="btn small ghost" data-rmtheme="' + esc(t) + '" title="Retirer ce thème">🗑</button></span></li>';
       }).join('') + '</ul>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
       (st.tenses ? '<p class="small muted" style="margin-top:12px">+ le cours « Passé &amp; futur ».</p>' : '') +
+      (st.words ? (function () { var miss = HPA.missingExtras(c).length;
+        return '<div class="review" style="margin-top:14px"><b>🧩 Définitions et phrases à compléter</b><p class="small muted" style="margin:4px 0 8px">Pour les exercices « Mot ↔ définition » et « Phrase à compléter » de ' + esc(s.first) + '. ' +
+          (miss ? plural(st.words - miss, 'mot en a', 'mots en ont') + ' sur ' + st.words + '.' : 'Tous ses mots en ont ✓') + '</p>' +
+          (miss ? '<button class="btn small primary" data-enrich="' + s.id + '">Préparer pour les ' + plural(miss, 'mot restant', 'mots restants') + '</button>' : '') + '</div>'; })() : '') +
       (c && c.updatedAt ? '<p class="small muted">Dernière mise à jour : ' + new Date(c.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) + '</p>' : '') + '</div>' +
       '<div class="card"><h3>Sources</h3>' + (c && c.sources && c.sources.length ? '<ul class="content-list">' + c.sources.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p class="hp-empty">—</p>') +
       '<h3 style="margin-top:22px">Importer un contenu préparé</h3><p class="small muted">Si un document a été analysé dans une conversation avec Claude, importez ici le fichier .json qu\'il vous a remis : vous pourrez le relire avant de l\'ajouter.</p>' +
@@ -3959,7 +4015,7 @@ var HPApp = (function () {
     /* mots déjà présents mais sans voyelles : la ré-analyse peut les compléter */
     var vfix = targets.reduce(function (m, id) {
       var dry = { themes: res.themes.map(function (t) { return { name: t.name, words: t.words.map(function (w) { return Object.assign({}, w, { keep: false }); }) }; }), grammar: [] };
-      return Math.max(m, HPA.merge(cache.contents[id], dry, '').vowels || 0);
+      var r = HPA.merge(cache.contents[id], dry, ''); return Math.max(m, (r.vowels || 0) + (r.enriched || 0));
     }, 0);
     var names = targets.map(function (id) { var s = cache.students.filter(function (x) { return x.id === id; })[0]; return s ? s.first : ''; }).filter(Boolean);
     function render() {
@@ -3976,9 +4032,9 @@ var HPApp = (function () {
           return '<details class="rv-gram"><summary><input type="checkbox" data-g="' + gi + '"' + (g.keep ? ' checked' : '') + '> ' + esc(g.title) + (g.he ? ' <span class="he-inline">' + esc(g.he) + '</span>' : '') + ' <span class="pill grey">' + esc(g.category) + '</span></summary><div class="body">' + g.body + '</div></details>';
         }).join('') : '') +
         (!nWords && !res.grammar.length ? '<p class="hp-empty">Aucun vocabulaire ni grammaire trouvé dans ce document.</p>' : '') +
-        (vfix ? '<p class="small ok" style="margin-top:12px">' + (vfix > 1 ? vfix + ' mots déjà présents recevront leurs voyelles' : '1 mot déjà présent recevra ses voyelles') + ' (nikoud).</p>' : '') +
+        (vfix ? '<p class="small ok" style="margin-top:12px">' + (vfix > 1 ? vfix + ' mots déjà présents seront complétés' : '1 mot déjà présent sera complété') + ' (nikoud, définition ou phrase d\'exemple).</p>' : '') +
         '<div class="row" style="margin-top:16px"><button class="btn primary" data-apply' + ((keep || vfix) && names.length ? '' : ' disabled') + '>' +
-          (keep ? 'Ajouter ' + keep + ' élément' + (keep > 1 ? 's' : '') : 'Compléter les voyelles') + ' à l\'espace de ' + esc(names.join(', ') || '…') + '</button>' +
+          (keep ? 'Ajouter ' + keep + ' élément' + (keep > 1 ? 's' : '') : 'Compléter les mots') + ' à l\'espace de ' + esc(names.join(', ') || '…') + '</button>' +
         '<button class="btn" data-cancel>Annuler</button></div></div>';
       $$('[data-w]', slot).forEach(function (cb) { cb.onchange = function () { var p = cb.dataset.w.split(':'); res.themes[+p[0]].words[+p[1]].keep = cb.checked; render(); }; });
       $$('[data-g]', slot).forEach(function (cb) { cb.onclick = function (e) { e.stopPropagation(); }; cb.onchange = function () { res.grammar[+cb.dataset.g].keep = cb.checked; render(); }; });
@@ -4079,6 +4135,19 @@ var HPApp = (function () {
       drop.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files, targets); });
     }
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
+    $$('[data-enrich]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.dataset.enrich, label = b.textContent; b.disabled = true;
+        HPB.getContent(id).then(function (c) {
+          return HPA.enrich(c, function (t) { if (b.isConnected) b.textContent = t; }).then(function (res) {
+            return HPB.getContent(id).then(function (c2) { var r = HPA.merge(c2, res, ''); return HPB.setContent(id, r.content).then(function () { return r.enriched; }); });
+          });
+        }).then(function (n) { toast(plural(n || 0, 'mot complété', 'mots complétés') + ' ✓'); return loadAll(); }).then(renderTeacher, function (e) {
+          if (b.isConnected) { b.disabled = false; b.textContent = label; }
+          toast('Préparation impossible : ' + (e && e.code === 'no_server' ? 'l\'analyse automatique n\'est pas activée' : errText(e)), true);
+        });
+      };
+    });
     $$('[data-look]').forEach(function (card) {
       var id = card.dataset.look, save = function (patch, msg) {
         return setLook(id, patch).then(function () { toast(msg); renderTeacher(); }, function (e) { toast('Enregistrement impossible : ' + errText(e), true); });

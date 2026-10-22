@@ -917,7 +917,7 @@ var HPApp = (function () {
         if (el) el.innerHTML = '<div class="review"><b>Ajout à l\'espace de l\'élève…</b><div class="progress-line"><i></i></div></div>';
         HPA.markDuplicates(res, d.students.map(function (id) { return cache.contents[id]; }));
         return applyResult(d, res, d.students).then(function (a) {
-          toast('« ' + d.name + ' » intégré automatiquement : ' + plural(a.words, 'mot') + ', ' + plural(a.grammar, 'fiche') + ' ✓');
+          toast('« ' + d.name + ' » intégré automatiquement : ' + plural(a.words, 'mot') + ', ' + plural(a.grammar, 'fiche') + (res.skipped ? ' — ' + plural(res.skipped, 'partie illisible', 'parties illisibles') + ', « Ré-analyser » plus tard pour compléter' : ' ✓'), !!res.skipped);
           return loadAll();
         }).then(renderTeacher, function (e) { var x = here(); if (x) x.innerHTML = '<div class="review"><div class="err">Ajout impossible : ' + esc(errText(e)) + '</div></div>'; else toast('Ajout de « ' + d.name + ' » impossible : ' + errText(e), true); });
       }
@@ -956,6 +956,9 @@ var HPApp = (function () {
     bindCopy(slot);
   }
 
+  function skippedNote(res) {
+    return res && res.skipped ? '<p class="small err" style="margin:8px 0 0">⚠️ ' + (res.skipped > 1 ? res.skipped + ' parties du document n\'ont' : 'Une partie du document n\'a') + ' pas pu être lue' + (res.skipped > 1 ? 's' : '') + ' (Claude très sollicité ou page illisible). Le reste est bien là ; « Ré-analyser » plus tard complétera sans créer de doublons.</p>' : '';
+  }
   function showReview(slot, d, res, targetIds) {
     var targets = targetIds || (d ? d.students : []) || [];
     HPA.markDuplicates(res, targets.map(function (id) { return cache.contents[id]; }));
@@ -968,7 +971,7 @@ var HPApp = (function () {
     var names = targets.map(function (id) { var s = cache.students.filter(function (x) { return x.id === id; })[0]; return s ? s.first : ''; }).filter(Boolean);
     function render() {
       var keep = res.themes.reduce(function (s, t) { return s + t.words.filter(function (w) { return w.keep; }).length; }, 0) + res.grammar.filter(function (g) { return g.keep; }).length;
-      slot.innerHTML = '<div class="review"><b>Résultat de l\'analyse</b>' + (res.summary ? '<p class="small muted" style="margin:4px 0 0">' + esc(res.summary) + '</p>' : '') +
+      slot.innerHTML = '<div class="review"><b>Résultat de l\'analyse</b>' + (res.summary ? '<p class="small muted" style="margin:4px 0 0">' + esc(res.summary) + '</p>' : '') + skippedNote(res) +
         '<p class="small">' + plural(nWords, 'mot') + ' dans ' + plural(res.themes.length, 'thème') + ', ' + plural(res.grammar.length, 'fiche') + ' de grammaire. Décochez ce que vous ne voulez pas ajouter. Les mots déjà présents sont grisés.</p>' +
         res.themes.map(function (t, ti) {
           return '<h4>' + esc(t.name) + ' <span class="pill grey">' + t.words.length + '</span></h4><table class="rv-words">' + t.words.map(function (w, wi) {

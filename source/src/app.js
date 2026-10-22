@@ -771,7 +771,9 @@ var HPApp = (function () {
         '<p class="small muted" style="margin:12px 0 0">La couleur repère ' + esc(s.first) + ' dans la liste des élèves et dans l\'agenda. Le personnage ou la photo ne sont visibles que par vous.</p></div>' +
       '<div class="card"><h3>Accès</h3><div class="row">' +
         (s.active === false ? '<button class="btn" data-act="activate">Réactiver le compte</button>' : '<button class="btn" data-act="suspend">Suspendre le compte</button>') +
-        '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p></div></div></div>';
+        '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p>' +
+        '<div class="row" style="margin-top:14px"><button class="btn" data-act="resetprog">↺ Remettre à zéro sa progression</button></div>' +
+        '<p class="small muted">Efface ses réponses, XP, séries et badges (par exemple après un essai). Son compte, son contenu et ses documents restent.</p></div></div></div>';
   }
   function accessCard(s, pw) {
     var site = (cache.settings && cache.settings.siteUrl) || (HPB.remote ? location.origin : '');
@@ -1175,6 +1177,25 @@ var HPApp = (function () {
       if (sp) sp.onclick = function () {
         var upd = Object.assign({}, s, { active: s.active === false });
         busy(sp, HPB.saveStudent(upd), 'Modification impossible').then(function () { s.active = upd.active; renderTeacher(); }).catch(function () {});
+      };
+      var rp = $('[data-act="resetprog"]');
+      if (rp) rp.onclick = function () {
+        var m = modal('<h2>Remettre à zéro la progression de ' + esc(fullName(s)) + ' ?</h2>' +
+          '<p class="muted">Ses réponses, ses XP, sa série de jours, ses badges et ses statistiques seront effacés : son espace repartira de zéro. Ses thèmes choisis, son contenu, ses documents et son compte sont conservés.</p>' +
+          '<p class="small muted">Faites-le de préférence quand ' + esc(s.first) + ' n\'est pas en train de réviser.</p>' +
+          '<div class="row" style="margin-top:16px"><button class="btn danger" data-yes>Remettre à zéro</button><button class="btn" data-no>Annuler</button></div>');
+        $('[data-no]', m).onclick = function () { m.remove(); };
+        $('[data-yes]', m).onclick = function () {
+          /* on garde seulement ses préférences (thèmes choisis, sens des questions) ; la date de remise à zéro
+             passe devant toute copie plus ancienne restée sur un appareil */
+          var work = Promise.resolve(HPB.getProgress(s.id)).catch(function () { return null; }).then(function (old) {
+            var storage = old && old.preferences && Array.isArray(old.preferences.selectedThemes) ? { preferences: old.preferences } : {};
+            var sum = cleanSummary({ updatedAt: new Date().toISOString() });
+            backup(s.id, null);
+            return HPB.pushProgress(s.id, sum, storage).then(function () { cache.summaries[s.id] = sum; });
+          });
+          busy(this, work, 'Remise à zéro impossible').then(function () { m.remove(); toast('Progression de ' + s.first + ' remise à zéro'); return loadAll(); }).then(renderTeacher).catch(function () {});
+        };
       };
       var del = $('[data-act="delete"]');
       if (del) del.onclick = function () {

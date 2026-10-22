@@ -1,24 +1,29 @@
-/* Construit le gabarit « espace élève » du site de Maayane à partir du site
-   personnel de Benjamin (source/src/original.html = copie de
-   github.com/Bensarfat/hebreu/index.html, mise à jour automatiquement).
+/* Construit le gabarit « espace élève » du site de Maayane.
 
-   Tout ce qui change dans le site de Benjamin (fonctions, design, quiz,
-   flashcards, progression…) est repris tel quel. Seules les DONNÉES
-   (vocabulaire, grammaire, conjugaison, cours Passé & futur) sont retirées :
-   chaque élève reçoit les siennes, issues des documents de Maayane.
+   Le code des exercices (quiz, flashcards, « Réviser », jeux, grammaire, statistiques…) se trouve ICI,
+   dans source/exercices/app.html : c'est la source unique, que le site perso de Benjamin (github.com/Bensarfat/hebreu)
+   recopie automatiquement toutes les heures avec ses propres données.
 
-   Si un repère attendu disparaît du site de Benjamin, la construction
-   s'arrête avec un message clair et le site de Maayane garde sa version
-   précédente (rien n'est publié à moitié). */
+   Ce script assemble app.html avec les données de démonstration (source/exercices/donnees-demo.js et
+   passe-futur-demo.html), puis en retire les DONNÉES : chaque élève reçoit les siennes, issues des documents de Maayane.
+
+   Si un repère attendu manque, la construction s'arrête avec un message clair (rien n'est publié à moitié). */
 const fs = require('fs'), path = require('path');
 const S = __dirname, OUT = path.join(S, '..', 'build');
 fs.mkdirSync(OUT, { recursive: true });
-let src = fs.readFileSync(path.join(S, 'original.html'), 'utf8').replace(/\r\n/g, '\n');
+let src;
+try {
+  src = require('../exercices/assemble.js').assemble({
+    donnees: fs.readFileSync(path.join(S, '..', 'exercices', 'donnees-demo.js'), 'utf8'),
+    passeFutur: fs.readFileSync(path.join(S, '..', 'exercices', 'passe-futur-demo.html'), 'utf8')
+  });
+} catch (e) { console.error('\n✗ Construction impossible : ' + e.message + '\n'); process.exit(1); }
+fs.writeFileSync(path.join(OUT, 'original.html'), src);   /* utilisé par build.js (couleurs) */
 
 function fail(msg) { console.error('\n✗ Construction impossible : ' + msg + '\n'); process.exit(1); }
 function must(s, a, b, label) {
   const n = s.split(a).length - 1;
-  if (n !== 1) fail('repère « ' + (label || a.slice(0, 50)) + ' » trouvé ' + n + ' fois au lieu d\'une (le site de Benjamin a changé à cet endroit).');
+  if (n !== 1) fail('repère « ' + (label || a.slice(0, 50)) + ' » trouvé ' + n + ' fois au lieu d\'une (source/exercices/app.html a changé à cet endroit).');
   return s.replace(a, () => b);
 }
 function between(s, startMark, endMark, label) {
@@ -27,7 +32,7 @@ function between(s, startMark, endMark, label) {
   return [a, b];
 }
 
-/* ---- 1. données du site de Benjamin (pour le compte de démo « benjamin ») ---- */
+/* ---- 1. données de démonstration (compte de démo « benjamin ») ---- */
 const DATA_START = 'const VOCAB = {';
 const DATA_END = '/* ============================================\n   STATE & STORAGE';
 const [d0, d1] = between(src, DATA_START, DATA_END, 'données (VOCAB … GRAMMAR_CATEGORIES)');
@@ -52,7 +57,7 @@ const tInner1 = src.lastIndexOf('</div>', st0);            // fermeture du panne
 const tensesInner = src.slice(tInner0, src.lastIndexOf('\n', tInner1) + 1);
 fs.writeFileSync(path.join(OUT, 'tenses.html'), tensesInner);
 
-/* ---- 3. module de progression : celui du site de Benjamin s'il en a un ---- */
+/* ---- 3. module de progression (bloc HP assemblé depuis progress.js et game.js) ---- */
 const HP_BEGIN = '<!-- HP:BEGIN', HP_END = '<!-- HP:END -->';
 let hasHP = src.indexOf(HP_BEGIN) >= 0 && src.indexOf(HP_END) >= 0;
 let progressJs;
@@ -104,4 +109,4 @@ if (!hasHP) {
   st = st.slice(0, i) + '<script>\n' + progressJs + '\n</script>\n<script>\n' + game + '\ntry { HPG.install(); } catch (e) { console.error("HPG", e); }\n</script>\n' + st.slice(i);
 }
 fs.writeFileSync(path.join(OUT, 'student-template.html'), st);
-console.log('✓ gabarit élève', (st.length / 1024).toFixed(0) + ' Ko · ' + Object.keys(data.VOCAB).length + ' thèmes de démo · module de progression ' + (hasHP ? 'du site de Benjamin' : 'du site de Maayane'));
+console.log('✓ gabarit élève', (st.length / 1024).toFixed(0) + ' Ko · ' + Object.keys(data.VOCAB).length + ' thèmes de démo · exercices de source/exercices/app.html');

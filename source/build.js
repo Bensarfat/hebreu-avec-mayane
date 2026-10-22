@@ -5,10 +5,10 @@
    Les noms contiennent une empreinte du contenu : le navigateur peut les garder en cache longtemps. */
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const S = path.join(__dirname, 'src'), B = path.join(__dirname, 'build'), D = path.join(__dirname, '..'), A = path.join(D, 'assets');
-const origTxt = fs.readFileSync(path.join(S, 'original.html'), 'utf8').replace(/\r\n/g, '\n');
-/* charte graphique reprise du site de Benjamin : jetons de couleur (clair + sombre) et fond */
+const origTxt = fs.readFileSync(path.join(B, 'original.html'), 'utf8').replace(/\r\n/g, '\n');   /* site de révision assemblé par build_templates.js */
+/* charte graphique reprise du site de révision (source/exercices/app.html) : jetons de couleur (clair + sombre) et fond */
 const tStart = origTxt.indexOf(':root {'), tEnd = origTxt.indexOf('\n  html, body {', tStart);
-if (tStart < 0 || tEnd < 0) { console.error('✗ jetons de couleur introuvables dans le site de Benjamin'); process.exit(1); }
+if (tStart < 0 || tEnd < 0) { console.error('✗ jetons de couleur introuvables dans source/exercices/app.html'); process.exit(1); }
 const tokens = '  ' + origTxt.slice(tStart, tEnd);
 const bg = origTxt.match(/  body \{\n    background-image:[\s\S]*?\n  \}/);
 const bodyBg = bg ? bg[0] : '';
@@ -48,6 +48,7 @@ const html = `<!doctype html>
 <meta name="color-scheme" content="only light">
 <meta name="supported-color-schemes" content="light only">
 <meta name="darkreader-lock">
+<meta name="robots" content="noindex, nofollow, noarchive">
 <title>Hébreu avec Maayane</title>
 <meta name="description" content="Cours d'hébreu, en hébreu avec le soutien du français, avec Maayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
 <meta name="theme-color" content="#EAF6FB">

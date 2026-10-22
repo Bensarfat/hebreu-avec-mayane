@@ -1,0 +1,40 @@
+# Vérifie chaque proposition de modification (pull request) :
+# le site se construit, et les fichiers publiés (index.html, version.json, assets/) sont bien à jour.
+# Lecture seule : ce contrôle ne modifie rien.
+name: Vérifier la construction
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Construire le site
+        working-directory: source
+        run: |
+          node src/build_templates.js
+          node build.js
+
+      - name: Les fichiers publiés sont-ils à jour ?
+        run: |
+          git add -A index.html version.json assets
+          if ! git diff --cached --quiet; then
+            git diff --cached --stat
+            echo "::error::Les fichiers publiés ne sont pas à jour. Lancer « cd source && node src/build_templates.js && node build.js » puis commiter index.html, version.json et assets/."
+            exit 1
+          fi
+          echo "✓ Construction correcte et fichiers à jour."

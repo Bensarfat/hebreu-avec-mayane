@@ -9,16 +9,15 @@ Site de cours d'hébreu en français : page d'accueil, espace élève (quiz, fla
 
 ## Lien avec le site de Benjamin
 
-L'espace élève est construit à partir du site personnel de Benjamin (`Bensarfat/hebreu`). Toutes les heures, l'action « Synchroniser avec le site de Benjamin » récupère son `index.html`, reconstruit le site et le publie : chaque nouvelle fonction ajoutée chez Benjamin arrive chez Maayane, sans ses données (chaque élève garde les contenus issus des documents de Maayane).
-
-Pour lancer la synchronisation tout de suite : onglet **Actions** → « Synchroniser avec le site de Benjamin » → **Run workflow**.
-
-Si une synchronisation échoue (un repère a disparu du site de Benjamin), GitHub envoie un e-mail et le site de Maayane garde sa version précédente.
+Le code des exercices des élèves (quiz, flashcards, « Réviser », jeux, grammaire, statistiques) se trouve ici, dans `source/exercices/app.html`.
+Le site perso de Benjamin (`Bensarfat/hebreu`) le recopie toutes les heures et l'assemble avec ses propres données
+(action « Assembler le site » de son dépôt) : une amélioration fusionnée ici arrive chez lui automatiquement.
 
 Construire à la main :
 ```
 cd source && node src/build_templates.js && node build.js
 ```
+Chaque pull request est vérifiée automatiquement (action « Vérifier la construction »).
 
 ## Analyse automatique des documents
 

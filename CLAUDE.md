@@ -20,6 +20,10 @@ Réponds toujours en français, en mots simples, sans jargon. Explique ce que tu
 
 ## Où se trouve quoi
 
+- `source/exercices/app.html` : **le code des exercices des élèves** (quiz, flashcards, onglet « Réviser » et ses jeux, grammaire,
+  vocabulaire, « Passé & futur », statistiques, audio). Source unique, partagée avec le site perso de Benjamin (voir plus bas).
+- `source/src/progress.js` + `source/src/game.js` : progression (XP, niveaux, séries, badges, graphiques), partagée aussi.
+- `source/exercices/assemble.js` : assemble `app.html` + progression + données ; `donnees-demo.js` et `passe-futur-demo.html` : données de démonstration.
 - `source/src/home.js` : page d'accueil publique (textes, présentation de Maayane).
 - `source/src/app.js` : espace de Maayane (tableau de bord, élèves, documents, réglages) et barre de l'espace élève.
 - `source/src/agenda-ui.js` + `api/_agenda.js` + `api/agenda.js` : agenda et réservation des cours.
@@ -29,21 +33,30 @@ Réponds toujours en français, en mots simples, sans jargon. Explique ce que tu
 - `api/*.js` : fonctions serveur Vercel. `supabase/` : schéma de la base.
 - `index.html`, `version.json`, `assets/` : **fichiers produits par le build, ne jamais les modifier à la main.**
 
+## Exercices des élèves : ici, et partagés avec le site de Benjamin
+
+- Les exercices se modifient **ici**, dans `source/exercices/app.html` (et `source/src/progress.js` / `game.js` pour XP et badges).
+  Maayane peut ajouter de nouvelles révisions et de nouveaux jeux : c'est autorisé par Benjamin.
+- **Le site perso de Benjamin** (`Bensarfat/hebreu`, https://hebreu-eight.vercel.app) recopie ce code toutes les heures et l'assemble avec
+  SES données : une nouvelle révision fusionnée ici arrive chez lui automatiquement (ou tout de suite : dans `Bensarfat/hebreu`, onglet **Actions**
+  › « Assembler le site » › **Run workflow**). Elle doit donc fonctionner avec n'importe quelles données : ne suppose pas qu'un champ existe,
+  cache le jeu si la donnée manque.
+- Repères à garder **une seule fois** dans `app.html` : `/*@@DONNEES@@*/`, `<!--@@PASSE_FUTUR@@-->` (dans `<div class="panel" id="panel-tenses">`),
+  `<!--@@HP@@-->` (entre `<!-- HP:BEGIN` et `<!-- HP:END -->`), `<div class="panel" id="panel-stats">` (après Passé & futur ; aucun panneau entre les deux),
+  `const STORAGE_KEY = 'hebrew_quiz_v2';`, `const raw = localStorage.getItem(STORAGE_KEY);`, `<div class="container">`, `<meta name="viewport"`.
+  La construction s'arrête avec un message clair si l'un d'eux manque.
+- Nouveau jeu : dans le module `RÉVISER` d'`app.html`, ajoute une entrée dans `GAMES` et une carte dans `render()` ; enregistre chaque réponse avec
+  `updateWordStat({ he, fr }, 'correct' | 'wrong')` (statistiques, XP et révision espacée suivent).
+- Nouvelle donnée par mot (définition, phrase d'exemple…) : la produire dans `source/src/analyse.js`, la transmettre dans le chargeur de
+  `source/src/build_templates.js` (liste `const VOCAB = __D.VOCAB || {}` …), l'ajouter vide dans `donnees-demo.js`, et l'utiliser avec une garde
+  (`typeof DEFS !== 'undefined'`). Préviens que Benjamin devra l'ajouter dans son `donnees.js` pour l'avoir chez lui.
+- Teste : ouvre `source/build/original.html` (le site de révision assemblé avec les données de démo) sur ordinateur et en 360 px, sans erreur dans la console.
+
 ## Ce qui ne se modifie pas ici
 
-- **Les exercices de l'espace élève** (quiz, flashcards, onglet « Réviser » et ses jeux, conjugaison, grammaire, statistiques, XP, badges)
-  viennent du site de Benjamin, dépôt **`Bensarfat/hebreu`** (site perso https://hebreu-eight.vercel.app).
-  `source/src/original.html` en est une copie remplacée toutes les heures, et le bloc « HP » (`progress.js`, `game.js`) de son site a priorité :
-  une modification de ces parties faite **ici** serait écrasée.
-  **Benjamin autorise Maayane à les modifier elle-même** : Maayane est collaboratrice de `Bensarfat/hebreu`.
-  Quand elle demande une nouvelle révision, un nouveau jeu ou un changement dans les exercices, travaille dans **`Bensarfat/hebreu`**
-  (ajoute ce dépôt à la session si besoin) en suivant son propre `CLAUDE.md` : branche + pull request, vérification que ce site-ci se construit toujours.
-  Une fois fusionnée là-bas, la modification apparaît sur le site perso de Benjamin tout de suite, et ici dans l'heure
-  (ou tout de suite : onglet **Actions** de ce dépôt › « Synchroniser avec le site de Benjamin » › **Run workflow**).
-  Si la révision a besoin d'une nouvelle donnée produite par l'analyse des documents (définition, phrase d'exemple…),
-  fais en plus, ici, une pull request séparée : `source/src/analyse.js` (la produire) et le chargeur de `source/src/build_templates.js` (la transmettre).
 - **La base de données** : si un changement exige une nouvelle colonne ou table, écris un nouveau fichier `supabase/migration-AAAA-MM-JJ-<sujet>.sql`
   et dis clairement à Maayane que Benjamin doit l'exécuter dans Supabase **avant** la fusion. Ne fusionne rien qui dépend d'une migration non exécutée.
+- Le vocabulaire personnel de Benjamin : il est dans son dépôt (`Bensarfat/hebreu`, fichiers `donnees.js` et `passe-futur.html`).
 - `.github/workflows/` et `vercel.json` : ne pas modifier sans demande explicite de Benjamin.
 
 ## Style

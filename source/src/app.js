@@ -279,8 +279,9 @@ var HPApp = (function () {
       /* une seule requête par type de données quand le serveur le permet */
       var sums = HPB.getSummaries ? HPB.getSummaries(ids) : Promise.all(ids.map(function (id) { return HPB.getSummary(id); })).then(function (l) { var o = {}; ids.forEach(function (id, i) { o[id] = l[i]; }); return o; });
       var conts = HPB.getContents ? HPB.getContents(ids) : Promise.all(ids.map(function (id) { return HPB.getContent(id); })).then(function (l) { var o = {}; ids.forEach(function (id, i) { o[id] = l[i]; }); return o; });
-      return Promise.all([sums, conts]).then(function (x) {
-        cache.summaries = {}; cache.contents = {};
+      var unread = HPB.unreadMessages ? Promise.resolve(HPB.unreadMessages()).catch(function () { return {}; }) : {};
+      return Promise.all([sums, conts, unread]).then(function (x) {
+        cache.summaries = {}; cache.contents = {}; cache.unread = x[2] || {};
         ids.forEach(function (id) { cache.summaries[id] = cleanSummary(x[0][id]); cache.contents[id] = x[1][id] || null; });
         cache.loadedAt = Date.now();
       });
@@ -395,13 +396,14 @@ var HPApp = (function () {
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
-        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
+        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>' +
         (window.HP_PRACTICE ? '<script>' + HP_PRACTICE.replace(/<\/script/gi, '<\\/script') + '<\/script>' : '');
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
         '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Jeux de mots</span><span class="s"> Exos</span></button>' +
+        (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><i id="hp-q-dot" hidden></i></button>') +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
@@ -417,7 +419,7 @@ var HPApp = (function () {
       fr.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms allow-downloads');
       root.appendChild(fr);
       frame = { el: fr, id: id, preview: !!preview };
-      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); });
+      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); });
       fr.srcdoc = html;
       document.title = 'Hébreu · ' + st.first;
       });
@@ -456,6 +458,8 @@ var HPApp = (function () {
     '.hp-sbar button{border:1.5px solid var(--line-strong);background:var(--paper);border-radius:999px;padding:6px 14px;font:700 13px var(--font-ui);color:var(--ink-soft);cursor:pointer}' +
     '.hp-sbar .hp-ag{display:flex;align-items:center;gap:10px;margin-left:auto}.hp-sbar .hp-ag small{font-size:12.5px;color:var(--ink-soft);font-weight:600}' +
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
+    '.hp-sbar button.q{position:relative}.hp-sbar button.q i{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--rose);border:2px solid var(--paper)}' +
+    '@media(max-width:560px){.hp-sbar button.q .l{display:none}}' +
     '.hp-sbar button.px{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.px .s{display:none}@media(max-width:560px){.hp-sbar button.px .l{display:none}.hp-sbar button.px .s{display:inline}}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
     '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar button.ag:hover{color:var(--on-accent);border-color:transparent;filter:brightness(1.06)}' +
@@ -469,6 +473,7 @@ var HPApp = (function () {
     var m = e.data;
     if (m.hp === 'logout' && !frame.preview) { frame = null; logout(); return; }
     if (m.hp === 'close' && frame.preview) { closePreview(); return; }
+    if (m.hp === 'ask' && !frame.preview) { var f1 = frame; openAsk(frame.id, function () { if (f1.el.isConnected) sendMsgInfo(f1.el, f1.id); }); return; }
     if (m.hp === 'agenda' && !frame.preview) { var f0 = frame; AG.openPane(frame.id, function () { if (f0.el.isConnected) sendAgendaInfo(f0.el, f0.id); }); return; }
     if (m.hp === 'progress' && !frame.preview) {
       var sum = cleanSummary(m.summary), storage = m.storage && typeof m.storage === 'object' ? m.storage : null;
@@ -509,11 +514,76 @@ var HPApp = (function () {
     });
   }
 
+  /* ================= MESSAGES : questions des élèves, réponses de Maayane ================= */
+  function unreadTotal() { var u = cache.unread || {}; return Object.keys(u).reduce(function (n, k) { return n + (u[k] || 0); }, 0); }
+  function msgSeen(id, v) {
+    try { if (v === undefined) return localStorage.getItem('hp_msg_seen_' + id) || ''; localStorage.setItem('hp_msg_seen_' + id, v); } catch (e) { return ''; }
+  }
+  function msgTime(t) { try { return new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+  /* conversation + zone d'écriture ; me = 'teacher' (fiche élève) ou 'student' (espace élève) */
+  function msgBox(box, sid, me, first) {
+    function draw(list) {
+      var empty = me === 'teacher' ? 'Aucune question pour l\'instant.' : 'Pas encore de question. Un mot, une règle, un exercice qui coince ? Écris ici : Maayane te répond.';
+      box.innerHTML = '<div class="msg-thread">' + (list.length ? list.map(function (m) {
+        var mine = m.from === me;
+        return '<div class="msg ' + (mine ? 'me' : 'them') + '"><div class="msg-b" dir="' + (/[A-Za-zÀ-ÿ]/.test(m.body) ? 'ltr' : 'rtl') + '">' + esc(m.body) + '</div><small>' +
+          (m.from === 'teacher' ? (me === 'teacher' ? 'Vous' : 'Maayane') : (me === 'student' ? 'Toi' : esc(first || 'Élève'))) + ' · ' + msgTime(m.at) + '</small></div>';
+      }).join('') : '<p class="muted small">' + empty + '</p>') + '</div>' +
+        '<form class="msg-form"><textarea class="in" name="body" rows="3" maxlength="2000" dir="auto" required placeholder="' + (me === 'teacher' ? 'Votre réponse…' : 'Ta question pour Maayane…') + '"></textarea>' +
+        '<button class="btn primary" type="submit">' + (me === 'teacher' ? 'Répondre' : 'Envoyer') + '</button></form>';
+      var th = $('.msg-thread', box); th.scrollTop = th.scrollHeight;
+      $('.msg-form', box).onsubmit = function (e) {
+        e.preventDefault();
+        var t = e.target.body.value.trim(); if (!t) return;
+        busy($('button', e.target), HPB.sendMessage(sid, t, me), 'Envoi impossible').then(function () {
+          toast(me === 'teacher' ? 'Réponse envoyée' : 'Question envoyée à Maayane ✓'); load();
+        }).catch(function () {});
+      };
+    }
+    function load() {
+      return Promise.resolve(HPB.listMessages(sid)).then(function (list) {
+        draw(list);
+        if (me === 'teacher' && list.some(function (m) { return m.from === 'student' && !m.readAt; })) {
+          Promise.resolve(HPB.markMessagesRead(sid)).then(function () {
+            if (cache.unread) delete cache.unread[sid];
+            var tb = document.querySelector('a[href$="/' + sid + '/messages"]'); if (tb) tb.textContent = 'Messages';
+            var nv = document.querySelector('.bo-nav a[href="#/eleves"]'); if (nv) nv.outerHTML = nv.outerHTML.replace(/<span class="count"[^>]*>\d+<\/span>/, '');
+          }).catch(function () {});
+        }
+        if (me === 'student') { var lt = list.filter(function (m) { return m.from === 'teacher'; }).pop(); if (lt) msgSeen(sid, lt.at); }
+      }, function () {
+        box.innerHTML = '<p class="muted">La messagerie n\'est pas encore disponible. Réessayez un peu plus tard.</p>';
+      });
+    }
+    load();
+  }
+  /* côté élève : fenêtre « Mes questions » par-dessus l'espace de révision */
+  function openAsk(sid, onClose) {
+    var el = document.createElement('div');
+    el.className = 'ag-pane'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Mes questions à Maayane');
+    el.innerHTML = '<div class="ag-pane-in"><div class="ag-ptop"><button type="button" class="btn small" data-close>← Retour à mes révisions</button></div>' +
+      '<h1 class="page-title">Une question ? <span class="grad">שְׁאֵלָה</span></h1><div class="card msg-card"><div id="ask-box"><p class="muted">Chargement…</p></div></div></div>';
+    document.body.appendChild(el);
+    var close = function () { el.remove(); document.removeEventListener('keydown', esc1); if (onClose) onClose(); };
+    function esc1(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', esc1);
+    $('[data-close]', el).onclick = close;
+    msgBox($('#ask-box', el), sid, 'student');
+  }
+  /* pastille « nouvelle réponse » sur le bouton de l'espace élève */
+  function sendMsgInfo(fr, id) {
+    if (!HPB.listMessages) return;
+    Promise.resolve(HPB.listMessages(id)).then(function (list) {
+      var seen = msgSeen(id), n = list.filter(function (m) { return m.from === 'teacher' && m.at > seen; }).length;
+      if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'msg-info', n: n }, '*');
+    }).catch(function () {});
+  }
+
   /* ================= BACK-OFFICE ================= */
   function nav(cur) {
     var pendingDocs = cache.docs.filter(function (d) { return d.status !== 'done'; }).length;
-    var nb = AG.badge();
-    var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves'], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
+    var nb = AG.badge(), nq = unreadTotal();
+    var items = [['tableau', 'Tableau de bord'], ['eleves', 'Élèves' + (nq ? '<span class="count" title="Questions non lues">' + nq + '</span>' : '')], ['agenda', 'Agenda' + (nb ? '<span class="count">' + nb + '</span>' : '')], ['documents', 'Documents' + (pendingDocs ? '<span class="count">' + pendingDocs + '</span>' : '')], ['reglages', 'Réglages']];
     return (HPB.remote ? '' : '<div class="demo-strip">Version de démonstration · <b>les données restent dans ce navigateur</b> — elles ne sont pas encore partagées entre appareils.</div>') +
       '<header class="bo-top"><a class="brand" href="#/tableau"><span class="logo">מ</span>Espace de Maayane' + (HPB.me && HPB.me.role === 'admin' ? ' <span class="pill grey">administrateur</span>' : '') + '</a>' +
       '<nav class="bo-nav">' + items.map(function (it) { return '<a href="#/' + it[0] + '" class="' + (cur === it[0] ? 'on' : '') + '"' + (cur === it[0] ? ' aria-current="page"' : '') + '>' + it[1] + '</a>'; }).join('') +
@@ -577,6 +647,10 @@ var HPApp = (function () {
     avg = HP.rate(HP.rangeSum(classDays, HP.addDays(new Date(), -6), 7));
     /* alertes */
     var alerts = [];
+    S.forEach(function (s) {
+      var q = (cache.unread || {})[s.id];
+      if (q) alerts.push(['good', '💬', '<b>' + esc(fullName(s)) + '</b> vous a posé ' + (q > 1 ? q + ' questions' : 'une question') + '.', s.id, 'messages']);
+    });
     S.forEach(function (s) {
       var m = M[s.id], n = m.last ? Math.round((HP.parseDay(HP.dayKey()) - HP.parseDay(m.last)) / 864e5) : null;
       if (!m.words) alerts.push(['', '📥', '<b>' + esc(fullName(s)) + '</b> n\'a encore aucun contenu : déposez ses premiers documents.', s.id, 'documents']);
@@ -649,8 +723,9 @@ var HPApp = (function () {
     if (!s) return '<p>Élève introuvable. <a href="#/eleves">Retour</a></p>';
     var m = metrics(s), L = HP.levelInfo(m.xp), pd = docsFor(id).filter(function (d) { return d.status !== 'done'; }).length;
     var nc = AG.upcoming(id).length;
-    var tabs = [['progression', 'Progression'], ['cours', 'Cours' + (nc ? ' (' + nc + ')' : '')], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
-    var body = tab === 'cours' ? AG.studentTab(s) : tab === 'documents' ? stDocs(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
+    var nq = (cache.unread || {})[id] || 0;
+    var tabs = [['progression', 'Progression'], ['messages', 'Messages' + (nq ? ' (' + nq + ')' : '')], ['cours', 'Cours' + (nc ? ' (' + nc + ')' : '')], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
+    var body = tab === 'messages' ? '<div class="card msg-card"><h3>Questions de ' + esc(s.first) + '</h3><div id="msg-box"><p class="muted">Chargement…</p></div></div>' : tab === 'cours' ? AG.studentTab(s) : tab === 'documents' ? stDocs(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
     return '<a class="back" href="#/eleves">← Tous les élèves</a>' +
       '<div class="st-head">' + avatar(s, 'lg') + '<div style="flex:1;min-width:220px"><h1>' + esc(fullName(s)) +
         (s.active === false ? ' <span class="pill rose">suspendu</span>' : '') + '</h1>' +
@@ -1195,6 +1270,7 @@ var HPApp = (function () {
     if (page === 'eleve') {
       var id = h[1], s = cache.students.filter(function (x) { return x.id === id; })[0];
       if (!s) return;
+      if (h[2] === 'messages' && $('#msg-box')) msgBox($('#msg-box'), id, 'teacher', s.first);
       var ef = $('#edit');
       if (ef) ef.addEventListener('submit', function (e) {
         e.preventDefault();

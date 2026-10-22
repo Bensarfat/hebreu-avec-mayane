@@ -41,10 +41,11 @@ const FONTS = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600
 const ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7457f5"/><stop offset="1" stop-color="#b86cf2"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#g)"/><text x="32" y="45" text-anchor="middle" font-family="Arial" font-weight="700" font-size="38" fill="#fff">מ</text></svg>');
 
 const html = `<!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
 <title>Hébreu avec Maayane</title>
 <meta name="description" content="Cours d'hébreu, en hébreu avec le soutien du français, avec Maayane : un espace de révision personnel pour chaque élève (vocabulaire, grammaire, quiz, flashcards).">
 <meta name="theme-color" content="#7457f5">

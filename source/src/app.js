@@ -551,8 +551,8 @@ var HPApp = (function () {
           }).catch(function () {});
         }
         if (me === 'student') { var lt = list.filter(function (m) { return m.from === 'teacher'; }).pop(); if (lt) msgSeen(sid, lt.at); }
-      }, function () {
-        box.innerHTML = '<p class="muted">La messagerie n\'est pas encore disponible. Réessayez un peu plus tard.</p>';
+      }, function (e) {
+        box.innerHTML = '<p class="muted">La messagerie n\'est pas encore disponible. Réessayez un peu plus tard.</p><p class="small muted">' + esc((e && e.message) || '') + '</p>';
       });
     }
     load();

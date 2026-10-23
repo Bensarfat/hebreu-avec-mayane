@@ -186,6 +186,22 @@
     listLevelTests: function () { return post('/api/test', { action: 'list' }).then(function (r) { return r.tests || []; }); },
     deleteLevelTest: function (id) { return post('/api/test', { action: 'delete', id: id }); },
 
+    /* ---------- messages (questions des élèves, réponses de Maayane) ---------- */
+    listMessages: function (sid) {
+      return q(sbc.from('messages').select('*').eq('student_id', sid).order('created_at', { ascending: true }).limit(500))
+        .then(function (rows) { return rows.map(function (r) { return { id: r.id, studentId: r.student_id, from: r.from_role, body: r.body, at: r.created_at, readAt: r.read_at }; }); });
+    },
+    sendMessage: function (sid, body, from) {
+      return q(sbc.from('messages').insert({ student_id: sid, from_role: from === 'teacher' ? 'teacher' : 'student', body: String(body).slice(0, 2000) }));
+    },
+    markMessagesRead: function (sid) {
+      return q(sbc.from('messages').update({ read_at: new Date().toISOString() }).eq('student_id', sid).eq('from_role', 'student').is('read_at', null));
+    },
+    unreadMessages: function () {
+      return q(sbc.from('messages').select('student_id').eq('from_role', 'student').is('read_at', null).limit(2000))
+        .then(function (rows) { var o = {}; rows.forEach(function (r) { o[r.student_id] = (o[r.student_id] || 0) + 1; }); return o; });
+    },
+
     /* ---------- agenda ---------- */
     listBookings: function (from, to) {
       var qq = sbc.from('bookings').select('*').order('starts_at', { ascending: true }).limit(3000);

@@ -143,7 +143,8 @@ var HPB = (function () {
         return set('students', l.filter(function (s) { return s.id !== id; }));
       }).then(function () {
         return Promise.all([del('content:' + id), del('summary:' + id), del('progress:' + id),
-          get('bookings').then(function (l) { return set('bookings', (l || []).filter(function (b) { return b.studentId !== id; })); })]);
+          get('bookings').then(function (l) { return set('bookings', (l || []).filter(function (b) { return b.studentId !== id; })); }),
+          get('messages').then(function (l) { return set('messages', (l || []).filter(function (m) { return m.studentId !== id; })); })]);
       }).then(function () {
         return api.listDocs().then(function (docs) {
           docs.forEach(function (d) { d.students = (d.students || []).filter(function (x) { return x !== id; }); });
@@ -207,6 +208,28 @@ var HPB = (function () {
         .then(function () { return del('blob:' + id); });
     },
     getBlob: function (id) { return get('blob:' + id); },
+
+    /* ---------- messages (questions des élèves, réponses de Maayane) ---------- */
+    listMessages: function (sid) {
+      return get('messages').then(function (l) { return (l || []).filter(function (m) { return m.studentId === sid; }); });
+    },
+    sendMessage: function (sid, body, from) {
+      return get('messages').then(function (l) {
+        l = l || [];
+        l.push({ id: 'm' + Date.now().toString(36) + rnd(3), studentId: sid, from: from === 'teacher' ? 'teacher' : 'student', body: String(body).slice(0, 2000), at: new Date().toISOString(), readAt: null });
+        return set('messages', l);
+      });
+    },
+    markMessagesRead: function (sid) {
+      return get('messages').then(function (l) {
+        l = l || []; var now = new Date().toISOString();
+        l.forEach(function (m) { if (m.studentId === sid && m.from === 'student' && !m.readAt) m.readAt = now; });
+        return set('messages', l);
+      });
+    },
+    unreadMessages: function () {
+      return get('messages').then(function (l) { var o = {}; (l || []).forEach(function (m) { if (m.from === 'student' && !m.readAt) o[m.studentId] = (o[m.studentId] || 0) + 1; }); return o; });
+    },
 
     /* ---------- agenda : cours réservés (mêmes règles que le serveur, via HPCal) ---------- */
     listBookings: function (from, to) {

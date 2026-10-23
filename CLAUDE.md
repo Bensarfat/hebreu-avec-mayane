@@ -54,8 +54,16 @@ Réponds toujours en français, en mots simples, sans jargon. Explique ce que tu
 
 ## Ce qui ne se modifie pas ici
 
-- **La base de données** : si un changement exige une nouvelle colonne ou table, écris un nouveau fichier `supabase/migration-AAAA-MM-JJ-<sujet>.sql`
-  et dis clairement à Maayane que Benjamin doit l'exécuter dans Supabase **avant** la fusion. Ne fusionne rien qui dépend d'une migration non exécutée.
+- **La base de données** (Supabase, gérée par Benjamin) : si un changement exige une nouvelle table ou colonne, écris un nouveau fichier
+  `supabase/migration-AAAA-MM-JJ-<sujet>.sql` dans la même pull request, et reporte-le aussi dans `supabase/schema.sql`.
+  **Il est appliqué automatiquement à la fusion** (action « Mettre à jour la base »), sans intervention de Benjamin. Règles :
+  - uniquement des ajouts, relançables sans risque : `create table if not exists`, `alter table … add column if not exists`,
+    `create index if not exists`, `create or replace function`, `drop policy if exists` suivi de `create policy` ;
+  - toujours `enable row level security` sur une nouvelle table, avec des règles précises (élève : seulement ses propres lignes) ;
+  - jamais de suppression ni d'effacement (`drop table`, `drop column`, `truncate`, `delete from`), ni de rôle, ni de désactivation de la sécurité :
+    l'action les refuse ; ces changements-là, Benjamin les fait à la main ;
+  - ne modifie jamais un fichier de migration déjà fusionné : fais-en un nouveau.
+  Après la fusion, vérifie dans l'onglet **Actions** que « Mettre à jour la base » est vert ; s'il est rouge, explique le message à Maayane.
 - Le vocabulaire personnel de Benjamin : il est dans son dépôt (`Bensarfat/hebreu`, fichiers `donnees.js` et `passe-futur.html`).
 - `.github/workflows/` et `vercel.json` : ne pas modifier sans demande explicite de Benjamin.
 

@@ -1,0 +1,70 @@
+# Applique automatiquement les mises à jour de la base de données (Supabase) dès qu'elles sont fusionnées sur main :
+# chaque fichier supabase/migration-AAAA-MM-JJ-<sujet>.sql pas encore appliqué est exécuté une fois, dans l'ordre,
+# puis noté dans la table outils.migrations.
+#
+# Garde-fous :
+#  - ne tourne que sur main, dans l'environnement « supabase » (secret SUPABASE_DB_URL réservé à la branche main) ;
+#  - refuse tout ce qui peut détruire des données ou ouvrir la base (suppression de table, de colonne, effacement,
+#    désactivation de la sécurité par ligne, gestion des rôles) : ces changements restent faits à la main par Benjamin ;
+#  - chaque fichier est appliqué en une seule transaction : en cas d'erreur, rien n'est modifié.
+name: Mettre à jour la base
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migration-*.sql"
+  workflow_dispatch:
+
+concurrency:
+  group: base
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  appliquer:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: supabase
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: "20"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Appliquer les mises à jour en attente
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::Le secret SUPABASE_DB_URL n'est pas configuré (GitHub › Settings › Environments › supabase). Demandez à Benjamin."
+            exit 1
+          fi
+          DANGER='drop[[:space:]]+(table|schema|database|column|owned|view|materialized)|truncate|delete[[:space:]]+from|disable[[:space:]]+row[[:space:]]+level[[:space:]]+security|(alter|create|drop)[[:space:]]+role|outils\.migrations'
+          applied="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -c 'select nom from outils.migrations')"
+          pending=()
+          for f in $(ls supabase/migration-*.sql | sort); do
+            n="$(basename "$f")"
+            if ! [[ "$n" =~ ^migration-[0-9]{4}-[0-9]{2}-[0-9]{2}(-[a-z0-9-]+)?\.sql$ ]]; then
+              echo "::error file=$f::Nom de fichier non conforme (attendu : migration-AAAA-MM-JJ-sujet.sql)."; exit 1
+            fi
+            grep -qxF "$n" <<<"$applied" || pending+=("$f")
+          done
+          if [ ${#pending[@]} -eq 0 ]; then echo "✓ La base est déjà à jour."; exit 0; fi
+          for f in "${pending[@]}"; do
+            if grep -qiE "$DANGER" "$f"; then
+              echo "::error file=$f::Cette mise à jour peut supprimer des données ou affaiblir la sécurité : elle n'est pas appliquée automatiquement. Demandez à Benjamin."
+              exit 1
+            fi
+          done
+          for f in "${pending[@]}"; do
+            n="$(basename "$f")"
+            { cat "$f"; printf '\ninsert into outils.migrations (nom) values (%s) on conflict do nothing;\n' "'$n'"; } \
+              | psql "$SUPABASE_DB_URL" -X -q -v ON_ERROR_STOP=1 --single-transaction -f -
+            echo "✓ $n appliquée"
+          done

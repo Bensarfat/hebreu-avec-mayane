@@ -403,7 +403,7 @@ var HPApp = (function () {
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
         '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Jeux de mots</span><span class="s"> Exos</span></button>' +
-        (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><i id="hp-q-dot" hidden></i></button>') +
+        (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><span class="s"> Question</span><i id="hp-q-dot" hidden></i></button>') +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
@@ -459,11 +459,11 @@ var HPApp = (function () {
     '.hp-sbar .hp-ag{display:flex;align-items:center;gap:10px;margin-left:auto}.hp-sbar .hp-ag small{font-size:12.5px;color:var(--ink-soft);font-weight:600}' +
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
     '.hp-sbar button.q{position:relative}.hp-sbar button.q i{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--rose);border:2px solid var(--paper)}' +
-    '@media(max-width:560px){.hp-sbar button.q .l{display:none}}' +
+    '.hp-sbar button.q{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.q .s{display:none}@media(max-width:560px){.hp-sbar button.q .l{display:none}.hp-sbar button.q .s{display:inline}}' +
     '.hp-sbar button.px{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.px .s{display:none}@media(max-width:560px){.hp-sbar button.px .l{display:none}.hp-sbar button.px .s{display:inline}}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
     '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar button.ag:hover{color:var(--on-accent);border-color:transparent;filter:brightness(1.06)}' +
-    '@media(max-width:420px){.hp-sbar{flex-wrap:nowrap;gap:8px;padding-left:12px}.hp-sbar .hi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp-sbar button{white-space:nowrap;padding:6px 10px}}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
+    '@media(max-width:420px){.hp-sbar{gap:6px;padding:8px;border-radius:18px;justify-content:center}.hp-sbar .hi{display:none}.hp-sbar .hp-ag{margin-left:0}.hp-sbar button{white-space:nowrap;padding:6px 10px}}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
   function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
 
   /* messages venant de l'espace élève : la page décide elle-même de quel élève il s'agit */

@@ -562,7 +562,7 @@ var HPApp = (function () {
     var el = document.createElement('div');
     el.className = 'ag-pane'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Mes questions à Maayane');
     el.innerHTML = '<div class="ag-pane-in"><div class="ag-ptop"><button type="button" class="btn small" data-close>← Retour à mes révisions</button></div>' +
-      '<h1 class="page-title">Une question ? <span class="grad">שְׁאֵלָה</span></h1><div class="card msg-card"><div id="ask-box"><p class="muted">Chargement…</p></div></div></div>';
+      '<h1 class="page-title">Une question ? <span class="grad" lang="he" dir="rtl">שאלה</span></h1><div class="card msg-card"><div id="ask-box"><p class="muted">Chargement…</p></div></div></div>';
     document.body.appendChild(el);
     var close = function () { el.remove(); document.removeEventListener('keydown', esc1); if (onClose) onClose(); };
     function esc1(e) { if (e.key === 'Escape') close(); }

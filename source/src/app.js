@@ -1043,8 +1043,9 @@ var HPApp = (function () {
     autoBusy = true;
     ids.forEach(function (id) { autoTried[id] = 1; });
     if (ids.length > 1) toast('Analyse automatique de ' + ids.length + ' documents…');
-    return ids.reduce(function (p, id) { return p.then(function () { return runAnalysis(id); }); }, Promise.resolve())
-      .then(function () { autoBusy = false; if (ids.length > 1) toast('Analyse automatique terminée'); return autoRun(); }, function () { autoBusy = false; });
+    var stopped = false;
+    return ids.reduce(function (p, id) { return p.then(function () { if (stopped) return; return runAnalysis(id).then(function (r) { if (r === 'stop') stopped = true; }); }); }, Promise.resolve())
+      .then(function () { autoBusy = false; if (stopped) return; if (ids.length > 1) toast('Analyse automatique terminée'); return autoRun(); }, function () { autoBusy = false; });
   }
 
   function runAnalysis(docId) {
@@ -1090,14 +1091,17 @@ var HPApp = (function () {
         : e && e.code === 'truncated' ? 'Une page de ce document contient trop de vocabulaire pour être analysée, même seule. Réessayez ; si l\'erreur revient, envoyez cette page en image ou en fichier séparé.'
         : e && e.code === 'timeout' ? 'L\'analyse a pris trop de temps. Réessayez, ou découpez le document.'
         : e && e.code === 'too_large' ? 'Les images de ce document sont trop lourdes : réduisez le nombre de pages ou de photos.'
-        : e && e.code === 'network' ? 'Connexion internet interrompue pendant l\'analyse. Réessayez.'
-        : e && e.code === 'not_teacher' ? 'Votre session a expiré : reconnectez-vous, puis relancez l\'analyse.'
+        : e && e.code === 'network' ? 'Connexion internet interrompue pendant l\'analyse : le document reste à intégrer. Relancez l\'analyse.'
+        : e && e.code === 'not_teacher' ? 'Connexion perdue pendant l\'analyse : le document reste à intégrer. Rechargez la page, puis relancez l\'analyse.'
         : e && e.code === 'bad_code' ? 'Le code d\'analyse est incorrect : vérifiez-le dans Réglages.'
         : e && e.code === 'server_error' ? 'L\'analyse a échoué (' + e.message + '). Réessayez dans un instant.'
         : e && (e.code === 'not_granted' || e.code === 'sampling_disabled') ? 'L\'analyse par Claude n\'est pas autorisée pour ce site. Utilisez l\'import manuel (onglet Contenu du site).'
         : (e && e.message) || 'Erreur inconnue.';
       if (el) el.innerHTML = '<div class="review"><div class="err">' + esc(msg) + '</div></div>';
       else toast('Analyse de « ' + d.name + ' » : ' + msg, true);
+      /* connexion perdue ou session expirée : ce n'est pas la faute du document. On ne le marque pas en échec,
+         et la série en cours s'arrête (sinon tous les documents suivants échoueraient de la même façon). */
+      if (e && (e.code === 'not_teacher' || e.code === 'network')) return 'stop';
       d.status = 'error'; d.error = msg;
       return Promise.resolve(HPB.updateDoc(d)).catch(function () {});
     });
@@ -1190,9 +1194,17 @@ var HPApp = (function () {
       b.onclick = function () {
         var ids = b.dataset.anall.split(',').filter(Boolean);
         b.disabled = true;
+        var stopped = false;
         ids.reduce(function (p, id, i) {
-          return p.then(function () { b.textContent = 'Analyse ' + (i + 1) + ' / ' + ids.length + '…'; return runAnalysis(id); });
-        }, Promise.resolve()).then(function () { if (b.isConnected) { b.textContent = 'Analyses terminées : validez-les ci-dessous'; } });
+          return p.then(function () {
+            if (stopped) return;
+            b.textContent = 'Analyse ' + (i + 1) + ' / ' + ids.length + '…';
+            return runAnalysis(id).then(function (r) { if (r === 'stop') stopped = true; });
+          });
+        }, Promise.resolve()).then(function () {
+          if (stopped) { toast('Analyses interrompues : connexion perdue. Rechargez la page, puis relancez « Analyser ».', true); b.disabled = false; b.textContent = 'Relancer l\'analyse'; return; }
+          if (b.isConnected) { b.textContent = 'Analyses terminées : validez-les ci-dessous'; }
+        });
       };
     });
     $$('[data-act="preview"]').forEach(function (b) { b.onclick = function () { openStudent(b.dataset.id, true); }; });

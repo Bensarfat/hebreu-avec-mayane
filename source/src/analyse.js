@@ -171,7 +171,19 @@ var HPA = (function () {
       var h = { 'content-type': 'application/json' };
       if (serverCode) h['x-analyse-code'] = serverCode;
       if (r[1]) h.Authorization = 'Bearer ' + r[1];
-      return fetch('/api/analyse', { method: 'POST', headers: h, body: JSON.stringify({ system: prompt.system, prompt: prompt.prompt, images: list }), signal: signal });
+      var body = JSON.stringify({ system: prompt.system, prompt: prompt.prompt, images: list });
+      return fetch('/api/analyse', { method: 'POST', headers: h, body: body, signal: signal }).then(function (r) {
+        /* session refusée : on renouvelle la connexion et on réessaie une fois */
+        if (r.status !== 401 || !authFn) return r;
+        return r.clone().json().catch(function () { return {}; }).then(function (j) {
+          if (j.error !== 'not_teacher') return r;
+          return Promise.resolve(authFn(true)).then(function (t) {
+            if (!t) return r;
+            h.Authorization = 'Bearer ' + t;
+            return fetch('/api/analyse', { method: 'POST', headers: h, body: body, signal: signal });
+          });
+        });
+      });
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (r.ok) {

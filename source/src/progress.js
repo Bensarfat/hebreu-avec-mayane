@@ -126,12 +126,14 @@ var HP = (function () {
     var map = {};
     function add(k, bad, seen) {
       var p = k.split('|');
-      var o = map[k] || (map[k] = { he: p[0], fr: p[1] || '', bad: 0, seen: 0 });
+      var o = map[k] || (map[k] = { he: p[0], fr: p[1] || '', bad: 0, seen: 0, q: 0, f: 0 });
       o.bad += bad; o.seen += seen;
+      return o;
     }
     var k, s;
-    for (k in (storage.wordStats || {})) { s = storage.wordStats[k]; if (s.wrong) add(k, s.wrong, s.seen || 0); }
-    for (k in (storage.flash || {})) { s = storage.flash[k]; if (s.again) add(k, s.again, s.seen || 0); }
+    /* q : erreurs aux exercices (quiz, jeux) ; f : « à revoir » aux cartes */
+    for (k in (storage.wordStats || {})) { s = storage.wordStats[k]; if (s.wrong) add(k, s.wrong, s.seen || 0).q += s.wrong; }
+    for (k in (storage.flash || {})) { s = storage.flash[k]; if (s.again) add(k, s.again, s.seen || 0).f += s.again; }
     return Object.keys(map).map(function (x) { return map[x]; })
       .sort(function (a, b) { return b.bad - a.bad || (b.bad / (b.seen || 1)) - (a.bad / (a.seen || 1)); })
       .slice(0, max || 15);
@@ -182,7 +184,7 @@ var HP = (function () {
     return {
       updatedAt: new Date().toISOString(), xp: P.xp || 0, level: levelInfo(P.xp).level,
       streak: st.cur, best: st.best, lastActive: last, goal: P.goal || 60,
-      days: keep, totals: totals, themes: themes, weak: weakWords(storage, 15),
+      days: keep, totals: totals, themes: themes, weak: weakWords(storage, 100),
       badges: P.badges || {}, bestCombo: P.bestCombo || 0
     };
   }
@@ -507,8 +509,9 @@ var HP = (function () {
     '.hp-kpi span{font-size:12px;font-weight:700;color:var(--ink-soft)}.hp-kpi.green{background:var(--mint)}.hp-kpi.green b{color:var(--olive)}' +
     '.hp-kpi.gold{background:var(--peach)}.hp-kpi.gold b{color:var(--gold)}.hp-kpi.rose{background:var(--rose-tint)}.hp-kpi.rose b{color:var(--rose)}' +
     '.hp-kpi.sky{background:var(--sky-tint)}.hp-kpi.sky b{color:var(--sky)}' +
-    '.hp-weak{list-style:none;padding:0;margin:0;display:grid;gap:2px}.hp-weak li{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}' +
-    '.hp-weak .he{font-family:var(--font-he);font-weight:600;color:var(--he);direction:rtl;text-align:left}.hp-weak small{color:var(--muted);font-weight:600;white-space:nowrap}';
+    '.hp-weak{list-style:none;padding:0;margin:0;display:grid;gap:2px}.hp-weak li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr);align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}' +
+    '.hp-weak .he{font-family:var(--font-he);font-weight:600;color:var(--he);direction:rtl;text-align:left}.hp-weak small{color:var(--muted);font-weight:600;text-align:right}' +
+    '@media(max-width:560px){.hp-weak li{grid-template-columns:1fr 1fr}.hp-weak small{grid-column:1/-1;white-space:normal}}';
 
   function injectCss() {
     if (document.getElementById('hp-css')) return;

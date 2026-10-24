@@ -156,6 +156,8 @@ module.exports = async function handler(req, res) {
     console.error('Anthropic', s, e);
     /* plafond de dépenses du compte Claude atteint : inutile de réessayer, il faut le relever sur la console */
     if ((e.details && e.details.error_code === 'enforced_spend_limit_reached') || /usage limits/i.test(e.message || '')) { res.status(402).json({ error: 'spend_limit' }); return; }
+    /* plus de crédit prépayé sur le compte Claude (console) : il faut en racheter */
+    if (/credit balance is too low/i.test(e.message || '')) { res.status(402).json({ error: 'no_credit' }); return; }
     const busy = s === 429 || s === 529 || e.type === 'overloaded_error';
     const timeout = e.type === 'deadline' || s === 504;
     res.status(busy ? 429 : timeout ? 504 : 502).json({ error: busy ? 'busy' : timeout ? 'timeout' : 'api_error', detail: e.message || ('HTTP ' + s) });

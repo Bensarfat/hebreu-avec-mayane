@@ -1129,6 +1129,7 @@ var HPApp = (function () {
       if (e && e.code === 'no_sample') { if (el) showManual(el, d, e.extracted); return; }
       var msg = e && (e.code === 'rate_limited' || e.code === 'busy') ? 'Claude est très sollicité en ce moment : réessayez dans quelques minutes.'
         : e && e.code === 'invalid_json' ? 'La réponse de Claude n\'était pas exploitable. Réessayez.'
+        : e && e.code === 'no_credit' ? 'Le crédit de l\'analyse automatique est épuisé. Benjamin doit en racheter sur platform.claude.com (Billing), puis relancez l\'analyse. Le document reste à intégrer.'
         : e && e.code === 'spend_limit' ? 'Le budget mensuel de l\'analyse automatique est atteint. Benjamin peut le relever sur platform.claude.com (Settings › Limits), puis relancez l\'analyse.'
         : e && e.code === 'truncated' ? 'Une page de ce document contient trop de vocabulaire pour être analysée, même seule. Réessayez ; si l\'erreur revient, envoyez cette page en image ou en fichier séparé.'
         : e && e.code === 'timeout' ? 'L\'analyse a pris trop de temps. Réessayez, ou découpez le document.'
@@ -1143,7 +1144,7 @@ var HPApp = (function () {
       else toast('Analyse de « ' + d.name + ' » : ' + msg, true);
       /* connexion perdue ou session expirée : ce n'est pas la faute du document. On ne le marque pas en échec,
          et la série en cours s'arrête (sinon tous les documents suivants échoueraient de la même façon). */
-      if (e && (e.code === 'not_teacher' || e.code === 'network')) return 'stop';
+      if (e && (e.code === 'not_teacher' || e.code === 'network' || e.code === 'no_credit' || e.code === 'spend_limit')) return 'stop';
       d.status = 'error'; d.error = msg;
       return Promise.resolve(HPB.updateDoc(d)).catch(function () {});
     });
@@ -1244,7 +1245,7 @@ var HPApp = (function () {
             return runAnalysis(id).then(function (r) { if (r === 'stop') stopped = true; });
           });
         }, Promise.resolve()).then(function () {
-          if (stopped) { toast('Analyses interrompues : connexion perdue. Rechargez la page, puis relancez « Analyser ».', true); b.disabled = false; b.textContent = 'Relancer l\'analyse'; return; }
+          if (stopped) { toast('Analyses interrompues : voyez le message sous le document concerné, puis relancez « Analyser ».', true); b.disabled = false; b.textContent = 'Relancer l\'analyse'; return; }
           if (b.isConnected) { b.textContent = 'Analyses terminées : validez-les ci-dessous'; }
         });
       };

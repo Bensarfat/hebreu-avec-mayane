@@ -396,7 +396,7 @@ var HPApp = (function () {
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
-        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
+        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp==="docs-info"){var c=document.getElementById("hp-dc-btn");if(c)c.hidden=!d.n;return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>' +
         (window.HP_PRACTICE ? '<script>' + HP_PRACTICE.replace(/<\/script/gi, '<\\/script') + '<\/script>' : '');
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
@@ -404,6 +404,7 @@ var HPApp = (function () {
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
         '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Jeux de mots</span><span class="s"> Exos</span></button>' +
         (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><span class="s"> Question</span><i id="hp-q-dot" hidden></i></button>') +
+        (preview ? '' : '<button type="button" id="hp-dc-btn" class="dc" hidden onclick="parent.postMessage({hp:\'docs\'},\'*\')">📄<span class="l"> Mes documents</span><span class="s"> Docs</span></button>') +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
@@ -419,7 +420,7 @@ var HPApp = (function () {
       fr.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms allow-downloads');
       root.appendChild(fr);
       frame = { el: fr, id: id, preview: !!preview };
-      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); });
+      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); sendDocsInfo(fr, id); });
       fr.srcdoc = html;
       document.title = 'Hébreu · ' + st.first;
       });
@@ -460,6 +461,7 @@ var HPApp = (function () {
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
     '.hp-sbar button.q{position:relative}.hp-sbar button.q i{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--rose);border:2px solid var(--paper)}' +
     '.hp-sbar button.q{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.q .s{display:none}@media(max-width:560px){.hp-sbar button.q .l{display:none}.hp-sbar button.q .s{display:inline}}' +
+    '.hp-sbar button.dc{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.dc .s{display:none}@media(max-width:560px){.hp-sbar button.dc .l{display:none}.hp-sbar button.dc .s{display:inline}}' +
     '.hp-sbar button.px{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.px .s{display:none}@media(max-width:560px){.hp-sbar button.px .l{display:none}.hp-sbar button.px .s{display:inline}}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
     '.hp-sbar button:hover{border-color:var(--accent-soft);color:var(--ink)}.hp-sbar button.ag:hover{color:var(--on-accent);border-color:transparent;filter:brightness(1.06)}' +
@@ -474,6 +476,7 @@ var HPApp = (function () {
     if (m.hp === 'logout' && !frame.preview) { frame = null; logout(); return; }
     if (m.hp === 'close' && frame.preview) { closePreview(); return; }
     if (m.hp === 'ask' && !frame.preview) { var f1 = frame; openAsk(frame.id, function () { if (f1.el.isConnected) sendMsgInfo(f1.el, f1.id); }); return; }
+    if (m.hp === 'docs' && !frame.preview) { openDocs(frame.id); return; }
     if (m.hp === 'agenda' && !frame.preview) { var f0 = frame; AG.openPane(frame.id, function () { if (f0.el.isConnected) sendAgendaInfo(f0.el, f0.id); }); return; }
     if (m.hp === 'progress' && !frame.preview) {
       var sum = cleanSummary(m.summary), storage = m.storage && typeof m.storage === 'object' ? m.storage : null;
@@ -569,6 +572,42 @@ var HPApp = (function () {
     document.addEventListener('keydown', esc1);
     $('[data-close]', el).onclick = close;
     msgBox($('#ask-box', el), sid, 'student');
+  }
+  /* côté élève : documents des cours que Maayane a choisi de lui montrer */
+  function docIcon(d) { var k = HPA.kind(d); return k === 'pdf' ? '📕' : k === 'img' ? '🖼️' : (k === 'docx' || k === 'doc') ? '📘' : '📄'; }
+  function openDocs(sid) {
+    var el = document.createElement('div');
+    el.className = 'ag-pane'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Mes documents');
+    el.innerHTML = '<div class="ag-pane-in"><div class="ag-ptop"><button type="button" class="btn small" data-close>← Retour à mes révisions</button></div>' +
+      '<h1 class="page-title">Mes documents <span class="grad" lang="he" dir="rtl">מסמכים</span></h1><div class="card"><div id="dc-box"><p class="muted">Chargement…</p></div></div></div>';
+    document.body.appendChild(el);
+    var close = function () { el.remove(); document.removeEventListener('keydown', esc1); };
+    function esc1(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', esc1);
+    $('[data-close]', el).onclick = close;
+    var box = $('#dc-box', el);
+    HPB.myDocs(sid).then(function (list) {
+      if (!list.length) { box.innerHTML = '<p class="hp-empty">Aucun document pour l\'instant. Maayane les ajoute ici après les cours.</p>'; return; }
+      box.innerHTML = '<div class="docs">' + list.map(function (d) {
+        return '<div class="doc"><span class="ft" style="font-size:20px;background:none">' + docIcon(d) + '</span><div><div class="nm">' + esc(d.name) + '</div><div class="sb"><span>' +
+          (d.at ? new Date(d.at).toLocaleDateString('fr-FR') : '') + '</span><span>' + Math.max(1, Math.round((d.size || 0) / 1024)) + ' Ko</span></div></div>' +
+          '<div class="act"><button class="btn small primary" data-get="' + esc(d.id) + '">Télécharger</button></div></div>';
+      }).join('') + '</div>';
+      $$('[data-get]', box).forEach(function (b) {
+        b.onclick = function () {
+          /* la fenêtre s'ouvre tout de suite (sinon le navigateur la bloque), le fichier y arrive ensuite */
+          var w = null; try { w = window.open('', '_blank'); } catch (e) {}
+          busy(b, HPB.myDocUrl(sid, b.dataset.get), 'Téléchargement impossible').then(function (u) {
+            if (!u) { if (w) w.close(); return toast('Fichier introuvable'); }
+            if (w) w.location.href = u; else location.href = u;
+          }).catch(function () { if (w) w.close(); });
+        };
+      });
+    }, function (e) { box.innerHTML = '<p class="muted">Les documents ne sont pas disponibles pour l\'instant. Réessaie un peu plus tard.</p><p class="small muted">' + esc((e && e.message) || '') + '</p>'; });
+  }
+  function sendDocsInfo(fr, id) {
+    if (!HPB.myDocs) return;
+    HPB.myDocs(id).then(function (l) { if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'docs-info', n: l.length }, '*'); }).catch(function () {});
   }
   /* pastille « nouvelle réponse » sur le bouton de l'espace élève */
   function sendMsgInfo(fr, id) {
@@ -798,9 +837,12 @@ var HPApp = (function () {
       (d.summary ? '<div class="small muted" style="margin-top:4px">' + esc(d.summary) + '</div>' : '') +
       (d.error ? '<div class="small" style="color:var(--bad);margin-top:4px">' + esc(d.error) + '</div>' : '') + '</div>' +
       '<div class="act">' + (d.status !== 'done' ? '<button class="btn small primary" data-an="' + d.id + '">Analyser et intégrer</button>' : '<button class="btn small" data-an="' + d.id + '">Ré-analyser</button>') +
+      ((d.students || []).length ? '<button class="btn small' + (isShared(d.id) ? ' primary' : '') + '" data-share="' + d.id + '" aria-pressed="' + isShared(d.id) + '" title="L\'élève peut voir et télécharger ce document dans son espace">' + (isShared(d.id) ? '✓ Visible par l\'élève' : '👁 Montrer à l\'élève') + '</button>' : '') +
       '<button class="btn small" data-dl="' + d.id + '">Ouvrir</button><button class="btn small ghost" data-rm="' + d.id + '" title="Supprimer">🗑</button></div>' +
       '<div class="rv-slot" style="grid-column:1/-1" id="rv-' + d.id + '"></div></div>';
   }
+  /* documents que les élèves concernés peuvent voir et télécharger dans leur espace */
+  function isShared(id) { return ((cache.settings || {}).sharedDocs || []).indexOf(id) >= 0; }
   /* élèves dont les documents sont analysés et ajoutés sans relecture (réglage de la professeure) */
   function isAuto(id) { return ((cache.settings || {}).autoIntegrate || []).indexOf(id) >= 0; }
   function autoDoc(d) { return !!(d.students || []).length && d.students.every(isAuto); }
@@ -1277,6 +1319,20 @@ var HPApp = (function () {
         }).join(''));
         $$('[data-cg]', m).forEach(function (b) { b.onclick = function () { $$('.char-h', m)[+b.dataset.cg].scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
         $$('[data-char]', m).forEach(function (b) { b.onclick = function () { m.remove(); save({ char: b.dataset.char, photo: '' }, 'Personnage enregistré'); }; });
+      };
+    });
+    $$('[data-share]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.dataset.share, on = !isShared(id);
+        busy(b, HPB.getSettings().then(function (st) {
+          var l = (st.sharedDocs || []).filter(function (x) { return x !== id && cache.docs.some(function (d) { return d.id === x; }); });
+          if (on) l.push(id);
+          st.sharedDocs = l;
+          return HPB.setSettings(st).then(function () { cache.settings = st; });
+        }), 'Enregistrement impossible').then(function () {
+          toast(on ? 'Document visible dans l\'espace de l\'élève' : 'Document retiré de l\'espace de l\'élève');
+          renderTeacher();
+        }).catch(function () {});
       };
     });
     $$('[data-auto]').forEach(function (cb) {

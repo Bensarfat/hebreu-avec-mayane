@@ -173,8 +173,8 @@ var HPApp = (function () {
     (Array.isArray(s.themes) ? s.themes : []).slice(0, 300).forEach(function (x) {
       if (x && typeof x === 'object') o.themes.push({ theme: txt(x.theme), n: num(x.n), m: num(x.m), seen: num(x.seen), pct: Math.max(0, Math.min(100, num(x.pct))), runs: num(x.runs) });
     });
-    (Array.isArray(s.weak) ? s.weak : []).slice(0, 15).forEach(function (x) {
-      if (x && typeof x === 'object') o.weak.push({ he: txt(x.he, 80), fr: txt(x.fr, 160), bad: num(x.bad), seen: num(x.seen) });
+    (Array.isArray(s.weak) ? s.weak : []).slice(0, 100).forEach(function (x) {
+      if (x && typeof x === 'object') o.weak.push(Object.assign({ he: txt(x.he, 80), fr: txt(x.fr, 160), bad: num(x.bad), seen: num(x.seen) }, x.q != null || x.f != null ? { q: num(x.q), f: num(x.f) } : {}));
     });
     var b = s.badges && typeof s.badges === 'object' ? s.badges : {};
     HP.BADGES.forEach(function (x) { if (DAY.test(b[x.id])) o.badges[x.id] = b[x.id]; });
@@ -808,9 +808,15 @@ var HPApp = (function () {
       '</div>' +
       '<div class="two">' +
         '<div class="card"><h3>Maîtrise par thème</h3>' + HP.themeBars(sum.themes) + '</div>' +
-          '<div class="card"><h3>Mots les plus difficiles</h3>' + (sum.weak && sum.weak.length ? '<ul class="hp-weak">' + sum.weak.map(function (w) {
-            return '<li><span class="he">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + plural(w.bad, 'erreur') + ' sur ' + w.seen + '</small></li>';
-          }).join('') + '</ul>' : '<p class="hp-empty">Aucun mot raté pour l\'instant.</p>') + '</div>' +
+          '<div class="card"><h3>Mots ratés <small>' + ((sum.weak || []).length) + '</small></h3><p class="small muted" style="margin:-6px 0 10px">Tous les exercices : quiz, jeux et cartes (« à revoir »).</p>' + (sum.weak && sum.weak.length ? (function () {
+            function li(w) {
+              var d = w.q != null || w.f != null ? [w.q ? plural(w.q, 'erreur') + ' (exercices)' : '', w.f ? w.f + ' × à revoir (cartes)' : ''].filter(Boolean).join(' · ') : plural(w.bad, 'erreur') + ' sur ' + w.seen;
+              return '<li><span class="he" lang="he" dir="rtl">' + esc(w.he) + '</span><span>' + esc(w.fr) + '</span><small>' + d + '</small></li>';
+            }
+            var top = sum.weak.slice(0, 15), rest = sum.weak.slice(15);
+            return '<ul class="hp-weak">' + top.map(li).join('') + '</ul>' +
+              (rest.length ? '<details style="margin-top:8px"><summary class="small"><b>Voir les ' + rest.length + ' autres</b></summary><ul class="hp-weak">' + rest.map(li).join('') + '</ul></details>' : '');
+          })() : '<p class="hp-empty">Aucun mot raté pour l\'instant.</p>') + '</div>' +
       '</div>' +
       '<div class="card"><h3>Badges <small>' + Object.keys(sum.badges || {}).length + ' / ' + HP.BADGES.length + '</small></h3>' + HP.badgesGrid(sum.badges) + '</div>' +
       '<p class="small muted">Dernière révision enregistrée : ' + (sum.updatedAt ? new Date(sum.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) : '—') + '. Record de série : ' + m.best + ' jours · meilleur combo : ' + (sum.bestCombo || 0) + ' bonnes réponses d\'affilée.</p>' +

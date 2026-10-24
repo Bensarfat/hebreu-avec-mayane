@@ -5142,8 +5142,8 @@ function endSeries() {
   const pct = done ? Math.round(state.correct / done * 100) : 0;
   let msg;
   if (done === 0) msg = 'Aucune réponse enregistrée.';
-  else if (pct >= 90) msg = 'מְצוּיָּן ! Excellent — ' + pct + '% de réussite.';
-  else if (pct >= 70) msg = 'כָּל הַכָּבוֹד ! Très bien — ' + pct + '% de réussite.';
+  else if (pct >= 90) msg = 'מצוין ! Excellent — ' + pct + '% de réussite.';
+  else if (pct >= 70) msg = 'כל הכבוד ! Très bien — ' + pct + '% de réussite.';
   else if (pct >= 50) msg = 'Pas mal — ' + pct + '% de réussite. Continue.';
   else msg = pct + '% de réussite. Ces mots méritent un second tour.';
   document.getElementById('series-msg').textContent = msg;

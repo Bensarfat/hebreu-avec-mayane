@@ -2,7 +2,7 @@
    Variables d'environnement (Vercel > Settings > Environment Variables) :
    - ANTHROPIC_API_KEY (obligatoire) : clé créée sur platform.claude.com
    - ANTHROPIC_WORKSPACE_ID (facultatif) : identifiant du workspace, si la clé n'est rattachée à aucun
-   - ANALYSE_MODEL (facultatif) : modèle Claude utilisé (par défaut claude-sonnet-5-5)
+   - ANALYSE_MODEL (facultatif) : modèle Claude utilisé (par défaut claude-haiku-5-5, environ 20 fois moins cher que claude-sonnet-5-5)
    - ANALYSE_CODE (mode sans Supabase uniquement) : code à saisir dans Réglages ; sans lui, l'analyse est refusée
    Fonctionnement : réponse diffusée au fil de l'eau (streaming), réflexion préalable coupée (elle consommait
    la longueur de réponse autorisée), JSON garanti par un schéma, nouvelles tentatives si Claude est surchargé.
@@ -116,7 +116,7 @@ module.exports = async function handler(req, res) {
   if (!prompt || prompt.length + system.length > MAX_PROMPT) { res.status(400).json({ error: 'bad_request' }); return; }
   if (images.some((b) => typeof b !== 'string' || b.length > MAX_IMG)) { res.status(413).json({ error: 'image_too_large' }); return; }
 
-  const model = process.env.ANALYSE_MODEL || 'claude-sonnet-5-5';
+  const model = process.env.ANALYSE_MODEL || 'claude-haiku-5-5';
   const payload = {
     model,
     max_tokens: 32000,

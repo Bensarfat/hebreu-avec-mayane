@@ -113,6 +113,16 @@ var HPB = (function () {
     getSettings: function () { return get('settings').then(function (s) { return s || {}; }); },
     setSettings: function (s) { return set('settings', s); },
 
+    /* ---------- documents montrés à l'élève (démo) ---------- */
+    myDocs: function (sid) {
+      return Promise.all([api.listDocs(), api.getSettings()]).then(function (r) {
+        var ok = r[1].sharedDocs || [];
+        return r[0].filter(function (d) { return ok.indexOf(d.id) >= 0 && (d.students || []).indexOf(sid) >= 0; })
+          .map(function (d) { return { id: d.id, name: d.name, type: d.type, size: d.size, at: d.addedAt }; });
+      });
+    },
+    myDocUrl: function (sid, id) { return api.getBlob(id).then(function (b) { return b ? URL.createObjectURL(b) : null; }); },
+
     /* ---------- tests de niveau (démo : gardés dans ce navigateur) ---------- */
     addLevelTest: function (rec) {
       return get('leveltests').then(function (l) {

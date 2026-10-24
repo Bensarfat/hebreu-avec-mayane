@@ -194,7 +194,7 @@ var HPA = (function () {
         var e = new Error(j.detail || j.error || ('HTTP ' + r.status));
         e.code = r.status === 404 || r.status === 405 || j.error === 'no_key' || j.error === 'not_configured' ? 'no_server'
           : r.status === 413 ? 'too_large' : r.status === 504 || j.error === 'timeout' ? 'timeout'
-          : r.status === 402 || j.error === 'spend_limit' ? 'spend_limit' : r.status === 429 ? 'busy' : r.status === 401 && j.error === 'not_teacher' ? 'not_teacher'
+          : j.error === 'no_credit' ? 'no_credit' : r.status === 402 || j.error === 'spend_limit' ? 'spend_limit' : r.status === 429 ? 'busy' : r.status === 401 && j.error === 'not_teacher' ? 'not_teacher'
           : j.error === 'bad_code' ? 'bad_code' : 'server_error';
         throw e;
       });

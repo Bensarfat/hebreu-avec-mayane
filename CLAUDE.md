@@ -20,7 +20,7 @@ Réponds toujours en français, en mots simples, sans jargon. Explique ce que tu
 
 ## Où se trouve quoi
 
-- `source/exercices/app.html` : **le code des exercices des élèves** (quiz, flashcards, onglet « Réviser » et ses jeux, grammaire,
+- `source/exercices/app.html` : **le code des exercices des élèves** (quiz, flashcards, onglet « Réviser » et ses jeux, « Jeux de mots » (module HPX : l’intrus, définitions, phrases à compléter), grammaire,
   vocabulaire, « Passé & futur », statistiques, audio). Source unique, partagée avec le site perso de Benjamin (voir plus bas).
 - `source/src/progress.js` + `source/src/game.js` : progression (XP, niveaux, séries, badges, graphiques), partagée aussi.
 - `source/exercices/assemble.js` : assemble `app.html` + progression + données ; `donnees-demo.js` et `passe-futur-demo.html` : données de démonstration.

@@ -27,7 +27,18 @@
     return p.then(function (r) { if (r.error) { var e = new Error(r.error.message || 'Erreur Supabase'); e.code = r.error.code; throw e; } return r.data; });
   }
   function emailFor(login) { return String(login || '').trim().toLowerCase() + '@' + DOMAIN; }
-  function token() { return sbc.auth.getSession().then(function (r) { return r.data && r.data.session ? r.data.session.access_token : null; }); }
+  /* jeton de connexion, renouvelé s'il expire dans moins d'une minute (ou si force) : après une mise en veille
+     ou une coupure d'internet, le renouvellement automatique a pu échouer ; on le retente ici avant d'abandonner */
+  function token(force) {
+    return sbc.auth.getSession().then(function (r) {
+      var s = r.data && r.data.session;
+      if (s && !force && (!s.expires_at || s.expires_at * 1000 - Date.now() > 60000)) return s.access_token;
+      return sbc.auth.refreshSession().then(function (r2) {
+        var s2 = r2.data && r2.data.session;
+        return s2 ? s2.access_token : (s ? s.access_token : null);
+      }, function () { return s ? s.access_token : null; });
+    });
+  }
   function admin(body) { return post('/api/admin', body); }
   function post(path, body) {
     return token().then(function (t) {

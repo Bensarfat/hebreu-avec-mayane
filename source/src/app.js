@@ -598,8 +598,12 @@ var HPApp = (function () {
       box.innerHTML = '<div class="docs">' + list.map(function (d) {
         return '<div class="doc"><span class="ft" style="font-size:20px;background:none">' + docIcon(d) + '</span><div><div class="nm">' + esc(d.name) + '</div><div class="sb"><span>' +
           (d.at ? new Date(d.at).toLocaleDateString('fr-FR') : '') + '</span><span>' + Math.max(1, Math.round((d.size || 0) / 1024)) + ' Ko</span></div></div>' +
-          '<div class="act"><button class="btn small primary" data-get="' + esc(d.id) + '">Télécharger</button></div></div>';
+          '<div class="act">' + (/^(pdf|img|txt)$/.test(HPA.kind(d)) ? '<button class="btn small" data-view="' + esc(d.id) + '">👁 Visualiser</button>' : '') +
+          '<button class="btn small primary" data-get="' + esc(d.id) + '">Télécharger</button></div></div>';
       }).join('') + '</div>';
+      $$('[data-view]', box).forEach(function (b) {
+        b.onclick = function () { viewDoc(sid, list.filter(function (d) { return d.id === b.dataset.view; })[0]); };
+      });
       $$('[data-get]', box).forEach(function (b) {
         b.onclick = function () {
           /* la fenêtre s'ouvre tout de suite (sinon le navigateur la bloque), le fichier y arrive ensuite */
@@ -611,6 +615,46 @@ var HPApp = (function () {
         };
       });
     }, function (e) { box.innerHTML = '<p class="muted">Les documents ne sont pas disponibles pour l\'instant. Réessaie un peu plus tard.</p><p class="small muted">' + esc((e && e.message) || '') + '</p>'; });
+  }
+  /* lecture d'un document sur le site, sans le télécharger : PDF (pages dessinées une à une), image ou texte */
+  function viewDoc(sid, d) {
+    if (!d) return;
+    var k = HPA.kind(d), el = document.createElement('div'), url = null;
+    el.className = 'ag-pane'; el.style.zIndex = 1001; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', d.name);
+    el.innerHTML = '<div class="ag-pane-in" style="max-width:900px"><div class="ag-ptop"><button type="button" class="btn small" data-close>← Retour à mes documents</button></div>' +
+      '<h2 style="margin:0 0 12px;word-break:break-word">' + esc(d.name) + '</h2><div id="dv-box" style="display:grid;gap:12px"><p class="muted">Ouverture du document…</p></div></div>';
+    document.body.appendChild(el);
+    var closed = false, close = function () { closed = true; el.remove(); document.removeEventListener('keydown', esc1); if (url) URL.revokeObjectURL(url); };
+    function esc1(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', esc1);
+    $('[data-close]', el).onclick = close;
+    var box = $('#dv-box', el);
+    HPB.myDocUrl(sid, d.id, true).then(function (u) {
+      if (!u) throw new Error('Fichier introuvable');
+      return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); });
+    }).then(function (blob) {
+      if (closed) return;
+      if (k === 'img') { url = URL.createObjectURL(blob); box.innerHTML = '<img src="' + url + '" alt="' + esc(d.name) + '" style="max-width:100%;height:auto;border-radius:12px;background:#fff">'; return; }
+      if (k === 'txt') return blob.text().then(function (t) { box.innerHTML = '<pre class="card" dir="auto" style="white-space:pre-wrap;margin:0;font:inherit">' + esc(t) + '</pre>'; });
+      return HPA.pdfLib().then(function (lib) { return blob.arrayBuffer().then(function (buf) { return lib.getDocument({ data: buf }).promise; }); }).then(function (pdf) {
+        box.innerHTML = '';
+        var n = Math.min(pdf.numPages, 300), i = 1, dpr = Math.min(window.devicePixelRatio || 1, 2);
+        function next() {
+          if (closed || i > n) return;
+          return pdf.getPage(i).then(function (p) {
+            var w = box.clientWidth || 600, vp = p.getViewport({ scale: w / p.getViewport({ scale: 1 }).width * dpr });
+            var c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+            c.style.cssText = 'width:100%;height:auto;background:#fff;border-radius:8px;box-shadow:0 6px 20px -14px rgba(0,0,0,.4)';
+            c.setAttribute('aria-label', 'Page ' + i + ' / ' + pdf.numPages);
+            box.appendChild(c);
+            return p.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function () { i++; return next(); });
+          });
+        }
+        return next();
+      });
+    }).catch(function (e) {
+      if (!closed) box.innerHTML = '<p class="muted">Impossible d\'afficher ce document ici. Tu peux le télécharger.</p><p class="small muted">' + esc((e && e.message) || '') + '</p>';
+    });
   }
   /* pastille « nouvelle réponse » sur le bouton de l'espace élève */
   function sendMsgInfo(fr, id) {

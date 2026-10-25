@@ -5042,8 +5042,8 @@ refreshGlobalStatsDisplay();
       var sb = body.querySelector('.hps-btn'); if (sb && window.HPS && HPS.ok()) { e.preventDefault(); sb.click(); return; }
     }
     if (!typeMode && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); flipped = !flipped; return draw(); }
-    /* A / P / O marchent aussi sans retourner la carte (on sait déjà si on connaît le mot) ;
-       en mode « écrire », la carte n'est jamais ici avant d'être vérifiée */
+    /* A / P / O seulement une fois la carte retournée (on vérifie la réponse avant de juger) */
+    if (!flipped) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var k = hpKey(e);
     if (k === 'a' || e.key === 'ArrowLeft') { e.preventDefault(); return answer('known'); }

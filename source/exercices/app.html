@@ -674,6 +674,19 @@
     padding-left: 4px;
   }
   .grammar-category:first-child { margin-top: 0; }
+  /* grands chapitres repliables : on ne voit que leurs titres, on ouvre celui qu'on veut */
+  .grammar-group { margin-bottom: 10px; }
+  .grammar-group > summary.grammar-category {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    margin: 0; padding: 14px 18px; font-size: 16px; text-transform: none; letter-spacing: 0;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .grammar-group > summary::-webkit-details-marker { display: none; }
+  .grammar-group > summary::after { content: '▾'; color: var(--muted); transition: transform .2s; }
+  .grammar-group[open] > summary::after { transform: rotate(180deg); }
+  .grammar-group > summary .n { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .grammar-group-items { padding: 10px 0 6px; }
 
   /* COURS PANEL */
   .cours-search {
@@ -946,7 +959,7 @@
       display: grid; gap: 12px; align-items: start;
       grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     }
-    #grammar-list {
+    .grammar-group-items {
       display: grid; gap: 12px; align-items: start;
       grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
     }
@@ -4040,11 +4053,23 @@ const grammarList = document.getElementById('grammar-list');
    sans ce vidage elles apparaissaient en double, et les statiques n'avaient
    pas d'ecouteur de clic (elles ne s'ouvraient donc jamais). */
 grammarList.innerHTML = '';
+/* un chapitre repliable par catégorie (fermé, sauf s'il n'y en a qu'un) : la liste reste courte */
 GRAMMAR_CATEGORIES.forEach(cat => {
-  const catHeader = document.createElement('div');
+  const group = document.createElement('details');
+  group.className = 'grammar-group';
+  if (GRAMMAR_CATEGORIES.length === 1) group.open = true;
+  const catHeader = document.createElement('summary');
   catHeader.className = 'grammar-category';
   catHeader.textContent = '⁘ ' + cat.name;
-  grammarList.appendChild(catHeader);
+  const count = document.createElement('span');
+  count.className = 'n';
+  count.textContent = cat.items.length + (cat.items.length > 1 ? ' fiches' : ' fiche');
+  catHeader.appendChild(count);
+  group.appendChild(catHeader);
+  const items = document.createElement('div');
+  items.className = 'grammar-group-items';
+  group.appendChild(items);
+  grammarList.appendChild(group);
   cat.items.slice().sort((a, b) =>
     String(a.title).localeCompare(String(b.title), 'fr', { sensitivity: 'base', ignorePunctuation: true })
   ).forEach(g => {
@@ -4060,7 +4085,7 @@ GRAMMAR_CATEGORIES.forEach(cat => {
     section.querySelector('.grammar-header').addEventListener('click', () => {
       section.classList.toggle('open');
     });
-    grammarList.appendChild(section);
+    items.appendChild(section);
   });
 });
 

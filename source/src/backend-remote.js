@@ -194,7 +194,7 @@
 
     /* ---------- documents montrés à l'élève (le serveur vérifie et donne un lien de téléchargement) ---------- */
     myDocs: function () { return post('/api/documents', { action: 'list' }).then(function (r) { return r.docs || []; }); },
-    myDocUrl: function (sid, id) { return post('/api/documents', { action: 'url', id: id }).then(function (r) { return r.url; }); },
+    myDocUrl: function (sid, id, view) { return post('/api/documents', { action: 'url', id: id, view: !!view }).then(function (r) { return r.url; }); },
 
     /* ---------- tests de niveau (fichiers déposés par /api/test ; lus et supprimés par le serveur, pour la professeure seule) ---------- */
     addLevelTest: function (rec) { return post('/api/test', rec); },

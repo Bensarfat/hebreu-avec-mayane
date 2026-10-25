@@ -42,7 +42,8 @@ module.exports = async function handler(req, res) {
       const r = await sb.call('/storage/v1/object/sign/documents/' + path, { method: 'POST', body: { expiresIn: 600 } });
       const signed = r && (r.signedURL || r.signedUrl);
       if (!signed) throw new Error('lien non créé');
-      res.status(200).json({ url: sb.URL_ + '/storage/v1' + signed + (signed.indexOf('?') >= 0 ? '&' : '?') + 'download=' + encodeURIComponent(d.name) });
+      /* view : lecture sur le site (sans forcer le téléchargement) */
+      res.status(200).json({ url: sb.URL_ + '/storage/v1' + signed + (b.view ? '' : (signed.indexOf('?') >= 0 ? '&' : '?') + 'download=' + encodeURIComponent(d.name)) });
       return;
     }
     res.status(400).json({ error: 'invalid' });

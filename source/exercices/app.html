@@ -4038,6 +4038,13 @@ document.querySelector('#quiz-view .quiz-card').addEventListener('click', e => {
   if (e.target.closest('.judge-btn') || e.target.closest('.card-x')) return;
   reveal();
 });
+/* Lettre de la touche, quelle que soit la disposition du clavier : en clavier hébreu, les touches A, P, O, S
+   donnent ש, פ, ם, ד — on les ramène à a, p, o, s pour que les raccourcis marchent aussi. */
+function hpKey(e) {
+  var k = (e.key || '').toLowerCase();
+  return { 'ש': 'a', 'פ': 'p', 'ם': 'o', 'ד': 's' }[k] || k;
+}
+
 // Touches clavier : Espace ou Entrée pour révéler la réponse
 document.addEventListener('keydown', e => {
   if (document.getElementById('quiz-view').style.display === 'none') return;
@@ -4051,7 +4058,7 @@ document.addEventListener('keydown', e => {
   /* une fois la reponse affichee : A = juste, P = faux (fleches haut/bas aussi) */
   if (state.revealed) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    var k = (e.key || '').toLowerCase();
+    var k = hpKey(e);
     if (k === 'a' || e.key === 'ArrowUp')   { e.preventDefault(); document.getElementById('correct-btn').click(); }
     if (k === 'p' || e.key === 'ArrowDown') { e.preventDefault(); document.getElementById('wrong-btn').click(); }
   }
@@ -5031,13 +5038,14 @@ refreshGlobalStatsDisplay();
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); return answer(typed ? typed.sugg : 'again'); }
     }
-    if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !(e.target && e.target.classList && e.target.classList.contains('flash-in'))) {
+    if (hpKey(e) === 's' && !e.ctrlKey && !e.metaKey && !(e.target && e.target.classList && e.target.classList.contains('flash-in'))) {
       var sb = body.querySelector('.hps-btn'); if (sb && window.HPS && HPS.ok()) { e.preventDefault(); sb.click(); return; }
     }
     if (!typeMode && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); flipped = !flipped; return draw(); }
-    if (!flipped) return;
+    /* A / P / O marchent aussi sans retourner la carte (on sait déjà si on connaît le mot) ;
+       en mode « écrire », la carte n'est jamais ici avant d'être vérifiée */
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    var k = (e.key || '').toLowerCase();
+    var k = hpKey(e);
     if (k === 'a' || e.key === 'ArrowLeft') { e.preventDefault(); return answer('known'); }
     if (k === 'p' || e.key === 'ArrowRight') { e.preventDefault(); return answer('again'); }
     if (k === 'o' || e.key === 'ArrowDown') { e.preventDefault(); return answer('soft'); }

@@ -269,10 +269,18 @@ var HPApp = (function () {
     sess(null); renderLogin();
   }
 
+  /* Échecs passagers ou corrigés depuis (session expirée, connexion coupée, crédit épuisé, « document trop long »
+     d'avant le découpage automatique, Claude surchargé…) : ce n'est pas la faute du document. On le remet
+     « À intégrer », sans l'ancien message, pour qu'il soit relancé normalement. */
+  var RETRYABLE = /session a expir|connexion perdue|connexion internet|trop long pour être analysé|credit balance|crédit de l'analyse|budget mensuel|très sollicité|pris trop de temps|réessayez dans un instant/i;
+  function retryable(d) {
+    if (d && d.status === 'error' && RETRYABLE.test(d.error || '')) { d.status = 'pending'; d.error = null; }
+    return d;
+  }
   function loadAll() {
     var slow = setTimeout(function () { document.body.classList.add('is-loading'); }, 250);
     return Promise.all([HPB.listStudents(), HPB.listDocs(), HPB.getSettings(), AG.load(), HPB.listLevelTests().then(function (l) { cache.testsError = ''; return l; }, function (e) { cache.testsError = errText(e); return []; })]).then(function (r) {
-      cache.students = r[0]; cache.docs = r[1]; cache.settings = r[2]; cache.tests = r[4];
+      cache.students = r[0]; cache.docs = r[1].map(retryable); cache.settings = r[2]; cache.tests = r[4];
       HPA.setCode(r[2].analyseCode || '');
       if (HPB.me && (HPB.me.role === 'teacher' || HPB.me.role === 'admin')) cache.teacherLogin = HPB.me.login;
       var ids = r[0].map(function (s) { return s.id; });

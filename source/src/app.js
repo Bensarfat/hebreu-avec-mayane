@@ -404,14 +404,14 @@ var HPApp = (function () {
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
-        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp==="docs-info"){var c=document.getElementById("hp-dc-btn");if(c)c.hidden=!d.n;return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
+        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';   /* « Jeux de mots » : dans le code commun (source/exercices/app.html) */
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
                  : '<span class="hi"><span class="he">שָׁלוֹם</span> <b>' + esc(st.first) + '</b></span>') +
         '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Jeux de mots</span><span class="s"> Exos</span></button>' +
         (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><span class="s"> Question</span><i id="hp-q-dot" hidden></i></button>') +
-        (preview ? '' : '<button type="button" id="hp-dc-btn" class="dc" hidden onclick="parent.postMessage({hp:\'docs\'},\'*\')">📄<span class="l"> Mes documents</span><span class="s"> Docs</span></button>') +
+        (preview ? '' : '<button type="button" id="hp-dc-btn" class="dc" onclick="parent.postMessage({hp:\'docs\'},\'*\')">📄<span class="l"> Mes documents</span><span class="s"> Docs</span></button>') +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
@@ -427,7 +427,7 @@ var HPApp = (function () {
       fr.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms allow-downloads');
       root.appendChild(fr);
       frame = { el: fr, id: id, preview: !!preview };
-      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); sendDocsInfo(fr, id); });
+      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); });
       fr.srcdoc = html;
       document.title = 'Hébreu · ' + st.first;
       });
@@ -611,10 +611,6 @@ var HPApp = (function () {
         };
       });
     }, function (e) { box.innerHTML = '<p class="muted">Les documents ne sont pas disponibles pour l\'instant. Réessaie un peu plus tard.</p><p class="small muted">' + esc((e && e.message) || '') + '</p>'; });
-  }
-  function sendDocsInfo(fr, id) {
-    if (!HPB.myDocs) return;
-    HPB.myDocs(id).then(function (l) { if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'docs-info', n: l.length }, '*'); }).catch(function () {});
   }
   /* pastille « nouvelle réponse » sur le bouton de l'espace élève */
   function sendMsgInfo(fr, id) {

@@ -686,8 +686,22 @@
   .grammar-group > summary::-webkit-details-marker { display: none; }
   .grammar-group > summary::after { content: '▾'; color: var(--muted); transition: transform .2s; }
   .grammar-group[open] > summary::after { transform: rotate(180deg); }
-  .grammar-group > summary .n { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .grammar-group > summary .n { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
   .grammar-group-items { padding: 10px 0 6px; }
+  .grammar-sub { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 8px 4px 2px; grid-column: 1 / -1; }
+  /* vocabulaire : thèmes rangés dans de grandes familles repliables */
+  .cours-fam { margin-bottom: 10px; }
+  .cours-fam > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    font-weight: 800; font-size: 16px; color: var(--accent);
+  }
+  .cours-fam > summary::-webkit-details-marker { display: none; }
+  .cours-fam > summary::after { content: '▾'; color: var(--muted); transition: transform .2s; }
+  .cours-fam[open] > summary::after { transform: rotate(180deg); }
+  .cours-fam > summary .c { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .cours-fam-items { padding: 10px 0 4px; }
 
   /* COURS PANEL */
   .cours-search {
@@ -956,10 +970,11 @@
     .grammar-intro { max-width: 860px; }
 
     /* lexique et grammaire en colonnes */
-    #cours-list {
+    #cours-list, .cours-fam-items {
       display: grid; gap: 12px; align-items: start;
       grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     }
+    #cours-list.grouped { display: block; }
     .grammar-group-items {
       display: grid; gap: 12px; align-items: start;
       grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
@@ -4074,17 +4089,45 @@ function updateScore() {
   refreshGlobalStatsDisplay();
 }
 
+/* Grands regroupements (grammaire et vocabulaire) : le nom d'une catégorie ou d'un thème
+   est rangé dans la première famille dont un mot-clé correspond (accents ignorés). */
+function bigFamily(name, fams, other) {
+  const n = String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  for (const f of fams) if (f[0].toLowerCase() === String(name || '').toLowerCase() || f[1].test(n)) return f[0];
+  return other;
+}
+const GRAMMAR_BIG = [
+  ['Verbes et conjugaison', /verb|conjug|binyan|pa.al|pi.el|hif.il|hitpa|passe|futur|present|imperatif|infinitif|temps/],
+  ['Prépositions et possession', /prepos|possess|avoir|appartenan|direction|mouvement|lieu/],
+  ['Phrases : négation, questions et liaisons', /negat|question|interrog|liaison|connect|condition|subordon|phrase|conjonction/],
+  ['Bases : articles, pronoms, genre et nombre', /base|structure|article|pronom|genre|pluriel|singulier|demonstr/],
+  ['Noms, adjectifs et comparaison', /\bnoms?\b|adjectif|compar|superlatif|construit|smikh/],
+  ['Nombres, heures et dates', /chiffre|nombre|numer|heure|date|quantit/]
+];
+
 /* GRAMMAR list */
 const grammarList = document.getElementById('grammar-list');
 /* Les 47 sections presentes en dur dans le HTML sont regenerees ci-dessous :
    sans ce vidage elles apparaissaient en double, et les statiques n'avaient
    pas d'ecouteur de clic (elles ne s'ouvraient donc jamais). */
 grammarList.innerHTML = '';
-/* un chapitre repliable par catégorie (fermé, sauf s'il n'y en a qu'un) : la liste reste courte */
+/* les catégories sont regroupées en quelques grands chapitres repliables (fermés, sauf s'il n'y en a qu'un) */
+const GRAMMAR_GROUPS = [];
 GRAMMAR_CATEGORIES.forEach(cat => {
+  const name = bigFamily(cat.name, GRAMMAR_BIG, 'Autres notions');
+  let g = GRAMMAR_GROUPS.find(x => x.name === name);
+  if (!g) { g = { name: name, subs: [] }; GRAMMAR_GROUPS.push(g); }
+  g.subs.push(cat);
+});
+GRAMMAR_GROUPS.sort((a, b) => {
+  const ia = GRAMMAR_BIG.findIndex(f => f[0] === a.name), ib = GRAMMAR_BIG.findIndex(f => f[0] === b.name);
+  return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+});
+GRAMMAR_GROUPS.forEach(big => {
+  const cat = { name: big.name, items: big.subs.reduce((l, c) => l.concat(c.items), []) };
   const group = document.createElement('details');
   group.className = 'grammar-group';
-  if (GRAMMAR_CATEGORIES.length === 1) group.open = true;
+  if (GRAMMAR_GROUPS.length === 1) group.open = true;
   const catHeader = document.createElement('summary');
   catHeader.className = 'grammar-category';
   catHeader.textContent = '⁘ ' + cat.name;
@@ -4097,7 +4140,15 @@ GRAMMAR_CATEGORIES.forEach(cat => {
   items.className = 'grammar-group-items';
   group.appendChild(items);
   grammarList.appendChild(group);
-  cat.items.slice().sort((a, b) =>
+  /* plusieurs catégories d'origine dans un chapitre : leur nom sert de petit intertitre */
+  big.subs.forEach(sub => {
+  if (big.subs.length > 1) {
+    const st = document.createElement('div');
+    st.className = 'grammar-sub';
+    st.textContent = sub.name;
+    items.appendChild(st);
+  }
+  sub.items.slice().sort((a, b) =>
     String(a.title).localeCompare(String(b.title), 'fr', { sensitivity: 'base', ignorePunctuation: true })
   ).forEach(g => {
     const section = document.createElement('div');
@@ -4113,6 +4164,7 @@ GRAMMAR_CATEGORIES.forEach(cat => {
       section.classList.toggle('open');
     });
     items.appendChild(section);
+  });
   });
 });
 
@@ -4271,6 +4323,20 @@ refreshGlobalStatsDisplay();
 
   var lastGroups = {};
 
+  /* grandes familles de thèmes (vue « Par thème ») : quelques titres au lieu d'une longue liste */
+  var VOCAB_FAMS = [
+    ['Corps & santé', /sant|medec|medic|hopital|soin|malad|dentist|dentaire|\bdents?\b|infirm|pharma|symptom|corps/],
+    ['Temps, dates & nombres', /temps|heure|jour|date|frequen|chiffre|nombre|ordin|calendrier|agenda|rendez|saison|meteo|mois|semaine/],
+    ['Famille & personnes', /famil|personne|\bages?\b|amis?\b|relation|gens|caractere|sentiment|emotion/],
+    ['Nourriture & repas', /nourrit|repas|cuisine|aliment|boisson|fruit|legume|restaurant|cafe|manger|courses/],
+    ['Maison & vie quotidienne', /maison|meuble|quotidien|vetement|habit|couleur|objet|menage|routine|achat|magasin|argent|banque/],
+    ['Travail & études', /travail|emploi|metier|profession|bureau|ecole|etude|cours|universit|classe|administr/],
+    ['Ville, voyages & nature', /ville|transport|voyage|lieu|direction|geograph|nature|animal|desert|negev|mer\b|montagne|pays|rue|quartier|vacance/],
+    ['Société, culture & Israël', /societ|identit|etat civil|histoir|sionis|religion|culture|israel|politique|securit|danger|armee|fete/],
+    ['Verbes & actions', /verbe|action|particip|binyan/],
+    ['Bases de la langue', /base|pronom|mot.outil|prepos|question|liaison|connect|salutation|politesse|expression|slang|adverbe|adjectif|grammaire/]
+  ];
+
   /* nombre de séries complètes faites sur ce thème */
   function runsBadge(theme) {
     var r = storage.themeRuns && storage.themeRuns[theme], n = r ? +r.n || 0 : 0;
@@ -4289,7 +4355,9 @@ refreshGlobalStatsDisplay();
     var html = '', total = 0, shown = 0;
 
     lastGroups = {};
-    groups().forEach(function (g) {
+    var gs = groups(), fams = {}, famOrder = [];
+    var grouped = view === 'theme' && gs.length > 6;
+    gs.forEach(function (g) {
       var theme = g.name;
       var rows = g.rows;
       lastGroups[g.name] = g.rows;
@@ -4303,8 +4371,8 @@ refreshGlobalStatsDisplay();
       }
       if (!rows.length) return;
       shown += rows.length;
-      var mk = masks[theme] || '';
-      html += '<details class="cours-sec' + (mk ? ' hide-' + mk : '') + '"' +
+      var mk = masks[theme] || '', h = '';
+      h += '<details class="cours-sec' + (mk ? ' hide-' + mk : '') + '"' +
               (q ? ' open' : '') + ' data-theme="' + esc(theme) + '">' +
               '<summary><span class="cours-name">' + esc(theme) + '</span>' +
               '<span class="cours-meta"><span class="c">' + rows.length + ' mot' + (rows.length > 1 ? 's' : '') + '</span>' +
@@ -4324,7 +4392,24 @@ refreshGlobalStatsDisplay();
                        '</td><td class="cours-fr">' + hlFr(e[1], q) + '</td></tr>';
               }).join('') +
               '</tbody></table></details>';
+      if (!grouped) { html += h; return; }
+      var fam = bigFamily(theme, VOCAB_FAMS, 'Autres thèmes');
+      if (!fams[fam]) { fams[fam] = { html: '', themes: 0, words: 0 }; famOrder.push(fam); }
+      fams[fam].html += h; fams[fam].themes++; fams[fam].words += rows.length;
     });
+    if (grouped) {
+      famOrder.sort(function (a, b) {
+        var ia = VOCAB_FAMS.findIndex(function (f) { return f[0] === a; }), ib = VOCAB_FAMS.findIndex(function (f) { return f[0] === b; });
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      famOrder.forEach(function (f) {
+        var F = fams[f];
+        html += '<details class="cours-fam"' + (q || famOrder.length === 1 ? ' open' : '') + '><summary>' + esc(f) +
+          '<span class="c">' + F.themes + ' thème' + (F.themes > 1 ? 's' : '') + ' · ' + F.words + ' mot' + (F.words > 1 ? 's' : '') + '</span></summary>' +
+          '<div class="cours-fam-items">' + F.html + '</div></details>';
+      });
+    }
+    list.classList.toggle('grouped', grouped);
 
     list.innerHTML = html || (view === 'soft' && !q
       ? '<div class="cours-empty">Aucun mot non essentiel pour l\'instant. Un mot arrive ici quand tu le rates en flashcards avec la touche O.</div>'

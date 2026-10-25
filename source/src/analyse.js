@@ -99,8 +99,8 @@ var HPA = (function () {
       'Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
   }
   /* grands chapitres de grammaire : peu nombreux, pour que la liste de l'élève reste courte */
-  var GRAM_CHAPTERS = ['Bases : articles, pronoms, genre et nombre', 'Noms et adjectifs', 'Verbes : présent', 'Verbes : passé', 'Verbes : futur et impératif',
-    'Verbes : infinitif et binyanim', 'Prépositions et possession', 'Phrases : négation, questions et liaisons', 'Nombres, heures et dates'];
+  var GRAM_CHAPTERS = ['Bases : articles, pronoms, genre et nombre', 'Noms, adjectifs et comparaison', 'Verbes et conjugaison',
+    'Prépositions et possession', 'Phrases : négation, questions et liaisons', 'Nombres, heures et dates'];   /* mêmes noms que GRAMMAR_BIG (exercices/app.html) */
   /* partie propre au document : son nom et les thèmes déjà présents */
   function context(existingThemes, docName) {
     return 'Document : « ' + docName + ' ».\nThèmes existants à réutiliser s\'ils conviennent : ' + (existingThemes && existingThemes.length ? existingThemes.join(' ; ') : '(aucun pour l\'instant)') + '.';

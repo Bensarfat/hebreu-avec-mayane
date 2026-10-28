@@ -1017,6 +1017,9 @@ var HPApp = (function () {
               '<span class="row"><button class="btn small ghost" data-wedit="' + i + '" data-t="' + esc(t) + '" aria-label="Corriger ce mot" title="Corriger">✏️</button><button class="btn small ghost" data-wdel="' + i + '" data-t="' + esc(t) + '" aria-label="Retirer ce mot" title="Retirer ce mot">🗑</button></span></li>';
           }).join('') + '</ul></details>';
       }).join('') + '</div>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
+      (c && HPA.oldThemes(c).length ? '<div class="review" style="margin-top:14px"><b>🗂 Ranger dans les grands thèmes</b><p class="small muted" style="margin:4px 0 8px">' +
+        plural(HPA.oldThemes(c).length, 'ancien thème', 'anciens thèmes') + ' à regrouper. Claude range chaque mot dans un grand thème (famille, maison, nourriture, temps…). Aucun mot n\'est supprimé ni modifié, et la progression de ' + esc(s.first) + ' est conservée.</p>' +
+        '<button class="btn small primary" data-regroup="' + s.id + '">Ranger les mots de ' + esc(s.first) + '</button></div>' : '') +
       (st.tenses ? '<p class="small muted" style="margin-top:12px">+ le cours « Passé &amp; futur ».</p>' : '') +
       (st.words ? (function () { var miss = HPA.missingExtras(c).length;
         return '<div class="review" style="margin-top:14px"><b>🧩 Définitions et phrases à compléter</b><p class="small muted" style="margin:4px 0 8px">Pour les exercices « Mot ↔ définition » et « Phrase à compléter » de ' + esc(s.first) + '. ' +
@@ -1386,6 +1389,26 @@ var HPApp = (function () {
       drop.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files, targets); });
     }
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
+    $$('[data-regroup]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.dataset.regroup, label = b.textContent; b.disabled = true;
+        HPB.getContent(id).then(function (c) {
+          return HPA.regroup(c, function (t) { if (b.isConnected) b.textContent = t; }).then(function (r) {
+            /* le contenu a pu changer pendant l'analyse : on n'enregistre que s'il est identique */
+            return HPB.getContent(id).then(function (c2) {
+              if (JSON.stringify(c2.VOCAB) !== JSON.stringify(c.VOCAB)) throw new Error('le vocabulaire a changé entre-temps, recommencez');
+              return HPB.setContent(id, r.content).then(function () { return r; });
+            });
+          });
+        }).then(function (r) {
+          toast(plural(r.moved, 'mot rangé', 'mots rangés') + ' ✓' + (r.kept ? ' · ' + plural(r.kept, 'mot placé', 'mots placés') + ' dans « Autres mots »' : ''));
+          return loadAll();
+        }).then(renderTeacher, function (e) {
+          if (b.isConnected) { b.disabled = false; b.textContent = label; }
+          toast('Rangement impossible : ' + (e && e.code === 'no_server' ? 'l\'analyse automatique n\'est pas activée' : errText(e)), true);
+        });
+      };
+    });
     $$('[data-enrich]').forEach(function (b) {
       b.onclick = function () {
         var id = b.dataset.enrich, label = b.textContent; b.disabled = true;

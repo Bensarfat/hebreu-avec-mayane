@@ -93,17 +93,21 @@ var HPA = (function () {
     return 'Tu prépares le contenu de révision d\'un élève de Maayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
       'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
-      'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +
+      'Range chaque mot dans UN des grands thèmes suivants, en recopiant exactement son nom (aucun autre thème, même pour un document très précis) : ' + VOCAB_THEMES.join(' ; ') + '. Un mot qui n\'entre dans aucun va dans « Autres mots ».\n\n' +
       EXTRA +
       'Grammaire : une fiche par règle expliquée dans le document, en français, comme une fiche de révision claire : "html" n\'utilise que <p>, <ul>, <li>, <strong>, <em>, <br> et <div class="example"> pour les exemples, avec l\'hébreu dans <span class="he-inline">…</span>. Reprends les exemples du document. "category" = un de ces grands chapitres, recopié exactement : ' + GRAM_CHAPTERS.join(' ; ') + '.\n\n' +
       'Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
   }
+  /* grands thèmes de vocabulaire : peu nombreux, pour que les révisions de l'élève restent simples (choix de Maayane) */
+  var VOCAB_THEMES = ['Personnes, famille et présentation', 'Corps, santé et émotions', 'Maison et vie quotidienne', 'Nourriture et boissons',
+    'Ville, transports et voyages', 'Études, travail et argent', 'Temps, dates et nombres', 'Nature, animaux et météo', 'Loisirs, culture et fêtes',
+    'Mots-outils : pronoms, prépositions, questions', 'Expressions de tous les jours', 'Autres mots'];
   /* grands chapitres de grammaire : peu nombreux, pour que la liste de l'élève reste courte */
   var GRAM_CHAPTERS = ['Bases : articles, pronoms, genre et nombre', 'Noms, adjectifs et comparaison', 'Verbes et conjugaison',
     'Prépositions et possession', 'Phrases : négation, questions et liaisons', 'Nombres, heures et dates'];   /* mêmes noms que GRAMMAR_BIG (exercices/app.html) */
   /* partie propre au document : son nom et les thèmes déjà présents */
   function context(existingThemes, docName) {
-    return 'Document : « ' + docName + ' ».\nThèmes existants à réutiliser s\'ils conviennent : ' + (existingThemes && existingThemes.length ? existingThemes.join(' ; ') : '(aucun pour l\'instant)') + '.';
+    return 'Document : « ' + docName + ' ».';
   }
   function instructions(existingThemes, docName) { return rules() + '\n\n' + context(existingThemes || [], docName); }
 
@@ -356,6 +360,60 @@ var HPA = (function () {
     });
   }
 
+  /* ---------- range le vocabulaire existant d'un élève dans les grands thèmes ---------- */
+  function regroupRules() {
+    return 'Tu ranges le vocabulaire d\'un élève de Maayane, professeure d\'hébreu.\n' +
+      'On te donne une liste de mots (hébreu = français). Renvoie EXACTEMENT les mêmes mots, sans en ajouter, en retirer ni en corriger : recopie "he_nikud" et "fr" tels quels, caractère pour caractère. "nature" = v, n, a, d, o, c ou x ; "def_he" et "ex_he" = "".\n' +
+      'Range chaque mot dans UN des grands thèmes suivants, en recopiant exactement son nom (aucun autre thème) : ' + VOCAB_THEMES.join(' ; ') + '. Un mot qui n\'entre dans aucun va dans « Autres mots ».\n\n' +
+      'Mets "grammar": [] et "summary": "". Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
+  }
+  /* thèmes de l'élève qui ne font pas partie des grands thèmes */
+  function oldThemes(content) { return Object.keys((content && content.VOCAB) || {}).filter(function (t) { return VOCAB_THEMES.indexOf(t) < 0; }); }
+  /* renvoie le nouveau contenu (rien n'est enregistré ici) : chaque mot garde ses voyelles, définition et phrase ; seul son thème change.
+     Un mot que Claude n'a pas classé (même au second essai) va dans « Autres mots ». */
+  function regroup(content, onStep, signal) {
+    var olds = oldThemes(content), list = [];
+    olds.forEach(function (t) { content.VOCAB[t].forEach(function (e, i) { list.push({ theme: t, e: e, nat: String((content.NATURE || {})[t] || '').charAt(i) || 'n' }); }); });
+    if (!list.length) return Promise.resolve({ content: content, moved: 0, kept: 0 });
+    var to = {}, byFr = {};
+    function dest(w) { return to[wkey(w.e[0], w.e[1])] || byFr[String(w.e[1]).trim().toLowerCase()]; }
+    function ask(words) {
+      var text = words.map(function (w) { return (w.e[2] || w.e[0]) + ' = ' + w.e[1]; }).join('\n');
+      return viaServerChunked({ text: text, images: [] }, [], 'vocabulaire existant', signal, onStep, regroupRules(), CHUNK_LIST).then(function (r) {
+        normalise(r).themes.forEach(function (t) {
+          if (VOCAB_THEMES.indexOf(t.name) < 0) return;
+          t.words.forEach(function (w) { to[wkey(w.he, w.fr)] = t.name; byFr[w.fr.trim().toLowerCase()] = t.name; });
+        });
+      });
+    }
+    /* les mots oubliés par Claude sont redemandés une fois, puis vont dans « Autres mots » */
+    return ask(list).then(function () {
+      var left = list.filter(function (w) { return !dest(w); });
+      return left.length ? ask(left) : null;
+    }).then(function () {
+      var c = JSON.parse(JSON.stringify(content)), moved = 0, kept = 0, seen = {};
+      ['VOCAB', 'NATURE'].forEach(function (k) { if (!c[k]) c[k] = {}; });
+      /* on garde les mots déjà dans un grand thème, et on y ajoute les autres */
+      Object.keys(c.VOCAB).forEach(function (t) { if (olds.indexOf(t) < 0) c.VOCAB[t].forEach(function (e) { seen[wkey(e[0], e[1])] = 1; }); });
+      list.forEach(function (w) {
+        var k = wkey(w.e[0], w.e[1]), d = dest(w);
+        if (!d) { d = 'Autres mots'; kept++; }
+        if (seen[k]) { moved++; return; }   /* le même mot figurait dans deux thèmes : une seule fois */
+        seen[k] = 1; moved++;
+        if (!c.VOCAB[d]) { c.VOCAB[d] = []; c.NATURE[d] = ''; }
+        c.NATURE[d] = String(c.NATURE[d] || '').padEnd(c.VOCAB[d].length, 'n').slice(0, c.VOCAB[d].length) + w.nat;
+        c.VOCAB[d].push(w.e);
+      });
+      olds.forEach(function (t) { delete c.VOCAB[t]; delete c.NATURE[t]; });
+      /* ordre des thèmes : les grands thèmes dans l'ordre de la liste, puis ce qui reste */
+      var order = VOCAB_THEMES.filter(function (t) { return c.VOCAB[t]; }).concat(Object.keys(c.VOCAB).filter(function (t) { return VOCAB_THEMES.indexOf(t) < 0; }));
+      var V = {}, N = {}; order.forEach(function (t) { V[t] = c.VOCAB[t]; N[t] = c.NATURE[t] || ''; });
+      c.VOCAB = V; c.NATURE = N;
+      c.CORE_THEMES = order.slice(); c.ADVANCED_THEMES = [];
+      return { content: c, moved: moved, kept: kept };
+    });
+  }
+
   function analyse(doc, blob, existingThemes, onStep, signal) {
     return extract(doc, blob, onStep).then(function (ex) {
       if (!ex.text.trim() && !ex.images.length) throw new Error('Aucun texte lisible dans ce document.');
@@ -510,6 +568,6 @@ var HPA = (function () {
   return {
     kind: kind, extract: extract, analyse: analyse, enrich: enrich, missingExtras: missingExtras, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
     pdfLib: function () { return script(PDFJS).then(function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFW; return window.pdfjsLib; }); },
-    stats: stats, emptyContent: emptyContent, bare: bare, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
+    stats: stats, emptyContent: emptyContent, bare: bare, oldThemes: oldThemes, regroup: regroup, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();

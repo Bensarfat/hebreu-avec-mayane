@@ -93,17 +93,21 @@ var HPA = (function () {
     return 'Tu prépares le contenu de révision d\'un élève de Maayane, professeure d\'hébreu, à partir d\'UN document de cours qu\'elle a déposé.\n\n' +
       'RÈGLE ABSOLUE : n\'utilise QUE ce qui figure dans le document. N\'ajoute aucun mot, aucune règle, aucun exemple qui n\'y est pas. Si le document ne contient pas de vocabulaire ou de grammaire, renvoie des listes vides.\n\n' +
       'Vocabulaire : chaque mot hébreu du document avec sa traduction française. "he_nikud" = le mot avec nikoud (si le document n\'en donne pas, vocalise toi-même selon la norme standard, c\'est le seul ajout autorisé). "fr" = la traduction donnée par le document, sinon la tienne, courte. "nature" = une lettre : v verbe (à l\'infinitif si le document le donne ainsi), n nom, a adjectif, d adverbe, o mot-outil (préposition, pronom, conjonction), c nombre, x expression.\n' +
-      'Regroupe les mots en thèmes en français ; si un thème existant (indiqué avec le document) convient, reprends exactement son nom.\n\n' +
+      'Range chaque mot dans UN des grands thèmes suivants, en recopiant exactement son nom (aucun autre thème, même pour un document très précis) : ' + VOCAB_THEMES.join(' ; ') + '. Un mot qui n\'entre dans aucun va dans « Autres mots ».\n\n' +
       EXTRA +
       'Grammaire : une fiche par règle expliquée dans le document, en français, comme une fiche de révision claire : "html" n\'utilise que <p>, <ul>, <li>, <strong>, <em>, <br> et <div class="example"> pour les exemples, avec l\'hébreu dans <span class="he-inline">…</span>. Reprends les exemples du document. "category" = un de ces grands chapitres, recopié exactement : ' + GRAM_CHAPTERS.join(' ; ') + '.\n\n' +
       'Réponds UNIQUEMENT avec un objet JSON valide de cette forme :\n' + SCHEMA;
   }
+  /* grands thèmes de vocabulaire : peu nombreux, pour que les révisions de l'élève restent simples (choix de Maayane) */
+  var VOCAB_THEMES = ['Personnes, famille et présentation', 'Corps, santé et émotions', 'Maison et vie quotidienne', 'Nourriture et boissons',
+    'Ville, transports et voyages', 'Études, travail et argent', 'Temps, dates et nombres', 'Nature, animaux et météo', 'Loisirs, culture et fêtes',
+    'Mots-outils : pronoms, prépositions, questions', 'Expressions de tous les jours', 'Autres mots'];
   /* grands chapitres de grammaire : peu nombreux, pour que la liste de l'élève reste courte */
   var GRAM_CHAPTERS = ['Bases : articles, pronoms, genre et nombre', 'Noms, adjectifs et comparaison', 'Verbes et conjugaison',
     'Prépositions et possession', 'Phrases : négation, questions et liaisons', 'Nombres, heures et dates'];   /* mêmes noms que GRAMMAR_BIG (exercices/app.html) */
   /* partie propre au document : son nom et les thèmes déjà présents */
   function context(existingThemes, docName) {
-    return 'Document : « ' + docName + ' ».\nThèmes existants à réutiliser s\'ils conviennent : ' + (existingThemes && existingThemes.length ? existingThemes.join(' ; ') : '(aucun pour l\'instant)') + '.';
+    return 'Document : « ' + docName + ' ».';
   }
   function instructions(existingThemes, docName) { return rules() + '\n\n' + context(existingThemes || [], docName); }
 

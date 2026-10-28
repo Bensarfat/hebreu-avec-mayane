@@ -1017,9 +1017,15 @@ var HPApp = (function () {
               '<span class="row"><button class="btn small ghost" data-wedit="' + i + '" data-t="' + esc(t) + '" aria-label="Corriger ce mot" title="Corriger">✏️</button><button class="btn small ghost" data-wdel="' + i + '" data-t="' + esc(t) + '" aria-label="Retirer ce mot" title="Retirer ce mot">🗑</button></span></li>';
           }).join('') + '</ul></details>';
       }).join('') + '</div>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
-      (c && HPA.oldThemes(c).length ? '<div class="review" style="margin-top:14px"><b>🗂 Ranger dans les grands thèmes</b><p class="small muted" style="margin:4px 0 8px">' +
-        plural(HPA.oldThemes(c).length, 'ancien thème', 'anciens thèmes') + ' à regrouper. Claude range chaque mot dans un grand thème (famille, maison, nourriture, temps…). Aucun mot n\'est supprimé ni modifié, et la progression de ' + esc(s.first) + ' est conservée.</p>' +
-        '<button class="btn small primary" data-regroup="' + s.id + '">Ranger les mots de ' + esc(s.first) + '</button></div>' : '') +
+      (st.words ? (function () {
+        var mode = HPA.grouping(c), miss = HPA.missingInfo(c, mode === 'lesson' ? 'themes' : mode).length;
+        return '<div class="review" style="margin-top:14px"><b>🗂 Organisation du vocabulaire</b><p class="small muted" style="margin:4px 0 8px">Comment les mots sont regroupés dans les révisions de ' + esc(s.first) + '. Aucun mot n\'est supprimé ni modifié, et sa progression est conservée.</p>' +
+          '<div class="row"><select class="in" data-grouping="' + s.id + '" aria-label="Organisation du vocabulaire" style="width:auto;max-width:100%">' + HPA.GROUPINGS.map(function (g) {
+            return '<option value="' + g[0] + '"' + (g[0] === mode ? ' selected' : '') + '>' + esc(g[1]) + '</option>';
+          }).join('') + '</select><button class="btn small primary" data-organize="' + s.id + '">Appliquer</button></div>' +
+          '<p class="small muted" style="margin:8px 0 0" data-orgnote>' + (miss ? 'La première fois, Claude doit d\'abord décrire ' + plural(miss, 'mot', 'mots') + ' (thème, binyan, racine) : comptez une à quelques minutes. Ensuite, changer d\'organisation est immédiat.' : 'Changer d\'organisation est immédiat.') + '</p>' +
+          '<p class="small muted" style="margin:4px 0 0">« Par leçon » : les mots ajoutés avant cette option sont dans « Mots plus anciens ».</p></div>';
+      })() : '') +
       (st.tenses ? '<p class="small muted" style="margin-top:12px">+ le cours « Passé &amp; futur ».</p>' : '') +
       (st.words ? (function () { var miss = HPA.missingExtras(c).length;
         return '<div class="review" style="margin-top:14px"><b>🧩 Définitions et phrases à compléter</b><p class="small muted" style="margin:4px 0 8px">Pour les exercices « Mot ↔ définition » et « Phrase à compléter » de ' + esc(s.first) + '. ' +
@@ -1389,23 +1395,27 @@ var HPApp = (function () {
       drop.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files, targets); });
     }
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
-    $$('[data-regroup]').forEach(function (b) {
+    $$('[data-organize]').forEach(function (b) {
       b.onclick = function () {
-        var id = b.dataset.regroup, label = b.textContent; b.disabled = true;
+        var id = b.dataset.organize, sel = $('[data-grouping="' + id + '"]'), mode = sel ? sel.value : 'themes', label = b.textContent;
+        b.disabled = true; if (sel) sel.disabled = true;
+        var note = $('[data-orgnote]'), step = function (t) { if (note && note.isConnected) note.textContent = t; };
         HPB.getContent(id).then(function (c) {
-          return HPA.regroup(c, function (t) { if (b.isConnected) b.textContent = t; }).then(function (r) {
-            /* le contenu a pu changer pendant l'analyse : on n'enregistre que s'il est identique */
+          var p = mode === 'lesson' ? Promise.resolve({ content: c, unknown: 0 }) : HPA.prepareInfo(c, step);
+          return p.then(function (r) {
+            var next = HPA.organize(r.content, mode);
+            /* le contenu a pu changer pendant ce temps : on n'enregistre que s'il est identique */
             return HPB.getContent(id).then(function (c2) {
               if (JSON.stringify(c2.VOCAB) !== JSON.stringify(c.VOCAB)) throw new Error('le vocabulaire a changé entre-temps, recommencez');
-              return HPB.setContent(id, r.content).then(function () { return r; });
+              return HPB.setContent(id, next).then(function () { return r; });
             });
           });
         }).then(function (r) {
-          toast(plural(r.moved, 'mot rangé', 'mots rangés') + ' ✓' + (r.kept ? ' · ' + plural(r.kept, 'mot placé', 'mots placés') + ' dans « Autres mots »' : ''));
+          toast('Vocabulaire réorganisé ✓' + (r.unknown ? ' · ' + plural(r.unknown, 'mot non classé', 'mots non classés') + ' (dans « Autres mots »)' : ''));
           return loadAll();
         }).then(renderTeacher, function (e) {
-          if (b.isConnected) { b.disabled = false; b.textContent = label; }
-          toast('Rangement impossible : ' + (e && e.code === 'no_server' ? 'l\'analyse automatique n\'est pas activée' : errText(e)), true);
+          if (b.isConnected) { b.disabled = false; b.textContent = label; if (sel) sel.disabled = false; }
+          toast('Réorganisation impossible : ' + (e && e.code === 'no_server' ? 'l\'analyse automatique n\'est pas activée' : errText(e)), true);
         });
       };
     });
@@ -1602,7 +1612,10 @@ var HPApp = (function () {
             var hv = f.he.value.trim(), fr = f.fr.value.trim();
             if (!HPA.bare(hv) || !fr) return;
             busy($('button[type=submit]', f), changeWord(s.id, t, i, e[0], e[1], function (c, list, j) {
+              var k0 = HPA.wkey(list[j][0], list[j][1]);
               list[j][0] = HPA.bare(hv); list[j][1] = fr; list[j][2] = hv;
+              var k1 = HPA.wkey(list[j][0], list[j][1]);
+              if (c.WORDINFO && c.WORDINFO[k0] && k0 !== k1) { c.WORDINFO[k1] = c.WORDINFO[k0]; delete c.WORDINFO[k0]; }
             }), 'Correction impossible').then(function () { m.remove(); toast('Mot corrigé'); renderTeacher(); }).catch(function () {});
           };
         };

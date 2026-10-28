@@ -103,7 +103,7 @@ var HPA = (function () {
     'Ville, transports et voyages', 'Études, travail et argent', 'Temps, dates et nombres', 'Nature, animaux et météo', 'Loisirs, culture et fêtes',
     'Mots-outils : pronoms, prépositions, questions', 'Expressions de tous les jours', 'Autres mots'];
   /* binyan et racine de chaque mot : servent à ranger le vocabulaire autrement (choix de Maayane pour chaque élève) */
-  var BINYANS = { paal: 'פָּעַל', nifal: 'נִפְעַל', piel: 'פִּעֵל', pual: 'פֻּעַל', hifil: 'הִפְעִיל', hufal: 'הֻפְעַל', hitpael: 'הִתְפַּעֵל' };
+  var BINYANS = { paal: 'פעל', nifal: 'נפעל', piel: 'פיעל', pual: 'פועל', hifil: 'הפעיל', hufal: 'הופעל', hitpael: 'התפעל' };   /* sans nikoud, comme les exercices des élèves */
   var INFO = '"binyan" = pour un verbe, son binyan parmi : paal, nifal, piel, pual, hifil, hufal, hitpael ; sinon "". ' +
     '"racine" = les lettres de la racine séparées par des tirets (ex. "כ-ת-ב"), pour tout mot qui en a une claire (verbe, nom, adjectif) ; sinon "".\n';
   /* grands chapitres de grammaire : peu nombreux, pour que la liste de l'élève reste courte */

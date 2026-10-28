@@ -393,6 +393,9 @@ var HPApp = (function () {
         $('#out').onclick = preview ? closePreview : logout;
         return;
       }
+      /* organisation du vocabulaire choisie par l'élève (sur cet appareil) : sinon, celle de Maayane */
+      var own = preview ? '' : myGrouping(id);
+      if (own && own !== HPA.grouping(content) && canGroup(content, own)) content = HPA.organize(content, own);
       /* thèmes retirés depuis la dernière visite : on les enlève aussi des préférences de l'élève */
       if (prog && prog.preferences && content.VOCAB) {
         ['selectedThemes', 'knownThemes'].forEach(function (k) {
@@ -412,6 +415,7 @@ var HPApp = (function () {
         '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Jeux de mots</span><span class="s"> Exos</span></button>' +
         (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><span class="s"> Question</span><i id="hp-q-dot" hidden></i></button>') +
         (preview ? '' : '<button type="button" id="hp-dc-btn" class="dc" onclick="parent.postMessage({hp:\'docs\'},\'*\')">📄<span class="l"> Mes documents</span><span class="s"> Docs</span></button>') +
+        (preview ? '' : '<button type="button" class="dc" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'grouping\'},\'*\')" title="Choisir comment tes mots sont regroupés">🗂<span class="l"> Organiser mes mots</span><span class="s"> Mots</span></button>') +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
       return getTpl().then(function (TPL) {
@@ -434,6 +438,32 @@ var HPApp = (function () {
     }).catch(function (e) { if (!root.querySelector('#student-frame')) renderFatal('Impossible d\'ouvrir l\'espace (' + errText(e) + '). Rechargez la page.'); });
   }
   function HPAstats(c) { return HPA.stats(c); }
+  /* choix de l'élève, gardé dans ce navigateur */
+  function myGrouping(id, v) {
+    try {
+      if (v === undefined) return localStorage.getItem('hp_grouping_' + id) || '';
+      if (v) localStorage.setItem('hp_grouping_' + id, v); else localStorage.removeItem('hp_grouping_' + id);
+    } catch (e) { return ''; }
+  }
+  /* une organisation n'est possible que si Claude a déjà décrit tous les mots (sauf « par leçon ») */
+  function canGroup(content, mode) { return mode === 'lesson' || mode === HPA.grouping(content) || !HPA.missingInfo(content, mode).length; }
+  function openGrouping(id) {
+    HPB.getContent(id).then(function (c) {
+      var def = HPA.grouping(c), cur = myGrouping(id) || def;
+      if (!canGroup(c, cur)) cur = def;
+      var m = modal('<h2>Organiser mes mots</h2><p class="muted">Choisis comment tes mots sont regroupés dans tes révisions. Ta progression ne change pas.</p>' +
+        '<div class="stack" style="gap:8px;margin-top:12px">' + HPA.GROUPINGS.map(function (g) {
+          var ok = canGroup(c, g[0]);
+          return '<label class="chip" style="justify-content:flex-start;padding:10px 14px;' + (ok ? '' : 'opacity:.5') + '"><input type="radio" name="grp" value="' + g[0] + '"' + (g[0] === cur ? ' checked' : '') + (ok ? '' : ' disabled') + '> ' +
+            esc(g[1]) + (g[0] === def ? ' <small class="muted">(choix de Maayane)</small>' : '') + (ok ? '' : ' <small class="muted">(pas encore disponible)</small>') + '</label>';
+        }).join('') + '</div><div class="row" style="margin-top:16px"><button class="btn primary" data-ok>Valider</button></div>');
+      $('[data-ok]', m).onclick = function () {
+        var r = $('input[name=grp]:checked', m), v = r ? r.value : def;
+        myGrouping(id, v === def ? '' : v);
+        m.remove(); toast('Mots réorganisés ✓'); openStudent(id, false);
+      };
+    }, function (e) { toast('Impossible pour l\'instant : ' + errText(e), true); });
+  }
   /* demande de Maayane : pas de nikoud dans les exercices des élèves. Les données enregistrées gardent
      les voyelles (on peut revenir en arrière) ; seul ce qui est envoyé à l'espace élève en est privé.
      Les fiches de grammaire et le cours « Passé & futur » ne sont pas touchés. */
@@ -484,6 +514,7 @@ var HPApp = (function () {
     if (m.hp === 'close' && frame.preview) { closePreview(); return; }
     if (m.hp === 'ask' && !frame.preview) { var f1 = frame; openAsk(frame.id, function () { if (f1.el.isConnected) sendMsgInfo(f1.el, f1.id); }); return; }
     if (m.hp === 'docs' && !frame.preview) { openDocs(frame.id); return; }
+    if (m.hp === 'grouping' && !frame.preview) { openGrouping(frame.id); return; }
     if (m.hp === 'agenda' && !frame.preview) { var f0 = frame; AG.openPane(frame.id, function () { if (f0.el.isConnected) sendAgendaInfo(f0.el, f0.id); }); return; }
     if (m.hp === 'progress' && !frame.preview) {
       var sum = cleanSummary(m.summary), storage = m.storage && typeof m.storage === 'object' ? m.storage : null;

@@ -904,13 +904,20 @@ var HPApp = (function () {
     if (todo.length < 2) return '';
     return '<button class="btn small primary" data-anall="' + todo.map(function (d) { return d.id; }).join(',') + '">Analyser les ' + todo.length + ' documents en attente</button>';
   }
+  /* bouton « tout montrer / tout masquer » pour les documents d'un élève */
+  function shareAllBtn(s, docs) {
+    if (!docs.length) return '';
+    var all = docs.every(function (d) { return isShared(d.id); });
+    return '<button class="btn small' + (all ? '' : ' primary') + '" data-shareall="' + s.id + '" data-on="' + (all ? '0' : '1') + '" title="Un document donné à plusieurs élèves devient visible pour chacun d\'eux">' +
+      (all ? 'Retirer tous les documents de son espace' : '👁 Montrer tous les documents à ' + esc(s.first)) + '</button>';
+  }
   function stDocs(s) {
     var docs = docsFor(s.id);
     return '<div class="stack"><div class="card"><h3>Déposer des documents pour ' + esc(s.first) + '</h3>' + dropZone(s.id) +
       (isAuto(s.id) ? '<p class="small muted" style="margin:12px 0 0">Dès le dépôt, Claude lit le document, en extrait le vocabulaire et la grammaire et les ajoute directement à l\'espace de ' + esc(s.first) + ', sans relecture de votre part, et uniquement à partir de vos documents.</p>'
         : '<p class="small muted" style="margin:12px 0 0">Après le dépôt, cliquez sur « Analyser et intégrer » : Claude lit le document, en extrait le vocabulaire et la grammaire, puis vous montre ce qui sera ajouté à l\'espace de ' + esc(s.first) + '. Rien n\'est ajouté sans votre validation, et uniquement à partir de vos documents.</p>') +
       '<label class="ag-switch" style="margin-top:14px;font-size:14.5px"><input type="checkbox" data-auto="' + s.id + '"' + (isAuto(s.id) ? ' checked' : '') + '><span></span><b>Intégrer automatiquement les documents de ' + esc(s.first) + ' (sans relecture)</b></label></div>' +
-      '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3>' + analyseAllBtn(docs) + '</div>' +
+      '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3><div class="row">' + shareAllBtn(s, docs) + analyseAllBtn(docs) + '</div></div>' +
       (docs.length ? '<div class="docs">' + docs.map(function (d) { return docRow(d); }).join('') + '</div>' : '<p class="hp-empty">Aucun document pour l\'instant.</p>') + '</div></div>';
   }
   function docsPage() {
@@ -1397,6 +1404,20 @@ var HPApp = (function () {
           return HPB.setSettings(st).then(function () { cache.settings = st; });
         }), 'Enregistrement impossible').then(function () {
           toast(on ? 'Document visible dans l\'espace de l\'élève' : 'Document retiré de l\'espace de l\'élève');
+          renderTeacher();
+        }).catch(function () {});
+      };
+    });
+    $$('[data-shareall]').forEach(function (b) {
+      b.onclick = function () {
+        var ids = docsFor(b.dataset.shareall).map(function (d) { return d.id; }), on = b.dataset.on === '1';
+        busy(b, HPB.getSettings().then(function (st) {
+          var l = (st.sharedDocs || []).filter(function (x) { return ids.indexOf(x) < 0 && cache.docs.some(function (d) { return d.id === x; }); });
+          if (on) l = l.concat(ids);
+          st.sharedDocs = l;
+          return HPB.setSettings(st).then(function () { cache.settings = st; });
+        }), 'Enregistrement impossible').then(function () {
+          toast(on ? (ids.length > 1 ? ids.length + ' documents visibles' : 'Document visible') + ' dans l\'espace de l\'élève' : 'Documents retirés de l\'espace de l\'élève');
           renderTeacher();
         }).catch(function () {});
       };

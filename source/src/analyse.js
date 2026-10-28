@@ -568,6 +568,6 @@ var HPA = (function () {
   return {
     kind: kind, extract: extract, analyse: analyse, enrich: enrich, missingExtras: missingExtras, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
     pdfLib: function () { return script(PDFJS).then(function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFW; return window.pdfjsLib; }); },
-    stats: stats, emptyContent: emptyContent, oldThemes: oldThemes, regroup: regroup, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
+    stats: stats, emptyContent: emptyContent, bare: bare, oldThemes: oldThemes, regroup: regroup, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();

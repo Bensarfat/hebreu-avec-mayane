@@ -980,15 +980,43 @@ var HPApp = (function () {
   }
 
   /* ---------- contenu du site de l'élève ---------- */
+  /* liste des mots : thèmes ouverts et recherche gardés d'un affichage à l'autre */
+  var openThemes = {}, wordSearch = '';
+  /* recherche sans nikoud, ni ו ni י : « תחבושת » trouve aussi « תַּחְבֹּשֶׁת » */
+  function wq(he) { return HPA.bare(he).replace(/[וי]/g, ''); }
+  /* modifie un mot de l'élève (relu dans la base juste avant, pour ne rien écraser) */
+  function changeWord(sid, t, i, he, fr, fn) {
+    return HPB.getContent(sid).then(function (c) {
+      var list = c && c.VOCAB && c.VOCAB[t];
+      if (!list) throw new Error('Thème introuvable');
+      if (!list[i] || list[i][0] !== he || list[i][1] !== fr) {
+        i = -1; list.forEach(function (e, j) { if (i < 0 && e[0] === he && e[1] === fr) i = j; });
+      }
+      if (i < 0) throw new Error('Mot introuvable, rechargez la page');
+      fn(c, list, i);
+      if (!list.length) {
+        delete c.VOCAB[t]; if (c.NATURE) delete c.NATURE[t];
+        c.CORE_THEMES = (c.CORE_THEMES || []).filter(function (x) { return x !== t; });
+        c.ADVANCED_THEMES = (c.ADVANCED_THEMES || []).filter(function (x) { return x !== t; });
+      }
+      return HPB.setContent(sid, c).then(function () { cache.contents[sid] = c; });
+    });
+  }
   function stContent(s) {
     var c = cache.contents[s.id], st = HPA.stats(c);
     var themes = c ? Object.keys(c.VOCAB || {}) : [];
     return '<div class="two"><div class="card"><h3>Ce que voit ' + esc(s.first) + '</h3>' +
       '<div class="hp-kpis" style="margin-bottom:14px"><div class="hp-kpi"><b>' + st.themes + '</b><span>thèmes</span></div><div class="hp-kpi green"><b>' + fmt(st.words) + '</b><span>mots</span></div>' +
       '<div class="hp-kpi gold"><b>' + st.grammar + '</b><span>fiches de grammaire</span></div><div class="hp-kpi sky"><b>' + st.conj + '</b><span>verbes à conjuguer</span></div></div>' +
-      (themes.length ? '<ul class="content-list">' + themes.map(function (t) {
-        return '<li><span>' + esc(t) + '</span><span class="row"><span class="pill grey">' + c.VOCAB[t].length + ' mots</span><button class="btn small ghost" data-rmtheme="' + esc(t) + '" title="Retirer ce thème">🗑</button></span></li>';
-      }).join('') + '</ul>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
+      (themes.length ? '<input class="in" type="search" id="wsearch" placeholder="Chercher un mot (hébreu ou français)…" aria-label="Chercher un mot" value="' + esc(wordSearch) + '" style="margin-bottom:8px">' +
+        '<p class="small muted" style="margin:0 0 8px">Cliquez sur un thème pour voir ses mots, les corriger ✏️ ou les retirer 🗑.</p>' +
+        '<div class="content-list">' + themes.map(function (t) {
+        return '<details class="wtheme" data-theme="' + esc(t) + '"' + (openThemes[t] ? ' open' : '') + '><summary><span>' + esc(t) + '</span><span class="row"><span class="pill grey">' + c.VOCAB[t].length + ' mots</span><button class="btn small ghost" data-rmtheme="' + esc(t) + '" title="Retirer ce thème">🗑</button></span></summary>' +
+          '<ul class="wlist">' + c.VOCAB[t].map(function (e, i) {
+            return '<li class="wrow" data-q="' + esc((wq(e[0]) + ' ' + wq(e[2]) + ' ' + e[1]).toLowerCase()) + '"><span><span class="he-w" lang="he" dir="rtl">' + esc(e[2] || e[0]) + '</span> <span class="muted">— ' + esc(e[1]) + '</span></span>' +
+              '<span class="row"><button class="btn small ghost" data-wedit="' + i + '" data-t="' + esc(t) + '" aria-label="Corriger ce mot" title="Corriger">✏️</button><button class="btn small ghost" data-wdel="' + i + '" data-t="' + esc(t) + '" aria-label="Retirer ce mot" title="Retirer ce mot">🗑</button></span></li>';
+          }).join('') + '</ul></details>';
+      }).join('') + '</div>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
       (c && HPA.oldThemes(c).length ? '<div class="review" style="margin-top:14px"><b>🗂 Ranger dans les grands thèmes</b><p class="small muted" style="margin:4px 0 8px">' +
         plural(HPA.oldThemes(c).length, 'ancien thème', 'anciens thèmes') + ' à regrouper. Claude range chaque mot dans un grand thème (famille, maison, nourriture, temps…). Aucun mot n\'est supprimé ni modifié, et la progression de ' + esc(s.first) + ' est conservée.</p>' +
         '<button class="btn small primary" data-regroup="' + s.id + '">Ranger les mots de ' + esc(s.first) + '</button></div>' : '') +
@@ -1542,8 +1570,58 @@ var HPApp = (function () {
           busy(this, HPB.deleteStudent(s.id), 'Suppression impossible').then(function () { m.remove(); toast('Compte de ' + s.first + ' supprimé'); location.hash = '#/eleves'; return loadAll(); }).then(renderTeacher).catch(function () {});
         };
       };
+      $$('details.wtheme').forEach(function (d) { d.ontoggle = function () { if (d.open) openThemes[d.dataset.theme] = 1; else delete openThemes[d.dataset.theme]; }; });
+      var ws = $('#wsearch');
+      if (ws) {
+        var filter = function () {
+          var q = ws.value.trim().toLowerCase(), qb = wq(q);
+          wordSearch = ws.value;
+          $$('details.wtheme').forEach(function (d) {
+            var n = 0;
+            $$('.wrow', d).forEach(function (r) { var ok = !q || (qb && r.dataset.q.indexOf(qb) >= 0) || r.dataset.q.indexOf(q) >= 0; r.hidden = !ok; if (ok) n++; });
+            d.hidden = !!q && !n;
+            if (q) d.open = n > 0; else d.open = !!openThemes[d.dataset.theme];
+          });
+        };
+        ws.oninput = filter;
+        if (ws.value) filter();
+      }
+      $$('[data-wedit]').forEach(function (b) {
+        b.onclick = function (ev) {
+          ev.preventDefault();
+          var t = b.dataset.t, i = +b.dataset.wedit, e = (cache.contents[s.id].VOCAB[t] || [])[i];
+          if (!e) return;
+          var m = modal('<h2>Corriger un mot</h2><form id="wf">' +
+            '<label class="f">Hébreu (avec ou sans nikoud)<input class="in he-w" name="he" lang="he" dir="rtl" required value="' + esc(e[2] || e[0]) + '"></label>' +
+            '<label class="f">Français<input class="in" name="fr" required value="' + esc(e[1]) + '"></label>' +
+            '<p class="small muted">La correction apparaît dans les questions et les flashcards de ' + esc(s.first) + ' à sa prochaine visite. Ses statistiques sur ce mot repartent de zéro si l\'orthographe change.</p>' +
+            '<div class="row" style="margin-top:16px"><button class="btn primary" type="submit">Enregistrer</button></div></form>');
+          var f = $('#wf', m);
+          f.onsubmit = function (x) {
+            x.preventDefault();
+            var hv = f.he.value.trim(), fr = f.fr.value.trim();
+            if (!HPA.bare(hv) || !fr) return;
+            busy($('button[type=submit]', f), changeWord(s.id, t, i, e[0], e[1], function (c, list, j) {
+              list[j][0] = HPA.bare(hv); list[j][1] = fr; list[j][2] = hv;
+            }), 'Correction impossible').then(function () { m.remove(); toast('Mot corrigé'); renderTeacher(); }).catch(function () {});
+          };
+        };
+      });
+      $$('[data-wdel]').forEach(function (b) {
+        b.onclick = function (ev) {
+          ev.preventDefault();
+          if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Retirer ?'; b.classList.add('danger'); return; }
+          var t = b.dataset.t, i = +b.dataset.wdel, e = (cache.contents[s.id].VOCAB[t] || [])[i];
+          if (!e) return;
+          busy(b, changeWord(s.id, t, i, e[0], e[1], function (c, list, j) {
+            list.splice(j, 1);
+            if (c.NATURE && typeof c.NATURE[t] === 'string') c.NATURE[t] = c.NATURE[t].slice(0, j) + c.NATURE[t].slice(j + 1);
+          }), 'Retrait impossible').then(function () { toast('Mot retiré'); renderTeacher(); }).catch(function () {});
+        };
+      });
       $$('[data-rmtheme]').forEach(function (b) {
-        b.onclick = function () {
+        b.onclick = function (ev) {
+          ev.preventDefault();
           if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Retirer ?'; b.classList.add('danger'); return; }
           var t = b.dataset.rmtheme;
           busy(b, HPB.getContent(s.id).then(function (c) {

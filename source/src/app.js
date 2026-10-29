@@ -1068,6 +1068,14 @@ var HPApp = (function () {
           (miss ? '<button class="btn small primary" data-enrich="' + s.id + '">Préparer pour les ' + plural(miss, 'mot restant', 'mots restants') + '</button>' : '') + '</div>'; })() : '') +
       (c && c.updatedAt ? '<p class="small muted">Dernière mise à jour : ' + new Date(c.updatedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) + '</p>' : '') + '</div>' +
       '<div class="card"><h3>Sources</h3>' + (c && c.sources && c.sources.length ? '<ul class="content-list">' + c.sources.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p class="hp-empty">—</p>') +
+      (function () {
+        var others = cache.students.filter(function (x) { return x.id !== s.id; });
+        if (!others.length) return '';
+        return '<h3 style="margin-top:22px">Copier le contenu d\'un autre élève</h3><p class="small muted">Pour un élève de la même classe : ajoute à ' + esc(s.first) + ' tous les mots, fiches de grammaire et verbes de l\'élève choisi. Rien n\'est retiré, rien n\'est ajouté deux fois. La progression n\'est pas copiée.</p>' +
+          '<div class="row"><select class="in" data-copyfrom="' + s.id + '" aria-label="Élève à copier" style="width:auto;max-width:100%">' + others.map(function (x) { return '<option value="' + x.id + '">' + esc(fullName(x)) + '</option>'; }).join('') + '</select></div>' +
+          '<label class="ag-switch" style="margin-top:10px;font-size:14px"><input type="checkbox" data-copydocs checked><span></span><b>Lui donner aussi les mêmes documents</b></label>' +
+          '<div class="row" style="margin-top:10px"><button class="btn small primary" data-copyto="' + s.id + '">Copier le contenu</button></div>';
+      })() +
       '<h3 style="margin-top:22px">Importer un contenu préparé</h3><p class="small muted">Si un document a été analysé dans une conversation avec Claude, importez ici le fichier .json qu\'il vous a remis : vous pourrez le relire avant de l\'ajouter.</p>' +
       '<label class="btn small">Choisir un fichier .json<input type="file" accept=".json,application/json" id="imp" hidden></label><div id="rv-import"></div></div></div>';
   }
@@ -1430,6 +1438,25 @@ var HPApp = (function () {
       drop.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files, targets); });
     }
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
+    $$('[data-copyto]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.dataset.copyto, sel = $('[data-copyfrom="' + id + '"]'), from = sel && sel.value, docsToo = !!($('[data-copydocs]') || {}).checked;
+        if (!from) return;
+        if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Confirmer la copie ?'; return; }
+        busy(b, Promise.all([HPB.getContent(id), HPB.getContent(from)]).then(function (r) {
+          var res = HPA.copyContent(r[0], r[1]);
+          return HPB.setContent(id, res.content).then(function () {
+            if (!docsToo) return res;
+            /* ses documents : attribués aussi à cet élève (visibles s'ils sont déjà montrés à l'élève d'origine) */
+            var docs = cache.docs.filter(function (d) { return (d.students || []).indexOf(from) >= 0 && (d.students || []).indexOf(id) < 0; });
+            return docs.reduce(function (p, d) { return p.then(function () { d.students = d.students.concat([id]); return HPB.updateDoc(d); }); }, Promise.resolve()).then(function () { res.docs = docs.length; return res; });
+          });
+        }), 'Copie impossible').then(function (res) {
+          toast(plural(res.words, 'mot ajouté', 'mots ajoutés') + ', ' + plural(res.grammar, 'fiche', 'fiches') + (res.docs ? ', ' + plural(res.docs, 'document') : '') + ' ✓');
+          return loadAll();
+        }).then(renderTeacher).catch(function () {});
+      };
+    });
     $$('[data-spell]').forEach(function (b) {
       b.onclick = function () {
         var id = b.dataset.spell, label = b.textContent; b.disabled = true;

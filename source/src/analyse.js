@@ -639,6 +639,38 @@ var HPA = (function () {
     if (docName && c.sources.indexOf(docName) < 0) c.sources.push(docName);
     return { content: c, words: nw, grammar: ng, vowels: nv, enriched: nd };
   }
+  /* ajoute au contenu d'un élève tout celui d'un autre (même classe) : mots, fiches de grammaire, verbes, « Passé & futur ».
+     Rien n'est retiré ; un mot ou une fiche déjà présents ne sont pas ajoutés deux fois. Renvoie une copie et ce qui a été ajouté. */
+  function copyContent(target, source) {
+    var c = JSON.parse(JSON.stringify(target || emptyContent())), src = JSON.parse(JSON.stringify(source || emptyContent()));
+    ['VOCAB', 'NATURE', 'VERB_PRESENT', 'WORDINFO'].forEach(function (k) { if (!c[k] || typeof c[k] !== 'object') c[k] = {}; });
+    ['CONJ', 'CORE_THEMES', 'ADVANCED_THEMES', 'GRAMMAR_CATEGORIES', 'sources'].forEach(function (k) { if (!Array.isArray(c[k])) c[k] = []; });
+    var keys = existingKeys(c), alias = aliases(c), SI = src.WORDINFO || {}, nw = 0, ng = 0, nc = 0;
+    Object.keys(src.VOCAB || {}).forEach(function (t) {
+      (src.VOCAB[t] || []).forEach(function (e, i) {
+        var k = wkey(e[0], e[1]);
+        if (keys[k] || (e[2] && alias[wkey(e[2], e[1])])) return;
+        var nat = String((src.NATURE || {})[t] || '').charAt(i) || 'n';
+        var g = c.GROUPING && c.GROUPING !== 'themes' && SI[k] ? groupOf(Object.assign({ n: nat }, SI[k]), c.GROUPING) : t;
+        if (!c.VOCAB[g]) { c.VOCAB[g] = []; c.NATURE[g] = ''; if (c.CORE_THEMES.indexOf(g) < 0) c.CORE_THEMES.push(g); }
+        c.NATURE[g] = String(c.NATURE[g] || '').padEnd(c.VOCAB[g].length, 'n').slice(0, c.VOCAB[g].length) + nat;
+        c.VOCAB[g].push(e.slice());
+        if (SI[k]) c.WORDINFO[k] = Object.assign({}, SI[k]);
+        keys[k] = g; nw++;
+      });
+    });
+    (src.GRAMMAR_CATEGORIES || []).forEach(function (sc) {
+      var cat = c.GRAMMAR_CATEGORIES.filter(function (x) { return x.name === sc.name; })[0];
+      if (!cat) { cat = { name: sc.name, items: [] }; c.GRAMMAR_CATEGORIES.push(cat); }
+      (sc.items || []).forEach(function (it) { if (!cat.items.some(function (x) { return x.title === it.title; })) { cat.items.push(it); ng++; } });
+    });
+    c.GRAMMAR_CATEGORIES = c.GRAMMAR_CATEGORIES.filter(function (x) { return x.items.length; });
+    (src.CONJ || []).forEach(function (v) { if (!c.CONJ.some(function (x) { return x.i === v.i; })) { c.CONJ.push(v); nc++; } });
+    Object.keys(src.VERB_PRESENT || {}).forEach(function (k) { if (!(k in c.VERB_PRESENT)) c.VERB_PRESENT[k] = src.VERB_PRESENT[k]; });
+    if (src.tensesHtml && !c.tensesHtml) c.tensesHtml = src.tensesHtml;
+    (src.sources || []).forEach(function (x) { if (c.sources.indexOf(x) < 0) c.sources.push(x); });
+    return { content: c, words: nw, grammar: ng, conj: nc };
+  }
   /* contents : contenu de chaque élève visé ; un mot n'est « déjà présent » que si TOUS l'ont */
   function markDuplicates(result, contents) {
     contents = (Array.isArray(contents) ? contents : [contents]).map(function (c) { var k = existingKeys(c || emptyContent()), a = aliases(c || emptyContent()); Object.keys(a).forEach(function (x) { k[x] = 1; }); return k; });
@@ -665,6 +697,6 @@ var HPA = (function () {
   return {
     kind: kind, extract: extract, analyse: analyse, enrich: enrich, missingExtras: missingExtras, normalise: normalise, merge: merge, markDuplicates: markDuplicates,
     pdfLib: function () { return script(PDFJS).then(function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFW; return window.pdfjsLib; }); },
-    stats: stats, emptyContent: emptyContent, bare: bare, GROUPINGS: GROUPINGS, grouping: grouping, missingInfo: missingInfo, missingSpelling: missingSpelling, renameWord: renameWord, renameProgress: renameProgress, prepareInfo: prepareInfo, organize: organize, wkey: wkey, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
+    stats: stats, emptyContent: emptyContent, bare: bare, GROUPINGS: GROUPINGS, grouping: grouping, missingInfo: missingInfo, missingSpelling: missingSpelling, copyContent: copyContent, renameWord: renameWord, renameProgress: renameProgress, prepareInfo: prepareInfo, organize: organize, wkey: wkey, instructions: instructions, rules: rules, context: context, SCHEMA: SCHEMA, sampleFn: sampleFn, setCode: setCode, setAuth: setAuth
   };
 })();

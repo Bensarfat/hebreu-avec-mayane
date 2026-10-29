@@ -394,6 +394,7 @@ var HPApp = (function () {
         return;
       }
       /* organisation du vocabulaire choisie par l'élève (sur cet appareil) : sinon, celle de Maayane */
+      prog = HPA.renameProgress(prog, content);   /* mots corrigés : leurs statistiques suivent */
       var own = preview ? '' : myGrouping(id);
       if (own && own !== HPA.grouping(content) && canGroup(content, own)) content = HPA.organize(content, own);
       /* thèmes retirés depuis la dernière visite : on les enlève aussi des préférences de l'élève */
@@ -1044,10 +1045,13 @@ var HPApp = (function () {
         '<div class="content-list">' + themes.map(function (t) {
         return '<details class="wtheme" data-theme="' + esc(t) + '"' + (openThemes[t] ? ' open' : '') + '><summary><span>' + esc(t) + '</span><span class="row"><span class="pill grey">' + c.VOCAB[t].length + ' mots</span><button class="btn small ghost" data-rmtheme="' + esc(t) + '" title="Retirer ce thème">🗑</button></span></summary>' +
           '<ul class="wlist">' + c.VOCAB[t].map(function (e, i) {
-            return '<li class="wrow" data-q="' + esc((wq(e[0]) + ' ' + wq(e[2]) + ' ' + e[1]).toLowerCase()) + '"><span><span class="he-w" lang="he" dir="rtl">' + esc(e[2] || e[0]) + '</span> <span class="muted">— ' + esc(e[1]) + '</span></span>' +
+            return '<li class="wrow" data-q="' + esc((wq(e[0]) + ' ' + wq(e[2]) + ' ' + e[1]).toLowerCase()) + '"><span><span class="he-w" lang="he" dir="rtl">' + esc(e[0]) + '</span> <span class="muted">— ' + esc(e[1]) + '</span></span>' +
               '<span class="row"><button class="btn small ghost" data-wedit="' + i + '" data-t="' + esc(t) + '" aria-label="Corriger ce mot" title="Corriger">✏️</button><button class="btn small ghost" data-wdel="' + i + '" data-t="' + esc(t) + '" aria-label="Retirer ce mot" title="Retirer ce mot">🗑</button></span></li>';
           }).join('') + '</ul></details>';
       }).join('') + '</div>' : '<p class="hp-empty">Aucun contenu : déposez des documents dans l\'onglet Documents.</p>') +
+      (c && HPA.missingSpelling(c).length ? '<div class="review" style="margin-top:14px"><b>✍️ Orthographe sans nikoud</b><p class="small muted" style="margin:4px 0 8px">' +
+        plural(HPA.missingSpelling(c).length, 'mot n\'a', 'mots n\'ont') + ' pas encore été vérifiés. Les anciens mots peuvent être en orthographe défective (תחבשת au lieu de תחבושת). Claude les réécrit en orthographe pleine ; la progression de ' + esc(s.first) + ' est conservée.</p>' +
+        '<button class="btn small primary" data-spell="' + s.id + '">Corriger l\'orthographe</button></div>' : '') +
       (st.words ? (function () {
         var mode = HPA.grouping(c), miss = HPA.missingInfo(c, mode === 'lesson' ? 'themes' : mode).length;
         return '<div class="review" style="margin-top:14px"><b>🗂 Organisation du vocabulaire</b><p class="small muted" style="margin:4px 0 8px">Comment les mots sont regroupés dans les révisions de ' + esc(s.first) + '. Aucun mot n\'est supprimé ni modifié, et sa progression est conservée.</p>' +
@@ -1426,6 +1430,25 @@ var HPApp = (function () {
       drop.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files, targets); });
     }
     $$('[data-an]').forEach(function (b) { b.onclick = function () { runAnalysis(b.dataset.an); }; });
+    $$('[data-spell]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.dataset.spell, label = b.textContent; b.disabled = true;
+        HPB.getContent(id).then(function (c) {
+          return HPA.prepareInfo(c, function (t) { if (b.isConnected) b.textContent = t; }).then(function (r) {
+            return HPB.getContent(id).then(function (c2) {
+              if (JSON.stringify(c2.VOCAB) !== JSON.stringify(c.VOCAB)) throw new Error('le vocabulaire a changé entre-temps, recommencez');
+              return HPB.setContent(id, r.content).then(function () { return r; });
+            });
+          });
+        }).then(function (r) {
+          toast(plural(r.respelled || 0, 'mot réécrit', 'mots réécrits') + ' en orthographe pleine ✓');
+          return loadAll();
+        }).then(renderTeacher, function (e) {
+          if (b.isConnected) { b.disabled = false; b.textContent = label; }
+          toast('Correction impossible : ' + (e && e.code === 'no_server' ? 'l\'analyse automatique n\'est pas activée' : errText(e)), true);
+        });
+      };
+    });
     $$('[data-organize]').forEach(function (b) {
       b.onclick = function () {
         var id = b.dataset.organize, sel = $('[data-grouping="' + id + '"]'), mode = sel ? sel.value : 'themes', label = b.textContent;
@@ -1633,9 +1656,9 @@ var HPApp = (function () {
           var t = b.dataset.t, i = +b.dataset.wedit, e = (cache.contents[s.id].VOCAB[t] || [])[i];
           if (!e) return;
           var m = modal('<h2>Corriger un mot</h2><form id="wf">' +
-            '<label class="f">Hébreu (avec ou sans nikoud)<input class="in he-w" name="he" lang="he" dir="rtl" required value="' + esc(e[2] || e[0]) + '"></label>' +
+            '<label class="f">Hébreu, sans nikoud (orthographe pleine : תחבושת)<input class="in he-w" name="he" lang="he" dir="rtl" required value="' + esc(e[0]) + '"></label>' +
             '<label class="f">Français<input class="in" name="fr" required value="' + esc(e[1]) + '"></label>' +
-            '<p class="small muted">La correction apparaît dans les questions et les flashcards de ' + esc(s.first) + ' à sa prochaine visite. Ses statistiques sur ce mot repartent de zéro si l\'orthographe change.</p>' +
+            '<p class="small muted">La correction apparaît dans les questions et les flashcards de ' + esc(s.first) + ' à sa prochaine visite. Ses statistiques sur ce mot sont conservées.</p>' +
             '<div class="row" style="margin-top:16px"><button class="btn primary" type="submit">Enregistrer</button></div></form>');
           var f = $('#wf', m);
           f.onsubmit = function (x) {
@@ -1643,10 +1666,16 @@ var HPApp = (function () {
             var hv = f.he.value.trim(), fr = f.fr.value.trim();
             if (!HPA.bare(hv) || !fr) return;
             busy($('button[type=submit]', f), changeWord(s.id, t, i, e[0], e[1], function (c, list, j) {
-              var k0 = HPA.wkey(list[j][0], list[j][1]);
-              list[j][0] = HPA.bare(hv); list[j][1] = fr; list[j][2] = hv;
-              var k1 = HPA.wkey(list[j][0], list[j][1]);
-              if (c.WORDINFO && c.WORDINFO[k0] && k0 !== k1) { c.WORDINFO[k1] = c.WORDINFO[k0]; delete c.WORDINFO[k0]; }
+              var o = list[j], k0 = HPA.wkey(o[0], o[1]), he = HPA.bare(hv), old = o[0] + '|' + o[1];
+              /* voyelles gardées si seules des ו / י changent, sinon remplacées par ce qui est saisi */
+              if (/[\u0591-\u05C7]/.test(hv)) o[2] = hv; else if (wq(o[2] || '') !== wq(he)) o[2] = he;
+              o[0] = he; o[1] = fr;
+              /* les statistiques de l'élève suivent le mot corrigé */
+              if (old !== he + '|' + fr) c.RENAMED = (c.RENAMED || []).concat([[old, he + '|' + fr]]).slice(-5000);
+              var k1 = HPA.wkey(o[0], o[1]);
+              c.WORDINFO = c.WORDINFO || {};
+              c.WORDINFO[k1] = Object.assign({}, c.WORDINFO[k0], { m: 1 });
+              if (k0 !== k1) delete c.WORDINFO[k0];
             }), 'Correction impossible').then(function () { m.remove(); toast('Mot corrigé'); renderTeacher(); }).catch(function () {});
           };
         };

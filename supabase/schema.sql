@@ -17,6 +17,10 @@ create table if not exists public.profiles (
   active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
+-- mails « nouveau cours » (voir migration-2026-11-03-mails.sql)
+alter table public.profiles add column if not exists notify_docs  boolean not null default true;
+alter table public.profiles add column if not exists notified_at  timestamptz;
+alter table public.profiles add column if not exists notify_token uuid not null default gen_random_uuid();
 
 -- Mot de passe des élèves, consultable par la professeure uniquement.
 create table if not exists public.student_secrets (

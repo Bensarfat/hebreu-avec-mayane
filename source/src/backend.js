@@ -114,6 +114,12 @@ var HPB = (function () {
     setSettings: function (s) { return set('settings', s); },
 
     /* ---------- documents montrés à l'élève (démo) ---------- */
+    /* mails « nouveau cours » (démo : aucun mail n'est envoyé, seul le réglage est gardé) */
+    notifyDocs: function () { return Promise.resolve({ sent: 0, demo: true }); },
+    setMyNotify: function (on, sid) { return api.setStudentNotify(sid, on); },
+    setStudentNotify: function (id, on) {
+      return api.listStudents().then(function (l) { l.forEach(function (x) { if (x.id === id) x.notify = !!on; }); return set('students', l); });
+    },
     myDocs: function (sid) {
       return Promise.all([api.listDocs(), api.getSettings()]).then(function (r) {
         var ok = r[1].sharedDocs || [];

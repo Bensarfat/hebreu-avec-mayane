@@ -618,13 +618,25 @@ var HPApp = (function () {
     var el = document.createElement('div');
     el.className = 'ag-pane'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Mes documents');
     el.innerHTML = '<div class="ag-pane-in"><div class="ag-ptop"><button type="button" class="btn small" data-close>← Retour à mes révisions</button></div>' +
-      '<h1 class="page-title">Mes documents <span class="grad" lang="he" dir="rtl">מסמכים</span></h1><div class="card"><div id="dc-box"><p class="muted">Chargement…</p></div></div></div>';
+      '<h1 class="page-title">Mes documents <span class="grad" lang="he" dir="rtl">מסמכים</span></h1>' +
+      '<div class="card" style="margin-bottom:16px"><label class="ag-switch" style="font-size:15px"><input type="checkbox" id="dc-mail" disabled><span></span><b>✉️ Recevoir un mail quand Maayane ajoute un cours</b></label><p class="small muted" id="dc-mail-note" style="margin:8px 0 0"></p></div>' +
+      '<div class="card"><div id="dc-box"><p class="muted">Chargement…</p></div></div></div>';
     document.body.appendChild(el);
     var close = function () { el.remove(); document.removeEventListener('keydown', esc1); };
     function esc1(e) { if (e.key === 'Escape') close(); }
     document.addEventListener('keydown', esc1);
     $('[data-close]', el).onclick = close;
-    var box = $('#dc-box', el);
+    var box = $('#dc-box', el), mail = $('#dc-mail', el), note = $('#dc-mail-note', el);
+    HPB.getStudent(sid).then(function (me) {
+      if (!me) return;
+      mail.checked = me.notify !== false; mail.disabled = false;
+      note.textContent = me.email ? 'Les mails arrivent à ' + me.email + '.' : 'Maayane n\'a pas encore ton adresse mail : demande-lui de l\'ajouter.';
+      mail.onchange = function () {
+        var on = mail.checked; mail.disabled = true;
+        Promise.resolve(HPB.setMyNotify(on, sid)).then(function () { toast(on ? 'Tu recevras un mail à chaque nouveau cours' : 'Tu ne recevras plus de mail'); }, function (e) { mail.checked = !on; toast('Réglage impossible : ' + errText(e), true); })
+          .then(function () { mail.disabled = false; });
+      };
+    }).catch(function () {});
     HPB.myDocs(sid).then(function (list) {
       if (!list.length) { box.innerHTML = '<p class="hp-empty">Aucun document pour l\'instant. Maayane les ajoute ici après les cours.</p>'; return; }
       box.innerHTML = '<div class="docs">' + list.map(function (d) {
@@ -1106,6 +1118,9 @@ var HPApp = (function () {
           return '<button type="button" class="sw' + (c[0] === stColor(s.id) ? ' on' : '') + '" data-color="' + c[0] + '" style="background:' + c[0] + '" title="' + c[1] + '" aria-label="' + c[1] + '" aria-pressed="' + (c[0] === stColor(s.id)) + '"></button>';
         }).join('') + '</div>' +
         '<p class="small muted" style="margin:12px 0 0">La couleur repère ' + esc(s.first) + ' dans la liste des élèves et dans l\'agenda. Le personnage ou la photo ne sont visibles que par vous.</p></div>' +
+      '<div class="card"><h3>✉️ Mails « nouveau cours »</h3><label class="ag-switch" style="font-size:14.5px"><input type="checkbox" data-notify="' + s.id + '"' + (s.notify !== false ? ' checked' : '') + '><span></span><b>Prévenir ' + esc(s.first) + ' par mail quand un cours est ajouté</b></label>' +
+        '<p class="small muted" style="margin:10px 0 0">' + (s.email ? 'Un mail est envoyé à ' + esc(s.email) + ' quand les mots d\'un nouveau document sont ajoutés à son espace (un mail au plus toutes les 10 minutes). ' + esc(s.first) + ' peut aussi couper ces mails dans son espace.' : 'Ajoutez son adresse mail dans « Informations » pour qu\'il soit prévenu.') +
+        ' Les mails partent une fois l\'envoi réglé par Benjamin.</p></div>' +
       '<div class="card"><h3>Accès</h3><div class="row">' +
         (s.active === false ? '<button class="btn" data-act="activate">Réactiver le compte</button>' : '<button class="btn" data-act="suspend">Suspendre le compte</button>') +
         '<button class="btn danger" data-act="delete">Supprimer le compte</button></div><p class="small muted">Un compte suspendu ne peut plus se connecter ; sa progression est conservée.</p>' +
@@ -1342,6 +1357,19 @@ var HPApp = (function () {
   }
 
   /* ajoute le résultat d'une analyse à l'espace des élèves, puis marque le document comme intégré */
+  /* mails « nouveau cours » : regroupés (plusieurs documents intégrés à la suite = un seul mail par élève) */
+  var notifyWait = {}, notifyTimer = null;
+  function queueNotify(ids, name) {
+    if (!HPB.notifyDocs) return;
+    (ids || []).forEach(function (id) { var l = notifyWait[id] = notifyWait[id] || []; if (l.indexOf(name) < 0) l.push(name); });
+    clearTimeout(notifyTimer);
+    notifyTimer = setTimeout(function () {
+      var w = notifyWait; notifyWait = {};
+      Object.keys(w).forEach(function (id) {
+        Promise.resolve(HPB.notifyDocs([id], w[id])).catch(function (e) { console.warn('Mail « nouveau cours » non envoyé', e); });
+      });
+    }, 8000);
+  }
   function applyResult(d, res, targets) {
     var name = d ? d.name : 'Import JSON', added = { words: 0, grammar: 0 };
     /* élève par élève, en relisant son contenu juste avant d'écrire */
@@ -1352,6 +1380,7 @@ var HPApp = (function () {
         return HPB.setContent(id, r.content);
       });
     }, Promise.resolve()).then(function () {
+      if (d && added.words + added.grammar > 0) queueNotify(targets, d.name);
       if (d) { d.status = 'done'; d.integratedAt = new Date().toISOString(); d.result = added; d.summary = res.summary || d.summary; delete d.error; delete results[d.id]; return HPB.updateDoc(d); }
     }).then(function () { return added; });
   }
@@ -1562,6 +1591,15 @@ var HPApp = (function () {
           toast(on ? (ids.length > 1 ? ids.length + ' documents visibles' : 'Document visible') + ' dans l\'espace de l\'élève' : 'Documents retirés de l\'espace de l\'élève');
           renderTeacher();
         }).catch(function () {});
+      };
+    });
+    $$('[data-notify]').forEach(function (cb) {
+      cb.onchange = function () {
+        var id = cb.dataset.notify, on = cb.checked; cb.disabled = true;
+        Promise.resolve(HPB.setStudentNotify(id, on)).then(function () {
+          cache.students.forEach(function (x) { if (x.id === id) x.notify = on; });
+          toast(on ? 'Mails activés' : 'Mails coupés');
+        }, function (e) { cb.checked = !on; toast('Réglage impossible : ' + errText(e), true); }).then(function () { cb.disabled = false; });
       };
     });
     $$('[data-auto]').forEach(function (cb) {

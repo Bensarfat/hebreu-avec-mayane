@@ -53,7 +53,8 @@
   function toStudent(p, secrets) {
     return {
       id: p.id, first: p.first || '', last: p.last || '', login: p.login, email: p.email || '', phone: p.phone || '',
-      active: p.active !== false, createdAt: p.created_at, pw: secrets ? (secrets[p.id] || '') : undefined
+      active: p.active !== false, createdAt: p.created_at, pw: secrets ? (secrets[p.id] || '') : undefined,
+      notify: p.notify_docs !== false   /* mails « nouveau cours » (activés par défaut) */
     };
   }
   function docFromRow(r) {
@@ -193,6 +194,10 @@
     reset: function () { return Promise.resolve(); },
 
     /* ---------- documents montrés à l'élève (le serveur vérifie et donne un lien de téléchargement) ---------- */
+    /* mails « nouveau cours » : envoyés par le serveur (s'il est réglé) ; l'élève ou Maayane peut les couper */
+    notifyDocs: function (ids, docs) { return post('/api/notify', { action: 'docs', students: ids, docs: docs }); },
+    setMyNotify: function (on) { return post('/api/notify', { action: 'pref', on: !!on }); },
+    setStudentNotify: function (id, on) { return q(sbc.from('profiles').update({ notify_docs: !!on }).eq('id', id)); },
     myDocs: function () { return post('/api/documents', { action: 'list' }).then(function (r) { return r.docs || []; }); },
     myDocUrl: function (sid, id, view) { return post('/api/documents', { action: 'url', id: id, view: !!view }).then(function (r) { return r.url; }); },
 

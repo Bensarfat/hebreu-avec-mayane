@@ -273,7 +273,10 @@ var HPApp = (function () {
      d'avant le découpage automatique, Claude surchargé…) : ce n'est pas la faute du document. On le remet
      « À intégrer », sans l'ancien message, pour qu'il soit relancé normalement. */
   var RETRYABLE = /session a expir|connexion perdue|connexion internet|trop long pour être analysé|credit balance|crédit de l'analyse|budget mensuel|très sollicité|pris trop de temps|réessayez dans un instant/i;
+  var blocked = null;   /* 'credit' | 'budget' : dernière analyse refusée faute de crédit ; gardé pour le bandeau d'alerte */
   function retryable(d) {
+    if (d && d.status === 'error' && /credit balance|crédit de l'analyse/i.test(d.error || '')) blocked = blocked || 'credit';
+    if (d && d.status === 'error' && /budget mensuel|spend limit/i.test(d.error || '')) blocked = 'budget';
     if (d && d.status === 'error' && RETRYABLE.test(d.error || '')) { d.status = 'pending'; d.error = null; }
     return d;
   }
@@ -731,6 +734,7 @@ var HPApp = (function () {
     else if (page === 'reglages') body = settingsPage();
     else if (page === 'tests') body = testsPage();
     else { page = 'tableau'; body = dashboard(); }
+    if (page === 'tableau' || page === 'documents') body = blockedBanner() + body;
     root.innerHTML = nav(page === 'eleve' ? 'eleves' : page) + '<main class="bo-main">' + body + '</main>';
     $('#lo').onclick = logout;
     bind(page, h);
@@ -963,6 +967,15 @@ var HPApp = (function () {
       '<label class="ag-switch" style="margin-top:14px;font-size:14.5px"><input type="checkbox" data-auto="' + s.id + '"' + (isAuto(s.id) ? ' checked' : '') + '><span></span><b>Intégrer automatiquement les documents de ' + esc(s.first) + ' (sans relecture)</b></label></div>' +
       '<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3 style="margin:0">Documents de ' + esc(s.first) + ' <small>' + docs.length + '</small></h3><div class="row">' + shareAllBtn(s, docs) + analyseAllBtn(docs) + '</div></div>' +
       (docs.length ? '<div class="docs">' + docs.map(function (d) { return docRow(d); }).join('') + '</div>' : '<p class="hp-empty">Aucun document pour l\'instant.</p>') + '</div></div>';
+  }
+  /* bandeau bien visible quand l'analyse est bloquée pour tout le monde (crédit Claude épuisé ou budget atteint) */
+  function blockedBanner() {
+    if (!blocked) return '';
+    var n = cache.docs.filter(function (d) { return d.status !== 'done'; }).length, budget = blocked === 'budget';
+    return '<div class="alert warn" id="blocked-banner" role="alert" style="margin-bottom:16px"><span class="ic" aria-hidden="true">⛔</span><span><b>L\'analyse des documents est bloquée</b> : ' +
+      (budget ? 'le budget mensuel de Claude est atteint.' : 'le crédit Claude est épuisé.') + (n ? ' ' + plural(n, 'document attend', 'documents attendent') + '.' : '') +
+      ' Aucun nouveau mot n\'arrive chez les élèves (et aucun mail « nouveau cours » ne part) tant que Benjamin n\'a pas ' + (budget ? 'relevé la limite' : 'racheté du crédit') +
+      ' sur platform.claude.com. Ensuite, relancez l\'analyse dans Documents.</span></div>';
   }
   function docsPage() {
     var docs = cache.docs, pend = docs.filter(function (d) { return d.status !== 'done'; });
@@ -1267,6 +1280,7 @@ var HPApp = (function () {
       return HPA.analyse(d, blob, Object.keys(themes), step, ctl.signal);
     }).then(function (res) {
       delete pending[docId];
+      if (blocked) { blocked = null; var bb = $('#blocked-banner'); if (bb) bb.remove(); }   /* l'analyse remarche */
       var el = here();
       if (autoDoc(d)) {
         if (el) el.innerHTML = '<div class="review"><b>Ajout à l\'espace de l\'élève…</b><div class="progress-line"><i></i></div></div>';
@@ -1280,6 +1294,11 @@ var HPApp = (function () {
       else { results[docId] = res; toast('Analyse de « ' + d.name + ' » terminée : ouvrez Documents pour la valider.', true); }
     }).catch(function (e) {
       delete pending[docId];
+      if (e && (e.code === 'no_credit' || e.code === 'spend_limit')) {
+        blocked = e.code === 'spend_limit' ? 'budget' : 'credit';
+        var main = $('.bo-main'), pg = (location.hash || '#/tableau').slice(2).split('/')[0] || 'tableau';
+        if (main && !$('#blocked-banner') && (pg === 'tableau' || pg === 'documents')) main.insertAdjacentHTML('afterbegin', blockedBanner());
+      }
       var el = here();
       if (e && e.code === 'cancelled') { if (el) el.innerHTML = ''; return; }
       if (e && e.code === 'no_sample') { if (el) showManual(el, d, e.extracted); return; }

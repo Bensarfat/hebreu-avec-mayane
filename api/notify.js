@@ -93,17 +93,19 @@ module.exports = async function handler(req, res) {
       const rows = await sb.call('/rest/v1/profiles?select=id,first,email,active,notify_docs,notified_at,notify_token&role=eq.student&id=in.(' + ids.join(',') + ')');
       const now = Date.now(), base = site(req);
       let sent = 0, skipped = 0, failed = 0;
+      const details = [];   /* pour chaque élève : ce qui s'est passé (affiché à Maayane) */
       for (const p of rows || []) {
-        if (p.active === false || p.notify_docs === false || !EMAIL.test(String(p.email || '').trim())) { skipped++; continue; }
-        if (p.notified_at && now - Date.parse(p.notified_at) < GAP) { skipped++; continue; }   /* déjà prévenu il y a moins de 10 minutes */
+        const st = p.active === false ? 'inactive' : p.notify_docs === false ? 'off' : !EMAIL.test(String(p.email || '').trim()) ? 'no_email'
+          : p.notified_at && now - Date.parse(p.notified_at) < GAP ? 'recent' : '';   /* recent : déjà prévenu il y a moins de 10 minutes */
+        if (st) { skipped++; details.push({ first: p.first || '', status: st }); continue; }
         const m = mail(p.first || '', docs, base + '/', base + '/api/notify?unsub=' + p.notify_token);
         try {
           await send(String(p.email).trim(), m.subject, m.html, m.text);
           await sb.call('/rest/v1/profiles?id=eq.' + p.id, { method: 'PATCH', body: { notified_at: new Date().toISOString() }, headers: { Prefer: 'return=minimal' } });
-          sent++;
-        } catch (e) { console.error('mail élève', p.id, e.message); failed++; }
+          sent++; details.push({ first: p.first || '', status: 'sent' });
+        } catch (e) { console.error('mail élève', p.id, e.message); failed++; details.push({ first: p.first || '', status: 'failed', detail: String(e.message || '').slice(0, 200) }); }
       }
-      res.status(200).json({ sent: sent, skipped: skipped, failed: failed });
+      res.status(200).json({ sent: sent, skipped: skipped, failed: failed, details: details });
       return;
     }
     res.status(400).json({ error: 'invalid' });

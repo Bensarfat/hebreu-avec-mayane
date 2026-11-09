@@ -1385,9 +1385,19 @@ var HPApp = (function () {
     notifyTimer = setTimeout(function () {
       var w = notifyWait; notifyWait = {};
       Object.keys(w).forEach(function (id) {
-        Promise.resolve(HPB.notifyDocs([id], w[id])).catch(function (e) { console.warn('Mail « nouveau cours » non envoyé', e); });
+        Promise.resolve(HPB.notifyDocs([id], w[id])).then(notifyToast, function (e) { toast('Mail « nouveau cours » non envoyé : ' + errText(e), true); });
       });
     }, 8000);
+  }
+  /* dire à Maayane si le mail est parti, et sinon pourquoi */
+  function notifyToast(r) {
+    if (!r) return;
+    if (r.reason === 'mail_not_configured') return toast('Mail « nouveau cours » non envoyé : l\'envoi de mails n\'est pas encore réglé (Benjamin, dans Vercel).', true);
+    var WHY = { no_email: 'pas d\'adresse mail dans sa fiche', off: 'mails coupés', recent: 'déjà prévenu il y a moins de 10 minutes', inactive: 'compte suspendu', failed: 'refus du service d\'envoi' };
+    (r.details || []).forEach(function (x) {
+      if (x.status === 'sent') toast('✉️ Mail « nouveau cours » envoyé à ' + x.first);
+      else toast('Pas de mail pour ' + x.first + ' : ' + (WHY[x.status] || x.status) + (x.detail ? ' (' + x.detail + ')' : '') + '.', x.status === 'failed' || x.status === 'no_email');
+    });
   }
   function applyResult(d, res, targets) {
     var name = d ? d.name : 'Import JSON', added = { words: 0, grammar: 0 };

@@ -105,6 +105,20 @@ module.exports = async function handler(req, res) {
           sent++; details.push({ first: p.first || '', status: 'sent' });
         } catch (e) { console.error('mail élève', p.id, e.message); failed++; details.push({ first: p.first || '', status: 'failed', detail: String(e.message || '').slice(0, 200) }); }
       }
+      /* copie pour Maayane (Réglages › Copie des mails) : un petit récapitulatif quand au moins un mail est parti */
+      if (sent) {
+        try {
+          const st = await sb.call('/rest/v1/settings?select=data&id=eq.1');
+          const copy = String((st && st[0] && st[0].data && st[0].data.copyMail) || '').trim();
+          if (EMAIL.test(copy)) {
+            const who2 = details.filter(function (x) { return x.status === 'sent'; }).map(function (x) { return x.first; });
+            const list = docs.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('');
+            await send(copy, 'Copie : mail « nouveau cours » envoyé à ' + who2.join(', '),
+              '<div style="font:15px/1.5 Arial,sans-serif;color:#2a2340"><p>Le mail « nouveau cours » est parti à <b>' + esc(who2.join(', ')) + '</b> pour :</p><ul>' + list + '</ul></div>',
+              'Le mail « nouveau cours » est parti à ' + who2.join(', ') + ' pour :\n' + docs.map(function (d) { return '- ' + d; }).join('\n') + '\n');
+          }
+        } catch (e) { console.error('copie mail Maayane', e.message); }
+      }
       res.status(200).json({ sent: sent, skipped: skipped, failed: failed, details: details });
       return;
     }

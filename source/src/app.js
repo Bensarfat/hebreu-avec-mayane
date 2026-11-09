@@ -1164,6 +1164,9 @@ var HPApp = (function () {
         '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="' + esc(HPB.remote ? location.origin : 'https://…') + '" value="' + esc(st.siteUrl || '') + '">' +
         (HPB.remote ? '<input type="hidden" name="code" value="">' : '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>') +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
+      '<div class="card"><h3>✉️ Copie des mails aux élèves</h3><p class="small muted" style="margin-top:-6px">Quand un élève reçoit un mail « nouveau cours », vous recevez un petit mail récapitulatif à cette adresse. Laissez vide pour ne rien recevoir.</p>' +
+        '<form id="copymail" class="stack" style="gap:12px"><input class="in" type="email" name="mail" placeholder="vous@exemple.com" value="' + esc(st.copyMail || '') + '" autocomplete="email">' +
+        '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       (HPB.remote ? '' : '<div class="card"><h3>Démonstration</h3><p class="small muted" style="margin-top:-6px">Remet le site dans son état de départ (comptes de test, contenus et statistiques fictives).</p>' +
         '<button class="btn danger" data-act="resetdemo">Réinitialiser la démo</button></div>') + '</div></div>';
   }
@@ -1811,6 +1814,13 @@ var HPApp = (function () {
     }
     if (page === 'tests') bindTests();
     if (page === 'reglages') {
+      var cmf = $('#copymail');
+      if (cmf) cmf.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = cmf.mail.value.trim();
+        busy($('button', cmf), HPB.getSettings().then(function (st) { st.copyMail = v; return HPB.setSettings(st).then(function () { cache.settings = st; }); }), 'Enregistrement impossible')
+          .then(function () { toast(v ? 'Vous recevrez une copie à ' + v : 'Plus de copie des mails'); }).catch(function () {});
+      });
       var tf = $('#tpw');
       tf.addEventListener('submit', function (e) {
         e.preventDefault();

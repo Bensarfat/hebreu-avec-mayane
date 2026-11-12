@@ -126,6 +126,11 @@
   .alerts { display: grid; gap: 8px; }
   .alert { display: flex; gap: 12px; align-items: center; padding: 11px 14px; border-radius: 16px; background: var(--zebra); font-size: 14px; cursor: pointer; border: 1px solid var(--line); }
   .alert:hover { border-color: var(--accent-soft); }
+  /* paiements (fiche élève et « Mon compte ») */
+  .ac-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ac-tbl td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .ac-tbl td:first-child { white-space: nowrap; color: var(--muted); }
+  .ac-tbl td:nth-child(3) { white-space: nowrap; }
   .alert .ic { font-size: 18px; } .alert.warn { background: var(--rose-tint); border-color: transparent; } .alert.good { background: var(--mint); border-color: transparent; }
   .lb { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .lb li { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; }

@@ -411,7 +411,7 @@ var HPApp = (function () {
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
-        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
+        'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp==="acct-info"){var a=document.getElementById("hp-ac-btn"),z=document.getElementById("hp-zm-btn"),ad=document.getElementById("hp-ac-dot");if(a)a.hidden=!d.pay;if(ad)ad.hidden=!d.due;if(z){z.hidden=!d.zoom;if(d.zoom)z.href=d.zoom;}return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';   /* « Jeux de mots » : dans le code commun (source/exercices/app.html) */
       var bar = '<div class="hp-sbar' + (preview ? ' pv' : '') + '">' +
         (preview ? '<span>👁 Aperçu de l\'espace de <b>' + esc(fullName(st)) + '</b> — vos réponses ne sont pas enregistrées</span>'
@@ -419,6 +419,8 @@ var HPApp = (function () {
         '<button type="button" id="hp-px-btn" class="px" hidden onclick="window.HPX&&HPX.open()">🧩<span class="l"> Jeux de mots</span><span class="s"> Exos</span></button>' +
         (preview ? '' : '<button type="button" class="q" onclick="parent.postMessage({hp:\'ask\'},\'*\')">❓<span class="l"> Une question ?</span><span class="s"> Question</span><i id="hp-q-dot" hidden></i></button>') +
         (preview ? '' : '<button type="button" id="hp-dc-btn" class="dc" onclick="parent.postMessage({hp:\'docs\'},\'*\')">📄<span class="l"> Mes documents</span><span class="s"> Docs</span></button>') +
+        (preview ? '' : '<button type="button" id="hp-ac-btn" class="dc q" hidden onclick="parent.postMessage({hp:\'account\'},\'*\')">💳<span class="l"> Mon compte</span><span class="s"> Compte</span><i id="hp-ac-dot" hidden></i></button>') +
+        (preview ? '' : '<a id="hp-zm-btn" class="zm" hidden target="_blank" rel="noopener">🎥<span> Zoom</span></a>') +
         (preview ? '' : '<button type="button" class="dc" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'grouping\'},\'*\')" title="Choisir comment tes mots sont regroupés">🗂<span class="l"> Organiser mes mots</span><span class="s"> Mots</span></button>') +
         (preview ? '' : '<span class="hp-ag"><small id="hp-ag-next"></small><button type="button" id="hp-ag-btn" class="ag" hidden onclick="parent.postMessage({hp:\'agenda\'},\'*\')">📅 Mes cours</button></span>') +
         '<button type="button" onclick="if(window.HPG&&HPG.flush)HPG.flush();parent.postMessage({hp:\'' + (preview ? 'close' : 'logout') + '\'},\'*\')">' + (preview ? '← Tableau de bord' : 'Se déconnecter') + '</button></div>';
@@ -435,7 +437,7 @@ var HPApp = (function () {
       fr.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms allow-downloads');
       root.appendChild(fr);
       frame = { el: fr, id: id, preview: !!preview };
-      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); });
+      if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); sendAcctInfo(fr, id); });
       fr.srcdoc = html;
       document.title = 'Hébreu · ' + st.first;
       });
@@ -502,6 +504,8 @@ var HPApp = (function () {
     '.hp-sbar button.ag{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);border-color:transparent}' +
     '.hp-sbar button.q{position:relative}.hp-sbar button.q i{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--rose);border:2px solid var(--paper)}' +
     '.hp-sbar button.q{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.q .s{display:none}@media(max-width:560px){.hp-sbar button.q .l{display:none}.hp-sbar button.q .s{display:inline}}' +
+    '.hp-sbar a.zm{display:inline-block;text-decoration:none;border:1.5px solid transparent;background:#2D8CFF;color:#fff;border-radius:999px;padding:6px 14px;font:700 13px var(--font-ui)}.hp-sbar a.zm[hidden]{display:none}' +
+    '@media(max-width:420px){.hp-sbar a.zm{padding:6px 10px}}' +
     '.hp-sbar button.dc{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.dc .s{display:none}@media(max-width:560px){.hp-sbar button.dc .l{display:none}.hp-sbar button.dc .s{display:inline}}' +
     '.hp-sbar button.px{border-color:var(--accent-soft);color:var(--accent)}.hp-sbar button.px .s{display:none}@media(max-width:560px){.hp-sbar button.px .l{display:none}.hp-sbar button.px .s{display:inline}}' +
     '@media(max-width:560px){.hp-sbar .hp-ag small{display:none}}' +
@@ -518,6 +522,7 @@ var HPApp = (function () {
     if (m.hp === 'close' && frame.preview) { closePreview(); return; }
     if (m.hp === 'ask' && !frame.preview) { var f1 = frame; openAsk(frame.id, function () { if (f1.el.isConnected) sendMsgInfo(f1.el, f1.id); }); return; }
     if (m.hp === 'docs' && !frame.preview) { openDocs(frame.id); return; }
+    if (m.hp === 'account' && !frame.preview) { openAccount(frame.id); return; }
     if (m.hp === 'grouping' && !frame.preview) { openGrouping(frame.id); return; }
     if (m.hp === 'agenda' && !frame.preview) { var f0 = frame; AG.openPane(frame.id, function () { if (f0.el.isConnected) sendAgendaInfo(f0.el, f0.id); }); return; }
     if (m.hp === 'progress' && !frame.preview) {
@@ -703,6 +708,64 @@ var HPApp = (function () {
       if (!closed) box.innerHTML = '<p class="muted">Impossible d\'afficher ce document ici. Tu peux le télécharger.</p><p class="small muted">' + esc((e && e.message) || '') + '</p>';
     });
   }
+  /* ---------- paiements : un seul calcul, chez Maayane comme chez l'élève ----------
+     cours de l'agenda passés (depuis la date de début) × prix de l'heure, + cours hors agenda, − paiements reçus */
+  function account(rate, start, bookings, pays) {
+    var from = start ? Date.parse(start + 'T00:00:00') : null;
+    var lessons = rate == null ? [] : bookings.filter(function (b) { return !from || b.start >= from; }).map(function (b) {
+      var min = Math.round((b.end - b.start) / 60000);
+      return { start: b.start, min: min, amount: Math.round(rate * min / 60 * 100) / 100 };
+    }).sort(function (a, b) { return b.start - a.start; });
+    function sum(l) { return l.reduce(function (t, x) { return t + (+x.amount || 0); }, 0); }
+    var charges = pays.filter(function (x) { return x.kind === 'charge'; }), paid = pays.filter(function (x) { return x.kind !== 'charge'; });
+    var total = sum(lessons) + sum(charges), paidTotal = sum(paid);
+    return { lessons: lessons, charges: charges, paid: paid, minutes: lessons.reduce(function (t, x) { return t + x.min; }, 0), total: total, paidTotal: paidTotal, due: Math.round((total - paidTotal) * 100) / 100 };
+  }
+  function money(n, cur) { return (Math.round(n * 100) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ' + (cur || '₪'); }
+  function hoursTxt(min) { var h = Math.floor(min / 60), m = min % 60; return h ? h + ' h' + (m ? ' ' + (m < 10 ? '0' : '') + m : '') : m + ' min'; }
+  /* tableau de bord du compte ; teacher : boutons de suppression des paiements */
+  function accountHtml(a, cur, teacher) {
+    var dueTxt = a.due > 0.004 ? (teacher ? 'Reste à payer' : 'Reste à régler') : a.due < -0.004 ? 'Avance' : 'À jour';
+    var rows = a.lessons.map(function (l) { return { t: l.start, html: '<td>' + new Date(l.start).toLocaleDateString('fr-FR') + '</td><td>Cours · ' + hoursTxt(l.min) + '</td><td style="text-align:right">' + money(l.amount, cur) + '</td><td></td>' }; })
+      .concat(a.charges.map(function (x) { return { t: Date.parse(x.on), html: '<td>' + new Date(x.on).toLocaleDateString('fr-FR') + '</td><td>Cours hors agenda' + (x.note ? ' · ' + esc(x.note) : '') + '</td><td style="text-align:right">' + money(x.amount, cur) + '</td><td>' + (teacher ? '<button class="btn small ghost" data-delpay="' + esc(x.id) + '" title="Supprimer">🗑</button>' : '') + '</td>' }; }))
+      .concat(a.paid.map(function (x) { return { t: Date.parse(x.on), html: '<td>' + new Date(x.on).toLocaleDateString('fr-FR') + '</td><td style="color:var(--good,#1a7f4b)"><b>Paiement reçu</b>' + (x.method ? ' · ' + esc(x.method) : '') + (x.note ? ' · ' + esc(x.note) : '') + '</td><td style="text-align:right;color:var(--good,#1a7f4b)">− ' + money(x.amount, cur) + '</td><td>' + (teacher ? '<button class="btn small ghost" data-delpay="' + esc(x.id) + '" title="Supprimer">🗑</button>' : '') + '</td>' }; }))
+      .sort(function (x, y) { return y.t - x.t; });
+    return '<div class="hp-kpis" style="margin-bottom:14px"><div class="hp-kpi"><b>' + a.lessons.length + '</b><span>cours (' + hoursTxt(a.minutes) + ')</span></div>' +
+      '<div class="hp-kpi gold"><b>' + money(a.total, cur) + '</b><span>total</span></div><div class="hp-kpi green"><b>' + money(a.paidTotal, cur) + '</b><span>payé</span></div>' +
+      '<div class="hp-kpi ' + (a.due > 0.004 ? 'rose' : 'sky') + '"><b>' + money(Math.abs(a.due), cur) + '</b><span>' + dueTxt + '</span></div></div>' +
+      (rows.length ? '<div style="overflow-x:auto"><table class="ac-tbl"><tbody>' + rows.map(function (r) { return '<tr>' + r.html + '</tr>'; }).join('') + '</tbody></table></div>' : '<p class="hp-empty">Aucun cours ni paiement pour l\'instant.</p>');
+  }
+  /* côté élève : « Mon compte » */
+  function openAccount(sid) {
+    var el = document.createElement('div');
+    el.className = 'ag-pane'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Mon compte');
+    el.innerHTML = '<div class="ag-pane-in"><div class="ag-ptop"><button type="button" class="btn small" data-close>← Retour à mes révisions</button></div>' +
+      '<h1 class="page-title">Mon compte <span class="grad" lang="he" dir="rtl">חשבון</span></h1><div id="ac-box"><p class="muted">Chargement…</p></div></div>';
+    document.body.appendChild(el);
+    var close = function () { el.remove(); document.removeEventListener('keydown', esc1); };
+    function esc1(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', esc1);
+    $('[data-close]', el).onclick = close;
+    var box = $('#ac-box', el);
+    HPB.myAccount(sid).then(function (r) {
+      if (r.rate == null) { box.innerHTML = '<div class="card"><p class="hp-empty">Pas encore de suivi des paiements.</p></div>'; return; }
+      var a = account(r.rate, r.start, r.bookings || [], r.payments || []);
+      box.innerHTML = '<div class="card" style="margin-bottom:16px"><p class="small muted" style="margin:0 0 12px">Prix de l\'heure : <b>' + money(r.rate, r.currency) + '</b>. Les cours passés de ton agenda sont comptés automatiquement.</p>' + accountHtml(a, r.currency, false) + '</div>' +
+        (r.bank ? '<div class="card"><h3>🏦 Payer par virement</h3><pre style="white-space:pre-wrap;font:inherit;margin:0 0 10px" dir="auto">' + esc(r.bank) + '</pre>' +
+          '<button class="btn small" data-copy>Copier les coordonnées</button><p class="small muted" style="margin:10px 0 0">Après ton virement, Maayane l\'ajoute ici.</p></div>' : '');
+      var cp = $('[data-copy]', box);
+      if (cp) cp.onclick = function () { try { navigator.clipboard.writeText(r.bank).then(function () { toast('Coordonnées copiées'); }); } catch (e) {} };
+    }, function (e) { box.innerHTML = '<div class="card"><p class="muted">Ton compte n\'est pas disponible pour l\'instant. Réessaie un peu plus tard.</p><p class="small muted">' + esc((e && e.message) || '') + '</p></div>'; });
+  }
+  /* boutons « Mon compte » (avec pastille si un montant reste dû) et « Zoom » de la barre élève */
+  function sendAcctInfo(fr, id) {
+    if (!HPB.myAccount) return;
+    Promise.resolve(HPB.myAccount(id)).then(function (r) {
+      var a = r.rate == null ? null : account(r.rate, r.start, r.bookings || [], r.payments || []);
+      var zoom = /^https:\/\/[^\s"'<>]+$/.test(r.zoom || '') ? r.zoom : '';
+      if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'acct-info', pay: !!a, due: !!(a && a.due > 0.004), zoom: zoom }, '*');
+    }).catch(function () {});
+  }
   /* pastille « nouvelle réponse » sur le bouton de l'espace élève */
   function sendMsgInfo(fr, id) {
     if (!HPB.listMessages) return;
@@ -859,8 +922,8 @@ var HPApp = (function () {
     var m = metrics(s), L = HP.levelInfo(m.xp), pd = docsFor(id).filter(function (d) { return d.status !== 'done'; }).length;
     var nc = AG.upcoming(id).length;
     var nq = (cache.unread || {})[id] || 0;
-    var tabs = [['progression', 'Progression'], ['messages', 'Messages' + (nq ? ' (' + nq + ')' : '')], ['cours', 'Cours' + (nc ? ' (' + nc + ')' : '')], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
-    var body = tab === 'messages' ? '<div class="card msg-card"><h3>Questions de ' + esc(s.first) + '</h3><div id="msg-box"><p class="muted">Chargement…</p></div></div>' : tab === 'cours' ? AG.studentTab(s) : tab === 'documents' ? stDocs(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
+    var tabs = [['progression', 'Progression'], ['messages', 'Messages' + (nq ? ' (' + nq + ')' : '')], ['cours', 'Cours' + (nc ? ' (' + nc + ')' : '')], ['documents', 'Documents' + (pd ? ' (' + pd + ')' : '')], ['paiements', 'Paiements'], ['contenu', 'Contenu du site'], ['acces', 'Compte & accès']];
+    var body = tab === 'messages' ? '<div class="card msg-card"><h3>Questions de ' + esc(s.first) + '</h3><div id="msg-box"><p class="muted">Chargement…</p></div></div>' : tab === 'cours' ? AG.studentTab(s) : tab === 'documents' ? stDocs(s) : tab === 'paiements' ? stPayments(s) : tab === 'contenu' ? stContent(s) : tab === 'acces' ? stAccess(s) : stProgress(s, m);
     return '<a class="back" href="#/eleves">← Tous les élèves</a>' +
       '<div class="st-head">' + avatar(s, 'lg') + '<div style="flex:1;min-width:220px"><h1>' + esc(fullName(s)) +
         (s.active === false ? ' <span class="pill rose">suspendu</span>' : '') + '</h1>' +
@@ -1116,6 +1179,60 @@ var HPApp = (function () {
       (s.id ? '' : '<label class="f">Mot de passe<span class="row" style="flex-wrap:nowrap"><input class="in mono" name="pw" value="' + HPB.genPassword() + '" required minlength="6"><button type="button" class="btn small" data-gen aria-label="Proposer un mot de passe" title="Proposer un mot de passe">↻</button></span></label>') +
       '</div>';
   }
+  /* ---------- paiements et Zoom de l'élève ---------- */
+  function stPayments(s) {
+    var cur = ((cache.settings || {}).billing || {}).currency || '₪', today = new Date().toISOString().slice(0, 10);
+    return '<div class="two"><div class="card"><h3>💳 Compte de ' + esc(s.first) + '</h3><div id="pay-box"><p class="muted">Chargement…</p></div></div>' +
+      '<div class="stack" style="gap:18px"><div class="card"><h3>Tarif et Zoom</h3><form id="bill-f" class="stack" style="gap:12px">' +
+        '<label class="f">Prix de l\'heure (' + esc(cur) + ')<input class="in" name="rate" type="number" min="0" step="0.01" inputmode="decimal" value="' + (s.rate == null ? '' : s.rate) + '" placeholder="laisser vide = pas de suivi"></label>' +
+        '<label class="f">Cours de l\'agenda comptés à partir du<input class="in" name="start" type="date" value="' + esc(s.billingStart || today) + '"></label>' +
+        '<label class="f">Lien Zoom de ' + esc(s.first) + ' <span class="muted" style="font-weight:500">(vide = lien commun des Réglages)</span><input class="in" name="zoom" type="url" placeholder="https://zoom.us/j/…" value="' + esc(s.zoom || '') + '"></label>' +
+        '<p class="small muted" style="margin:0">Chaque cours passé de l\'agenda est compté au prorata de sa durée (45 min = ¾ du prix de l\'heure).</p>' +
+        '<div><button class="btn primary" type="submit">Enregistrer</button></div></form></div>' +
+      '<div class="card"><h3>Ajouter</h3><form id="pay-f" class="stack" style="gap:12px">' +
+        '<label class="f">Type<select class="in" name="kind"><option value="payment">Paiement reçu</option><option value="charge">Cours hors agenda (à payer)</option></select></label>' +
+        '<label class="f">Montant (' + esc(cur) + ')<input class="in" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></label>' +
+        '<label class="f">Date<input class="in" name="on" type="date" value="' + today + '" required></label>' +
+        '<label class="f">Moyen<select class="in" name="method"><option>Virement</option><option>Bit</option><option>PayBox</option><option>Espèces</option><option>Autre</option></select></label>' +
+        '<label class="f">Note <span class="muted" style="font-weight:500">(facultatif)</span><input class="in" name="note" maxlength="300"></label>' +
+        '<div><button class="btn primary" type="submit">Ajouter</button></div></form></div></div></div>';
+  }
+  function bindPayments(s) {
+    var box = $('#pay-box'); if (!box) return;
+    var cur = ((cache.settings || {}).billing || {}).currency || '₪';
+    function load() {
+      return Promise.all([HPB.listBookings(null, Date.now()), HPB.listPayments()]).then(function (r) {
+        if (!box.isConnected) return;
+        var now = Date.now(), bk = r[0].filter(function (b) { return b.studentId === s.id && b.status !== 'cancelled' && b.end < now; });
+        var pays = r[1].filter(function (x) { return x.studentId === s.id; });
+        box.innerHTML = s.rate == null && !pays.length ? '<p class="hp-empty">Indiquez le prix de l\'heure pour commencer le suivi.</p>' : accountHtml(account(s.rate, s.billingStart, bk, pays), cur, true);
+        $$('[data-delpay]', box).forEach(function (b) {
+          b.onclick = function () { busy(b, HPB.deletePayment(b.dataset.delpay), 'Suppression impossible').then(load).catch(function () {}); };
+        });
+      }, function (e) { if (box.isConnected) box.innerHTML = '<p class="muted">Les paiements ne sont pas encore disponibles (mise à jour de la base en cours). Rechargez la page dans une minute.</p><p class="small muted">' + esc(errText(e)) + '</p>'; });
+    }
+    load();
+    var bf = $('#bill-f');
+    bf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = bf.rate.value.trim(), z = bf.zoom.value.trim();
+      if (z && !/^https:\/\//.test(z)) { toast('Le lien Zoom doit commencer par https://', true); return; }
+      var b = { rate: v === '' ? null : Math.max(0, +v), billingStart: bf.start.value || '', zoom: z };
+      busy($('button', bf), HPB.setBilling(s.id, b), 'Enregistrement impossible').then(function () {
+        s.rate = b.rate; s.billingStart = b.billingStart; s.zoom = b.zoom; toast('Enregistré'); load();
+      }).catch(function () {});
+    });
+    var pf = $('#pay-f');
+    pf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var p = { studentId: s.id, kind: pf.kind.value, amount: Math.round(+pf.amount.value * 100) / 100, on: pf.on.value, method: pf.kind.value === 'payment' ? pf.method.value : '', note: pf.note.value.trim() };
+      if (!(p.amount > 0)) return;
+      busy($('button[type=submit]', pf), HPB.addPayment(p), 'Ajout impossible').then(function () {
+        toast(p.kind === 'payment' ? 'Paiement enregistré' : 'Cours ajouté'); pf.amount.value = ''; pf.note.value = ''; load();
+      }).catch(function () {});
+    });
+  }
+
   function stAccess(s) {
     return '<div class="two"><div class="card"><h3>Informations</h3><form id="edit">' + studentForm(s) +
       '<div class="row" style="margin-top:16px"><button class="btn primary" type="submit">Enregistrer</button><span id="edit-msg"></span></div></form></div>' +
@@ -1163,6 +1280,11 @@ var HPApp = (function () {
       '<div class="stack" style="gap:18px"><div class="card"><h3>Adresse du site</h3><p class="small muted" style="margin-top:-6px">Elle est ajoutée aux messages d\'accès envoyés aux élèves.</p>' +
         '<form id="site" class="stack" style="gap:12px"><input class="in" name="url" placeholder="' + esc(HPB.remote ? location.origin : 'https://…') + '" value="' + esc(st.siteUrl || '') + '">' +
         (HPB.remote ? '<input type="hidden" name="code" value="">' : '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>') +
+        '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
+      '<div class="card"><h3>💳 Paiements et Zoom</h3><p class="small muted" style="margin-top:-6px">Le prix de l\'heure se règle dans la fiche de chaque élève (onglet Paiements).</p><form id="billing" class="stack" style="gap:12px">' +
+        '<label class="f">Monnaie<select class="in" name="currency">' + ['₪', '€', '$'].map(function (c) { return '<option' + (((st.billing || {}).currency || '₪') === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></label>' +
+        '<label class="f">Coordonnées pour le virement <span class="muted" style="font-weight:500">(montrées aux élèves dans « Mon compte »)</span><textarea class="in" name="bank" rows="4" placeholder="Banque, agence, numéro de compte, nom…">' + esc((st.billing || {}).bank || '') + '</textarea></label>' +
+        '<label class="f">Lien Zoom commun <span class="muted" style="font-weight:500">(pour les élèves sans lien propre)</span><input class="in" name="zoom" type="url" placeholder="https://zoom.us/j/…" value="' + esc((st.billing || {}).zoom || '') + '"></label>' +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       '<div class="card"><h3>✉️ Copie des mails aux élèves</h3><p class="small muted" style="margin-top:-6px">Quand un élève reçoit un mail « nouveau cours », vous recevez un petit mail récapitulatif à cette adresse. Laissez vide pour ne rien recevoir.</p>' +
         '<form id="copymail" class="stack" style="gap:12px"><input class="in" type="email" name="mail" placeholder="vous@exemple.com" value="' + esc(st.copyMail || '') + '" autocomplete="email">' +
@@ -1471,6 +1593,7 @@ var HPApp = (function () {
     bindCopy(document);
     if (page === 'agenda') AG.bind(h[1]);
     if (page === 'tableau' || (page === 'eleve' && h[2] === 'cours')) AG.bindStudentTab();
+    if (page === 'eleve' && h[2] === 'paiements') { var ps = cache.students.filter(function (x) { return x.id === h[1]; })[0]; if (ps) bindPayments(ps); }
 
     /* dépôt */
     var drop = $('#drop');
@@ -1814,6 +1937,15 @@ var HPApp = (function () {
     }
     if (page === 'tests') bindTests();
     if (page === 'reglages') {
+      var blf = $('#billing');
+      if (blf) blf.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var z = blf.zoom.value.trim();
+        if (z && !/^https:\/\//.test(z)) { toast('Le lien Zoom doit commencer par https://', true); return; }
+        var b = { currency: blf.currency.value, bank: blf.bank.value.trim().slice(0, 1000), zoom: z };
+        busy($('button', blf), HPB.getSettings().then(function (st) { st.billing = b; return HPB.setSettings(st).then(function () { cache.settings = st; }); }), 'Enregistrement impossible')
+          .then(function () { toast('Enregistré'); }).catch(function () {});
+      });
       var cmf = $('#copymail');
       if (cmf) cmf.addEventListener('submit', function (e) {
         e.preventDefault();

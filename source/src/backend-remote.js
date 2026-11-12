@@ -54,7 +54,8 @@
     return {
       id: p.id, first: p.first || '', last: p.last || '', login: p.login, email: p.email || '', phone: p.phone || '',
       active: p.active !== false, createdAt: p.created_at, pw: secrets ? (secrets[p.id] || '') : undefined,
-      notify: p.notify_docs !== false   /* mails « nouveau cours » (activés par défaut) */
+      notify: p.notify_docs !== false,   /* mails « nouveau cours » (activés par défaut) */
+      rate: p.rate == null ? null : +p.rate, billingStart: p.billing_start || '', zoom: p.zoom_url || ''   /* paiements et Zoom */
     };
   }
   function docFromRow(r) {
@@ -200,6 +201,17 @@
     setStudentNotify: function (id, on) { return q(sbc.from('profiles').update({ notify_docs: !!on }).eq('id', id)); },
     myDocs: function () { return post('/api/documents', { action: 'list' }).then(function (r) { return r.docs || []; }); },
     myDocUrl: function (sid, id, view) { return post('/api/documents', { action: 'url', id: id, view: !!view }).then(function (r) { return r.url; }); },
+
+    /* ---------- paiements et Zoom ---------- */
+    setBilling: function (id, b) { return q(sbc.from('profiles').update({ rate: b.rate, billing_start: b.billingStart || null, zoom_url: b.zoom || '' }).eq('id', id)); },
+    listPayments: function () {
+      return q(sbc.from('payments').select('*').order('paid_on', { ascending: false }).limit(5000)).then(function (rows) {
+        return rows.map(function (x) { return { id: x.id, studentId: x.student_id, kind: x.kind, amount: +x.amount, on: x.paid_on, method: x.method, note: x.note }; });
+      });
+    },
+    addPayment: function (p) { return q(sbc.from('payments').insert({ student_id: p.studentId, kind: p.kind, amount: p.amount, paid_on: p.on, method: p.method || '', note: p.note || '' })); },
+    deletePayment: function (id) { return q(sbc.from('payments').delete().eq('id', id)); },
+    myAccount: function () { return post('/api/compte', {}); },
 
     /* ---------- tests de niveau (fichiers déposés par /api/test ; lus et supprimés par le serveur, pour la professeure seule) ---------- */
     addLevelTest: function (rec) { return post('/api/test', rec); },

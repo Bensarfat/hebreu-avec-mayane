@@ -129,6 +129,26 @@ var HPB = (function () {
     },
     myDocUrl: function (sid, id) { return api.getBlob(id).then(function (b) { return b ? URL.createObjectURL(b) : null; }); },
 
+    /* ---------- paiements et Zoom (démo : dans ce navigateur) ---------- */
+    setBilling: function (id, b) {
+      return api.listStudents().then(function (l) { l.forEach(function (x) { if (x.id === id) { x.rate = b.rate; x.billingStart = b.billingStart || ''; x.zoom = b.zoom || ''; } }); return set('students', l); });
+    },
+    listPayments: function () { return get('payments').then(function (l) { return (l || []).slice().sort(function (a, b) { return a.on < b.on ? 1 : -1; }); }); },
+    addPayment: function (p) {
+      return get('payments').then(function (l) { l = l || []; p = Object.assign({}, p, { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }); l.push(p); return set('payments', l); });
+    },
+    deletePayment: function (id) { return get('payments').then(function (l) { return set('payments', (l || []).filter(function (x) { return x.id !== id; })); }); },
+    myAccount: function (sid) {
+      return Promise.all([api.getStudent(sid), api.getSettings(), api.listBookings(), api.listPayments()]).then(function (r) {
+        var s = r[0] || {}, bill = r[1].billing || {}, now = Date.now();
+        return {
+          rate: s.rate == null ? null : +s.rate, start: s.billingStart || null, zoom: s.zoom || bill.zoom || '', currency: bill.currency || '₪', bank: bill.bank || '',
+          bookings: r[2].filter(function (b) { return b.studentId === sid && b.status !== 'cancelled' && b.end < now; }).map(function (b) { return { start: b.start, end: b.end }; }),
+          payments: r[3].filter(function (x) { return x.studentId === sid; })
+        };
+      });
+    },
+
     /* ---------- tests de niveau (démo : gardés dans ce navigateur) ---------- */
     addLevelTest: function (rec) {
       return get('leveltests').then(function (l) {

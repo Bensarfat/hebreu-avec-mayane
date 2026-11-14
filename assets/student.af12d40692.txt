@@ -4339,6 +4339,7 @@ refreshGlobalStatsDisplay();
     ['Maison & vie quotidienne', /maison|meuble|quotidien|vetement|habit|couleur|objet|menage|routine|achat|magasin|argent|banque/],
     ['Travail & études', /travail|emploi|metier|profession|bureau|ecole|etude|cours|universit|classe|administr/],
     ['Ville, voyages & nature', /ville|transport|voyage|lieu|direction|geograph|nature|animal|desert|negev|mer\b|montagne|pays|rue|quartier|vacance/],
+    ['Sport & loisirs', /sport|loisir|\bjeux?\b|activite/],
     ['Société, culture & Israël', /societ|identit|etat civil|histoir|sionis|religion|culture|israel|politique|securit|danger|armee|fete/],
     ['Verbes & actions', /verbe|action|particip|binyan/],
     ['Bases de la langue', /base|pronom|mot.outil|prepos|question|liaison|connect|salutation|politesse|expression|slang|adverbe|adjectif|grammaire/]

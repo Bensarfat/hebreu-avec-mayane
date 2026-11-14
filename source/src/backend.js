@@ -142,7 +142,7 @@ var HPB = (function () {
       return Promise.all([api.getStudent(sid), api.getSettings(), api.listBookings(), api.listPayments()]).then(function (r) {
         var s = r[0] || {}, bill = r[1].billing || {}, now = Date.now();
         return {
-          rate: s.rate == null ? null : +s.rate, start: s.billingStart || null, zoom: s.zoom || bill.zoom || '', currency: bill.currency || '₪', bank: bill.bank || '',
+          rate: s.rate == null ? null : +s.rate, start: s.billingStart || null, zoom: s.zoom || bill.zoom || '', currency: bill.currency || '€', bank: bill.bank || '',
           bookings: r[2].filter(function (b) { return b.studentId === sid && b.status !== 'cancelled' && b.end < now; }).map(function (b) { return { start: b.start, end: b.end }; }),
           payments: r[3].filter(function (x) { return x.studentId === sid; })
         };

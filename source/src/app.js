@@ -721,7 +721,7 @@ var HPApp = (function () {
     var total = sum(lessons) + sum(charges), paidTotal = sum(paid);
     return { lessons: lessons, charges: charges, paid: paid, minutes: lessons.reduce(function (t, x) { return t + x.min; }, 0), total: total, paidTotal: paidTotal, due: Math.round((total - paidTotal) * 100) / 100 };
   }
-  function money(n, cur) { return (Math.round(n * 100) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ' + (cur || '₪'); }
+  function money(n, cur) { return (Math.round(n * 100) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ' + (cur || '€'); }
   function hoursTxt(min) { var h = Math.floor(min / 60), m = min % 60; return h ? h + ' h' + (m ? ' ' + (m < 10 ? '0' : '') + m : '') : m + ' min'; }
   /* tableau de bord du compte ; teacher : boutons de suppression des paiements */
   function accountHtml(a, cur, teacher) {
@@ -1181,7 +1181,7 @@ var HPApp = (function () {
   }
   /* ---------- paiements et Zoom de l'élève ---------- */
   function stPayments(s) {
-    var cur = ((cache.settings || {}).billing || {}).currency || '₪', today = new Date().toISOString().slice(0, 10);
+    var cur = ((cache.settings || {}).billing || {}).currency || '€', today = new Date().toISOString().slice(0, 10);
     return '<div class="two"><div class="card"><h3>💳 Compte de ' + esc(s.first) + '</h3><div id="pay-box"><p class="muted">Chargement…</p></div></div>' +
       '<div class="stack" style="gap:18px"><div class="card"><h3>Tarif et Zoom</h3><form id="bill-f" class="stack" style="gap:12px">' +
         '<label class="f">Prix de l\'heure (' + esc(cur) + ')<input class="in" name="rate" type="number" min="0" step="0.01" inputmode="decimal" value="' + (s.rate == null ? '' : s.rate) + '" placeholder="laisser vide = pas de suivi"></label>' +
@@ -1199,7 +1199,7 @@ var HPApp = (function () {
   }
   function bindPayments(s) {
     var box = $('#pay-box'); if (!box) return;
-    var cur = ((cache.settings || {}).billing || {}).currency || '₪';
+    var cur = ((cache.settings || {}).billing || {}).currency || '€';
     function load() {
       return Promise.all([HPB.listBookings(null, Date.now()), HPB.listPayments()]).then(function (r) {
         if (!box.isConnected) return;
@@ -1282,7 +1282,7 @@ var HPApp = (function () {
         (HPB.remote ? '<input type="hidden" name="code" value="">' : '<label class="f">Code d\'analyse <span class="muted" style="font-weight:500">(seulement si Benjamin vous en a donné un)</span><input class="in mono" name="code" value="' + esc(st.analyseCode || '') + '" autocomplete="off"></label>') +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       '<div class="card"><h3>💳 Paiements et Zoom</h3><p class="small muted" style="margin-top:-6px">Le prix de l\'heure se règle dans la fiche de chaque élève (onglet Paiements).</p><form id="billing" class="stack" style="gap:12px">' +
-        '<label class="f">Monnaie<select class="in" name="currency">' + ['₪', '€', '$'].map(function (c) { return '<option' + (((st.billing || {}).currency || '₪') === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></label>' +
+        '<label class="f">Monnaie<select class="in" name="currency">' + ['€', '₪', '$'].map(function (c) { return '<option' + (((st.billing || {}).currency || '€') === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></label>' +
         '<label class="f">Coordonnées pour le virement <span class="muted" style="font-weight:500">(montrées aux élèves dans « Mon compte »)</span><textarea class="in" name="bank" rows="4" placeholder="Banque, agence, numéro de compte, nom…">' + esc((st.billing || {}).bank || '') + '</textarea></label>' +
         '<label class="f">Lien Zoom commun <span class="muted" style="font-weight:500">(pour les élèves sans lien propre)</span><input class="in" name="zoom" type="url" placeholder="https://zoom.us/j/…" value="' + esc((st.billing || {}).zoom || '') + '"></label>' +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +

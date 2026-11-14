@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     const bill = (st && st[0] && st[0].data && st[0].data.billing) || {};
     res.status(200).json({
       rate: p[0].rate == null ? null : +p[0].rate, start: p[0].billing_start || null,
-      zoom: p[0].zoom_url || bill.zoom || '', currency: bill.currency || '₪', bank: bill.bank || '',
+      zoom: p[0].zoom_url || bill.zoom || '', currency: bill.currency || '€', bank: bill.bank || '',
       bookings: (bookings || []).map(function (b) { return { start: Date.parse(b.starts_at), end: Date.parse(b.ends_at) }; }),
       payments: (payments || []).map(function (x) { return { id: x.id, kind: x.kind, amount: +x.amount, on: x.paid_on, method: x.method, note: x.note }; })
     });

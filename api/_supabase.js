@@ -25,6 +25,13 @@ async function call(path, opts) {
   return data;
 }
 
+/* requête brute avec la clé service (fichiers binaires du stockage) : renvoie la réponse fetch telle quelle */
+function raw(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({ apikey: SERVICE }, SERVICE.indexOf('eyJ') === 0 ? { Authorization: 'Bearer ' + SERVICE } : {}, opts.headers || {});
+  return fetch(URL_ + path, { method: opts.method || 'GET', headers: headers, body: opts.body });
+}
+
 /* Qui appelle ? Renvoie {id, role} ou null. */
 async function caller(req) {
   const h = req.headers.authorization || '';
@@ -47,4 +54,4 @@ async function hasTeacher() {
   return !!(rows && rows.length);
 }
 
-module.exports = { configured, emailFor, validLogin, call, caller, hasTeacher, isStaff, URL_, ANON };
+module.exports = { configured, emailFor, validLogin, call, raw, caller, hasTeacher, isStaff, URL_, ANON };

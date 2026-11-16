@@ -410,6 +410,8 @@ var HPApp = (function () {
         ';window.__HP_KEY__=' + JSON.stringify(preview ? 'hp_preview' : 'hp_cache_' + id) +
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
+        (HPB.tts ? 'window.__HP_TTS=1;' : '') +   /* prononciation par la voix de qualité (api/tts.js) */
+        ';window.__HP_VOC=' + JSON.stringify(vocMap(content)).replace(/</g, '\\u003c') + ';' +   /* nikoud gardé pour la voix seulement */
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
         'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp==="acct-info"){var a=document.getElementById("hp-ac-btn"),z=document.getElementById("hp-zm-btn"),ad=document.getElementById("hp-ac-dot");if(a)a.hidden=!d.pay;if(ad)ad.hidden=!d.due;if(z){z.hidden=!d.zoom;if(d.zoom)z.href=d.zoom;}return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';   /* « Jeux de mots » : dans le code commun (source/exercices/app.html) */
@@ -473,6 +475,12 @@ var HPApp = (function () {
   /* demande de Maayane : pas de nikoud dans les exercices des élèves. Les données enregistrées gardent
      les voyelles (on peut revenir en arrière) ; seul ce qui est envoyé à l'espace élève en est privé.
      Les fiches de grammaire et le cours « Passé & futur » ne sont pas touchés. */
+  /* l'écran est sans nikoud, mais la voix prononce bien mieux un mot vocalisé : mot sans nikoud → mot vocalisé */
+  function vocMap(c) {
+    var m = {};
+    Object.keys((c && c.VOCAB) || {}).forEach(function (t) { (c.VOCAB[t] || []).forEach(function (e) { if (e && e[0] && e[2] && !m[e[0]]) m[e[0]] = e[2]; }); });
+    return m;
+  }
   function noNikud(c) {
     var N = /[\u0591-\u05BD\u05BF-\u05C7]/g;   /* garde le makaf ־ */
     function st(x) {
@@ -513,12 +521,26 @@ var HPApp = (function () {
     '@media(max-width:420px){.hp-sbar{gap:6px;padding:8px;border-radius:18px;justify-content:center}.hp-sbar .hi{display:none}.hp-sbar .hp-ag{margin-left:0}.hp-sbar button{white-space:nowrap;padding:6px 10px}}.hp-sbar.pv{background:var(--peach);border-color:transparent;border-radius:18px}';
   function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
 
+  /* voix de qualité : un son par texte, gardé en mémoire ; si le service n'est pas réglé, on n'insiste plus (voix de l'appareil) */
+  var ttsCache = {}, ttsOff = false;
+  function ttsAudio(text) {
+    if (!text || ttsOff || !HPB.tts) return Promise.resolve(null);
+    if (!ttsCache[text]) ttsCache[text] = HPB.tts(text).catch(function (e) {
+      delete ttsCache[text];
+      if (e && (e.code === 'tts_not_configured' || e.code === 'not_logged_in')) ttsOff = true;
+      return null;
+    });
+    return ttsCache[text];
+  }
   /* messages venant de l'espace élève : la page décide elle-même de quel élève il s'agit */
   var frame = null;
   window.addEventListener('message', function (e) {
     if (!frame || !frame.el.isConnected || e.source !== frame.el.contentWindow || !e.data || typeof e.data !== 'object') return;
     var m = e.data;
     if (m.hp === 'logout' && !frame.preview) { frame = null; logout(); return; }
+    if (m.hp === 'tts') { var f2 = frame; ttsAudio(String(m.text || '').slice(0, 300)).then(function (buf) {
+      if (f2.el.isConnected && f2.el.contentWindow) { var c = buf ? buf.slice(0) : null; f2.el.contentWindow.postMessage({ hp: 'tts-audio', id: m.id, buf: c }, '*', c ? [c] : []); }
+    }); return; }
     if (m.hp === 'close' && frame.preview) { closePreview(); return; }
     if (m.hp === 'ask' && !frame.preview) { var f1 = frame; openAsk(frame.id, function () { if (f1.el.isConnected) sendMsgInfo(f1.el, f1.id); }); return; }
     if (m.hp === 'docs' && !frame.preview) { openDocs(frame.id); return; }

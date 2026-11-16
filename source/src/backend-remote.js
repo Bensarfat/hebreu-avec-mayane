@@ -202,6 +202,16 @@
     myDocs: function () { return post('/api/documents', { action: 'list' }).then(function (r) { return r.docs || []; }); },
     myDocUrl: function (sid, id, view) { return post('/api/documents', { action: 'url', id: id, view: !!view }).then(function (r) { return r.url; }); },
 
+    /* ---------- prononciation (voix de qualité, api/tts.js) : renvoie le son MP3 ---------- */
+    tts: function (text) {
+      return token().then(function (t) {
+        return fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + (t || '') }, body: JSON.stringify({ text: text }) });
+      }).then(function (r) {
+        if (r.ok) return r.arrayBuffer();
+        return r.json().catch(function () { return {}; }).then(function (j) { var e = new Error(j.error || ('HTTP ' + r.status)); e.code = j.error; throw e; });
+      });
+    },
+
     /* ---------- paiements et Zoom ---------- */
     setBilling: function (id, b) { return q(sbc.from('profiles').update({ rate: b.rate, billing_start: b.billingStart || null, zoom_url: b.zoom || '' }).eq('id', id)); },
     listPayments: function () {

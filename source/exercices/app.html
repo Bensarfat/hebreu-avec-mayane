@@ -3471,13 +3471,16 @@ let storage = loadData();
    ============================================ */
 var HPS = (function () {
   var synth = window.speechSynthesis, voice = null, lastText = '', lastAt = 0;
+  /* Voix « cloud » : sur le site de Maayane, la page parente lit le mot avec une voix de qualité (Google)
+     et renvoie le son. Sans elle (site de Benjamin, ou service non réglé), voix de l'appareil. */
+  var cloud = !!window.__HP_TTS && window.parent !== window, actx = null, seq = 0, reqs = {}, src = null;
   var ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
   function pick() {
     if (!synth || !synth.getVoices) return;
     var he = (synth.getVoices() || []).filter(function (v) { return /^(he|iw)([-_]|$)/i.test(v.lang || ''); });
     he.sort(function (a, b) { return (b.localService ? 1 : 0) - (a.localService ? 1 : 0); });
     voice = he[0] || null;
-    document.documentElement.classList.toggle('hps-on', !!voice);
+    document.documentElement.classList.toggle('hps-on', !!voice || cloud);
   }
   if (synth) {
     pick();
@@ -3498,13 +3501,46 @@ var HPS = (function () {
     current = null;
     if (playingBtn) { playingBtn.classList.remove('playing'); playingBtn = null; }
   }
+  /* le contexte audio est ouvert au moment du clic (sinon iPhone et Safari refusent de jouer le son arrivé ensuite) */
+  function unlock() {
+    try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {}
+  }
+  function cloudSpeak(text, btn, slow) {
+    unlock();
+    var id = ++seq; reqs[id] = { text: text, btn: btn, slow: slow };
+    try { if (src) src.stop(); } catch (e) {}
+    window.parent.postMessage({ hp: 'tts', id: id, text: String(text) }, '*');
+    setTimeout(function () { if (reqs[id]) { delete reqs[id]; if (id === seq) done(null); } }, 15000);
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (e.source !== window.parent || !d || d.hp !== 'tts-audio') return;
+    var r = reqs[d.id]; delete reqs[d.id];
+    if (!r || d.id !== seq) return;                   /* une lecture plus récente a été demandée */
+    if (!d.buf || !actx) {                            /* service indisponible : voix de l'appareil */
+      cloud = false; pick();
+      if (voice) { playingBtn = null; speak(r.text, r.btn); } else done(null);
+      return;
+    }
+    actx.decodeAudioData(d.buf, function (audio) {
+      if (d.id !== seq) return;
+      try { if (src) src.stop(); } catch (x) {}
+      src = actx.createBufferSource(); src.buffer = audio;
+      src.playbackRate.value = r.slow ? 0.7 : 1;
+      src.connect(actx.destination);
+      src.onended = function () { if (d.id === seq) done(null); };
+      src.start(0);
+    }, function () { cloud = false; pick(); if (voice) speak(r.text, r.btn); else done(null); });
+  });
   function speak(text, btn) {
-    if (!synth || !voice || !text) return false;
+    if (text && window.__HP_VOC && window.__HP_VOC[text]) text = window.__HP_VOC[text];   /* mot affiché sans nikoud : on lit sa forme vocalisée */
+    if (!text || (!cloud && (!synth || !voice))) return false;
     var now = Date.now(), slow = !!btn && text === lastText && now - lastAt < 6000;
     lastText = text; lastAt = now;
     if (playingBtn && playingBtn !== btn) playingBtn.classList.remove('playing');
     playingBtn = btn || null;
     if (btn) btn.classList.add('playing');
+    if (cloud) { cloudSpeak(text, btn, slow); return true; }
     function go() {
       var u = new SpeechSynthesisUtterance(String(text));
       var v = freshVoice();
@@ -3552,6 +3588,7 @@ var HPS = (function () {
   }
   /* texte à lire : pour un verbe, l'infinitif puis « אֲנִי » au présent, au passé et au futur */
   function word(he, voc) {
+    if (!voc && window.__HP_VOC) voc = window.__HP_VOC[he] || '';   /* site de Maayane : nikoud gardé pour la voix */
     var w = voc || he, f = forms(he, voc);
     if (!f) return w;
     return [w].concat([f.pres, f.past, f.fut].filter(Boolean).map(function (x) { return 'אֲנִי ' + x; })).join(', ');
@@ -3563,7 +3600,8 @@ var HPS = (function () {
     var row = function (lbl, x) { return x ? '<span class="vf-row"><i>' + lbl + '</i><span lang="he" dir="rtl">אֲנִי ' + e(x) + '</span></span>' : ''; };
     return '<span class="verb-forms ' + (cls || '') + '">' + row('présent', f.pres) + row('passé', f.past) + row('futur', f.fut) + '</span>';
   }
-  return { speak: function (t) { return speak(t, null); }, btn: btn, word: word, forms: forms, formsHtml: formsHtml, ok: function () { return !!voice; } };
+  if (cloud) document.documentElement.classList.add('hps-on');
+  return { speak: function (t) { return speak(t, null); }, btn: btn, word: word, forms: forms, formsHtml: formsHtml, ok: function () { return !!voice || cloud; } };
 })();
 
 /* Themes renommes (numeros de cours retires) : on reporte les choix enregistres. */

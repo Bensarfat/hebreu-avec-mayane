@@ -412,6 +412,7 @@ var HPApp = (function () {
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         (HPB.tts ? 'window.__HP_TTS=1;' : '') +   /* prononciation par la voix de qualité (api/tts.js) */
         ';window.__HP_VOC=' + JSON.stringify(vocMap(content)).replace(/</g, '\\u003c') + ';' +   /* nikoud gardé pour la voix seulement */
+        ';window.__HP_WINFO=' + JSON.stringify(winfoMap(content)).replace(/</g, '\\u003c') + ';' +   /* grand thème et nature de chaque mot (jeu « L'intrus ») */
         ';window.__HP_TIP=' + JSON.stringify({ me: (content && content.TIP) || '', all: (content && content.TIP_ALL) || '' }).replace(/</g, '\\u003c') + ';' +   /* conseils de Maayane */
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
         'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp==="acct-info"){var a=document.getElementById("hp-ac-btn"),z=document.getElementById("hp-zm-btn"),ad=document.getElementById("hp-ac-dot");if(a)a.hidden=!d.pay;if(ad)ad.hidden=!d.due;if(z){z.hidden=!d.zoom;if(d.zoom)z.href=d.zoom;}return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
@@ -480,6 +481,11 @@ var HPApp = (function () {
   function vocMap(c) {
     var m = {};
     Object.keys((c && c.VOCAB) || {}).forEach(function (t) { (c.VOCAB[t] || []).forEach(function (e) { if (e && e[0] && e[2] && !m[e[0]]) m[e[0]] = e[2]; }); });
+    return m;
+  }
+  function winfoMap(c) {
+    var I = (c && c.WORDINFO) || {}, m = {};
+    Object.keys(I).forEach(function (k) { if (I[k] && (I[k].t || I[k].n)) m[k] = [I[k].t || '', I[k].n || '']; });
     return m;
   }
   function noNikud(c) {

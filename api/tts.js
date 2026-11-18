@@ -17,10 +17,11 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (!sb.configured()) { res.status(503).json({ error: 'not_configured' }); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed' }); return; }
+  const b = await readBody(req);
+  if (b.probe) { res.status(200).json({ ok: !!process.env.GOOGLE_TTS_KEY }); return; }   /* la page demande si la voix est réglée */
   if (!process.env.GOOGLE_TTS_KEY) { res.status(503).json({ error: 'tts_not_configured' }); return; }
   const who = await sb.caller(req);
   if (!who) { res.status(401).json({ error: 'not_logged_in' }); return; }   /* élèves et professeure seulement */
-  const b = await readBody(req);
   const text = String(b.text || '').replace(/\s+/g, ' ').trim();
   if (!text || text.length > 300) { res.status(400).json({ error: 'invalid' }); return; }
   const voice = process.env.TTS_VOICE || 'he-IL-Wavenet-A';

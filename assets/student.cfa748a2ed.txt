@@ -3502,7 +3502,9 @@ var HPS = (function () {
   var synth = window.speechSynthesis, voice = null, lastText = '', lastAt = 0;
   /* Voix « cloud » : sur le site de Maayane, la page parente lit le mot avec une voix de qualité (Google)
      et renvoie le son. Sans elle (site de Benjamin, ou service non réglé), voix de l'appareil. */
-  var cloud = !!window.__HP_TTS && window.parent !== window, actx = null, seq = 0, reqs = {}, src = null;
+  /* la voix de qualité ne s'active que quand la page parente confirme qu'elle est réglée (message « tts-on ») :
+     sinon chaque clic part d'abord vers un service absent, et le premier son se perd */
+  var cloud = false, actx = null, seq = 0, reqs = {}, src = null;
   var ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
   function pick() {
     if (!synth || !synth.getVoices) return;
@@ -3543,6 +3545,7 @@ var HPS = (function () {
   }
   window.addEventListener('message', function (e) {
     var d = e.data;
+    if (e.source === window.parent && d && d.hp === 'tts-on' && window.parent !== window) { cloud = true; document.documentElement.classList.add('hps-on'); return; }
     if (e.source !== window.parent || !d || d.hp !== 'tts-audio') return;
     var r = reqs[d.id]; delete reqs[d.id];
     if (!r || d.id !== seq) return;                   /* une lecture plus récente a été demandée */
@@ -3629,7 +3632,6 @@ var HPS = (function () {
     var row = function (lbl, x) { return x ? '<span class="vf-row"><i>' + lbl + '</i><span lang="he" dir="rtl">אֲנִי ' + e(x) + '</span></span>' : ''; };
     return '<span class="verb-forms ' + (cls || '') + '">' + row('présent', f.pres) + row('passé', f.past) + row('futur', f.fut) + '</span>';
   }
-  if (cloud) document.documentElement.classList.add('hps-on');
   return { speak: function (t) { return speak(t, null); }, btn: btn, word: word, forms: forms, formsHtml: formsHtml, ok: function () { return !!voice || cloud; } };
 })();
 

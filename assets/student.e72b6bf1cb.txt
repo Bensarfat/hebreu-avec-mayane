@@ -7205,12 +7205,36 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     same.concat(diff).forEach(function (x) { var k = bare(x.voc); if (out.length < n && !seen[k]) { seen[k] = 1; out.push(x); } });
     return out;
   }
-  /* l'intrus : 3 mots d'un même thème + 1 mot d'un autre thème */
+  /* l'intrus : 3 mots d'un même thème + 1 mot d'une AUTRE grande famille de sens.
+     Les thèmes fourre-tout (divers, verbes, bases, expressions, leçons…) ne servent pas : leurs mots n'ont pas de lien visible.
+     Deux thèmes de la même famille (santé / médecine) ne sont jamais opposés : l'intrus doit sauter aux yeux. */
+  var ODD_FAMS = [
+    ['sante', /sant|medec|medic|hopital|soin|malad|dentist|dentaire|\bdents?\b|infirm|pharma|symptom|corps/],
+    ['couleurs', /couleur/],
+    ['temps', /temps|heure|jour|date|frequen|calendrier|agenda|saison|meteo|mois|semaine/],
+    ['nombres', /chiffre|nombre|ordin/],
+    ['famille', /famil|personne|\bages?\b|amis?\b|relation|caractere|sentiment|emotion/],
+    ['nourriture', /nourrit|repas|cuisine|aliment|boisson|fruit|legume|restaurant|cafe|manger|courses/],
+    ['maison', /maison|meuble|objet|menage|vetement|habit/],
+    ['ville', /ville|magasin|achat|argent|banque|transport|voyage|lieu|direction|geograph|rue|quartier|vacance/],
+    ['nature', /nature|animal|desert|negev|mer\b|montagne|plante/],
+    ['travail', /travail|emploi|metier|profession|bureau|ecole|etude|universit|classe|administr/],
+    ['societe', /societ|identit|etat civil|histoir|sionis|religion|culture|israel|politique|securit|danger|armee|fete/]
+  ];
+  var ODD_SKIP = /divers|verbe|pronom|expression|slang|adjectif|adverbe|connect|liaison|grammaire|\bcours\b|lecon|\bunite|autre|\bmots? /;
+  function oddFam(t) {
+    var n = String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (ODD_SKIP.test(n + ' ')) return null;
+    for (var i = 0; i < ODD_FAMS.length; i++) if (ODD_FAMS[i][1].test(n)) return ODD_FAMS[i][0];
+    return null;
+  }
   var oddThemes = Object.keys(VOC).filter(function (t) {
+    if (!oddFam(t)) return false;
     var seen = {}; (VOC[t] || []).forEach(function (e) { if (e && e[0]) seen[bare(e[2] || e[0])] = 1; });
     return Object.keys(seen).length >= 3;
   });
-  var oddOk = oddThemes.length >= 2;
+  var oddFamsOk = {}; oddThemes.forEach(function (t) { oddFamsOk[oddFam(t)] = 1; });
+  var oddOk = Object.keys(oddFamsOk).length >= 2;
   var MODES = {
     def: { n: defs.length, label: 'Définition → mot', ask: 'Quel mot correspond à la définition ?' },
     rdef: { n: defs.length, label: 'Mot → définition', ask: 'Quelle est la bonne définition ?' },
@@ -7228,7 +7252,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     if (m === 'cloze') { var b = blank(w); return { w: w, gap: true, q: '<div class="hpx-q">' + esc(b.before) + '<span class="gap" id="hpx-gap">&nbsp;</span>' + esc(b.after) + '</div>', say: w.ex, sayLbl: 'Écouter la phrase',
       ch: shuffle(others(w, words, 3).concat([w])).map(function (c) { return { key: bare(c.voc), he: c.voc }; }), good: bare(w.voc) }; }
     /* intrus */
-    var th = shuffle(oddThemes), A = th[0], B = th[1];
+    var th = shuffle(oddThemes), A = th[0], B = th.filter(function (t) { return oddFam(t) !== oddFam(A); })[0];
     var famA = shuffle(words.filter(function (x) { return x.theme === A; })), three = [], seen = {};
     famA.forEach(function (x) { var k = bare(x.voc); if (three.length < 3 && !seen[k]) { seen[k] = 1; three.push(x); } });
     var odd = shuffle(words.filter(function (x) { return x.theme === B && !seen[bare(x.voc)]; }))[0];
@@ -7316,7 +7340,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
       if (g.querySelector('[data-hpx]')) return;
       var soon = 'Bientôt : ta professeure les prépare';
       g.insertAdjacentHTML('beforeend',
-        card('odd', '🕵️', 'L’intrus', '4 mots, 3 de la même famille : trouve celui qui n’a rien à faire là. 10 questions.', MODES.odd.n, 'Il faut au moins deux thèmes') +
+        card('odd', '🕵️', 'L’intrus', '4 mots, 3 de la même famille : trouve celui qui n’a rien à faire là. 10 questions.', MODES.odd.n, 'Il faut des mots d’au moins deux familles différentes (ex. nourriture et famille)') +
         card('def', '🧩', 'Mot ↔ définition', 'Une définition simple en hébreu → le mot, ou le mot → sa définition. 10 questions.', defs.length, soon) +
         card('cloze', '✍️', 'Phrase à compléter', 'Une phrase en hébreu, un mot manque : lequel ? 10 questions.', clozes.length, soon));
     });

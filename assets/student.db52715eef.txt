@@ -7123,9 +7123,9 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
   var VOC = (window.__HP_DATA__ && window.__HP_DATA__.VOCAB) || (typeof VOCAB !== 'undefined' ? VOCAB : {});
   var words = [];
   Object.keys(VOC).forEach(function (t) {
-    (VOC[t] || []).forEach(function (e) {
+    (VOC[t] || []).forEach(function (e, i) {
       if (!e || !e[0]) return;
-      words.push({ he: e[0], fr: e[1] || '', voc: e[2] || e[0], def: e[3] || '', ex: e[4] || '', theme: t });
+      words.push({ he: e[0], fr: e[1] || '', voc: e[2] || e[0], def: e[3] || '', ex: e[4] || '', theme: t, i: i });
     });
   });
   function bare(s) { return String(s || '').replace(NIK, ''); }
@@ -7228,13 +7228,31 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     for (var i = 0; i < ODD_FAMS.length; i++) if (ODD_FAMS[i][1].test(n)) return ODD_FAMS[i][0];
     return null;
   }
-  var oddThemes = Object.keys(VOC).filter(function (t) {
-    if (!oddFam(t)) return false;
-    var seen = {}; (VOC[t] || []).forEach(function (e) { if (e && e[0]) seen[bare(e[2] || e[0])] = 1; });
-    return Object.keys(seen).length >= 3;
+  var ODD_LBL = { sante: 'Corps et santé', couleurs: 'Couleurs', temps: 'Temps', nombres: 'Nombres', famille: 'Famille et personnes', nourriture: 'Nourriture',
+    maison: 'Maison et objets', ville: 'Ville et achats', nature: 'Nature', travail: 'Études et travail', societe: 'Société' };
+  /* famille de sens et nature de chaque mot : d'abord ce que Claude a noté pour chaque mot (site de Maayane, window.__HP_WINFO :
+     grand thème + nature), sinon le nom du thème et la liste NATURE. Les 4 mots d'une question sont de même nature (4 noms, 4 verbes…). */
+  var WI = window.__HP_WINFO || {}, NATS = (typeof NATURE !== 'undefined' && NATURE) || {};
+  words.forEach(function (w) {
+    var info = WI[bare(w.he).trim() + '|' + String(w.fr || '').trim().toLowerCase()];
+    w.nat = (info && info[1]) || String(NATS[w.theme] || '').charAt(w.i) || '';
+    w.fam = info && info[0] ? (/mots-outils|expressions|autres mots/i.test(info[0]) ? null : info[0]) : oddFam(w.theme);
+    w.famLbl = info && info[0] ? info[0] : ODD_LBL[w.fam] || w.theme;
   });
-  var oddFamsOk = {}; oddThemes.forEach(function (t) { oddFamsOk[oddFam(t)] = 1; });
-  var oddOk = Object.keys(oddFamsOk).length >= 2;
+  var oddGroups = {};
+  words.forEach(function (w) {
+    if (!w.fam || 'nav'.indexOf(w.nat || 'x') < 0) return;
+    var g = oddGroups[w.fam + '|' + w.nat] = oddGroups[w.fam + '|' + w.nat] || { fam: w.fam, nat: w.nat, lbl: w.famLbl, list: [], seen: {} };
+    var k = bare(w.voc); if (!g.seen[k]) { g.seen[k] = 1; g.list.push(w); }
+  });
+  /* une question possible = un groupe d'au moins 3 mots + un autre groupe de même nature et d'une autre famille */
+  var oddPairs = [];
+  Object.keys(oddGroups).forEach(function (a) {
+    var A = oddGroups[a]; if (A.list.length < 3) return;
+    var others = Object.keys(oddGroups).filter(function (b) { var B = oddGroups[b]; return B.nat === A.nat && B.fam !== A.fam; });
+    if (others.length) oddPairs.push({ A: A, others: others });
+  });
+  var oddOk = oddPairs.length > 0;
   var MODES = {
     def: { n: defs.length, label: 'Définition → mot', ask: 'Quel mot correspond à la définition ?' },
     rdef: { n: defs.length, label: 'Mot → définition', ask: 'Quelle est la bonne définition ?' },
@@ -7252,11 +7270,12 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     if (m === 'cloze') { var b = blank(w); return { w: w, gap: true, q: '<div class="hpx-q">' + esc(b.before) + '<span class="gap" id="hpx-gap">&nbsp;</span>' + esc(b.after) + '</div>', say: w.ex, sayLbl: 'Écouter la phrase',
       ch: shuffle(others(w, words, 3).concat([w])).map(function (c) { return { key: bare(c.voc), he: c.voc }; }), good: bare(w.voc) }; }
     /* intrus */
-    var th = shuffle(oddThemes), A = th[0], B = th.filter(function (t) { return oddFam(t) !== oddFam(A); })[0];
-    var famA = shuffle(words.filter(function (x) { return x.theme === A; })), three = [], seen = {};
-    famA.forEach(function (x) { var k = bare(x.voc); if (three.length < 3 && !seen[k]) { seen[k] = 1; three.push(x); } });
-    var odd = shuffle(words.filter(function (x) { return x.theme === B && !seen[bare(x.voc)]; }))[0];
-    return { w: odd, odd: true, fam: A, q: '', ch: shuffle(three.concat([odd])).map(function (c) { return { key: bare(c.voc), he: c.voc, fr: c.fr }; }), good: bare(odd.voc) };
+    var pr = shuffle(oddPairs)[0], three = shuffle(pr.A.list).slice(0, 3), seen = {};
+    three.forEach(function (x) { seen[bare(x.voc)] = 1; });
+    var B = oddGroups[shuffle(pr.others)[0]];
+    var odd = shuffle(B.list.filter(function (x) { return !seen[bare(x.voc)]; }))[0];
+    odd.famLbl = B.lbl;
+    return { w: odd, odd: true, fam: pr.A.lbl, q: '', ch: shuffle(three.concat([odd])).map(function (c) { return { key: bare(c.voc), he: c.voc, fr: c.fr }; }), good: bare(odd.voc) };
   }
   function start(m) {
     if (!can(m)) return;
@@ -7297,7 +7316,7 @@ try { HPG.install(); } catch (e) { console.error("HPG", e); }
     });
     var gap = root.querySelector('#hpx-gap'); if (gap) { gap.textContent = w.voc; gap.classList.add('ok'); }
     var fb = Q.odd
-      ? (ok ? '✅ Bravo ! ' : '❌ ') + 'L’intrus : <span class="he" lang="he" dir="rtl">' + esc(w.voc) + '</span> (' + esc(w.fr) + ', thème « ' + esc(w.theme) + ' »). Les autres : « ' + esc(Q.fam) + ' ».'
+      ? (ok ? '✅ Bravo ! ' : '❌ ') + 'L’intrus : <span class="he" lang="he" dir="rtl">' + esc(w.voc) + '</span> (' + esc(w.fr) + ', « ' + esc(w.famLbl || w.theme) + ' »). Les autres : « ' + esc(Q.fam) + ' ».'
       : (ok ? '✅ Bravo ! ' : '❌ C’était ') + '<span class="he" lang="he" dir="rtl">' + esc(w.voc) + '</span> = ' + esc(w.fr) + (mode === 'rdef' ? '<br><span class="he" lang="he" dir="rtl">' + esc(w.def) + '</span>' : '');
     root.querySelector('#hpx-fb').innerHTML = fb + '<button class="hpx-next" data-next>' + (i + 1 < serie.length ? 'Suivant →' : 'Voir mon score') + '</button>';
     say(w.voc);

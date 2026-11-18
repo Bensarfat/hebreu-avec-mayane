@@ -504,7 +504,7 @@ var HPApp = (function () {
   }
   function sendAgendaInfo(fr, id) {
     if (!HPB.agendaState) return;
-    AG.barInfo(id).then(function (info) { if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'agenda-info', show: !!info.show, next: info.next }, '*'); });
+    AG.barInfo(id).then(function (info) { if (fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'agenda-info', show: !!info.show, next: info.next, start: info.start || null }, '*'); });
   }
   var SBAR_CSS = '.hp-sbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;padding:8px 8px 8px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:14px;color:var(--ink-soft)}' +
     '.hp-sbar .he{font-family:var(--font-he);color:var(--accent);font-weight:700}.hp-sbar b{color:var(--ink)}' +

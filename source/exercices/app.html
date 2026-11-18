@@ -704,7 +704,7 @@
 
   /* MOT DU JOUR + CONSEIL DE LA PROF */
   #wotd:empty { display: none; }
-  #wotd { display: grid; gap: 10px; margin: 0 auto 18px; max-width: 860px; }
+  #wotd { display: grid; gap: 10px; margin: 0 auto 18px; max-width: 860px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
   .wotd-card, .wotd-tip { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px; box-shadow: 0 1px 2px var(--shadow); }
   .wotd-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; color: var(--accent); }
   .wotd-x { border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
@@ -715,6 +715,8 @@
   .wotd-acts button { font: 700 14px var(--font-ui); border-radius: 999px; padding: 8px 16px; cursor: pointer; border: 1.5px solid var(--line-strong); background: var(--paper); color: var(--ink); }
   .wotd-acts button.ok { background: var(--accent); border-color: transparent; color: var(--on-accent, #fff); }
   .wotd-res { font-size: 14px; font-weight: 700; margin-top: 8px; }
+  .wotd-bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 8px; }
+  .wotd-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
   .wotd-tip p { margin: 6px 0 0; font-size: 15.5px; line-height: 1.55; color: var(--ink); white-space: pre-wrap; }
 
   /* COURS PANEL */
@@ -4273,8 +4275,66 @@ refreshGlobalStatsDisplay();
     saveData();
     return e;
   }
+  /* ---------- défi de la semaine : réponses données du lundi au dimanche ---------- */
+  var WEEK_GOAL = 100;
+  function weekCount() {
+    var days = (storage.progress && storage.progress.days) || {}, d = new Date(), n = 0;
+    var monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+    for (var i = 0; i < 7; i++) {
+      var x = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      var k = x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2), v = days[k];
+      if (v) n += (v.qOk || 0) + (v.qKo || 0) + (v.fK || 0) + (v.fA || 0) + (v.fS || 0) + (v.cK || 0) + (v.cA || 0) + (v.cS || 0);
+    }
+    return n;
+  }
+  /* ---------- expression de la semaine : une par semaine, sans nikoud ---------- */
+  var EXPR = [
+    ['סבבה', 'D\'accord, ça marche, cool', 'La réponse la plus courante pour dire oui.'],
+    ['יאללה', 'Allez ! On y va !', 'Pour encourager quelqu\'un ou pour partir.'],
+    ['אין בעיה', 'Pas de problème', ''],
+    ['בכיף', 'Avec plaisir', 'Réponse à « merci » ou à une demande de service.'],
+    ['לאט לאט', 'Petit à petit, doucement', 'Pour rassurer : ça viendra.'],
+    ['יהיה בסדר', 'Ça va aller', 'L\'expression la plus israélienne qui soit.'],
+    ['כל הכבוד', 'Bravo !', ''],
+    ['מה נשמע?', 'Quoi de neuf ? Comment ça va ?', ''],
+    ['אחלה', 'Super, génial', ''],
+    ['חבל על הזמן', 'Génial, incroyable', 'Mot à mot « dommage pour le temps » : selon le ton, ça peut aussi vouloir dire « c\'est une perte de temps ».'],
+    ['על הפנים', 'Nul, horrible', 'Mot à mot « sur le visage ».'],
+    ['בתיאבון', 'Bon appétit', ''],
+    ['תתחדש', 'Profite bien de ton nouvel achat', 'Au féminin : תתחדשי.'],
+    ['תבריא', 'Bon rétablissement', 'Au féminin : תבריאי.'],
+    ['מזל טוב', 'Félicitations', ''],
+    ['בהצלחה', 'Bonne chance', ''],
+    ['בדיוק', 'Exactement', ''],
+    ['סתם', 'Pour rien, je plaisante', '« סתם ! » après une blague : je rigole !'],
+    ['דווקא', 'Justement, au contraire', 'Un petit mot très utilisé et difficile à traduire.'],
+    ['שבת שלום', 'Bon chabbat', 'À partir du vendredi.'],
+    ['שבוע טוב', 'Bonne semaine', 'Le samedi soir et le dimanche.'],
+    ['נו', 'Alors ? Allez !', 'Pour presser quelqu\'un : « נו, בוא ! ».']
+  ];
+  function weekNumber() { var d = new Date(), j = new Date(d.getFullYear(), 0, 1); return Math.floor(((d - j) / 864e5 + j.getDay() + 6) / 7) + d.getFullYear() * 53; }
+  /* ---------- rappel avant le cours (heure transmise par la page parente) ---------- */
+  var nextLesson = null;
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (e.source !== window.parent || !d || d.hp !== 'agenda-info') return;
+    nextLesson = d.start || null; render();
+  });
+  function reviewList() {
+    var out = [], seen = {};
+    Object.keys(VOCAB).forEach(function (t) { (VOCAB[t] || []).forEach(function (e) { var k = e[0] + '|' + e[1]; if (!seen[k] && weak(e) && !(typeof isExcludedKey === 'function' && isExcludedKey(k))) { seen[k] = 1; out.push(e); } }); });
+    return out;
+  }
   function render() {
     var tip = window.__HP_TIP || {}, html = '';
+    if (nextLesson && nextLesson - Date.now() > 0 && nextLesson - Date.now() < 48 * 3600e3) {
+      var dl = new Date(nextLesson), td = new Date(), tm = new Date(td.getFullYear(), td.getMonth(), td.getDate() + 1);
+      var when = dl.toDateString() === td.toDateString() ? 'aujourd\'hui' : dl.toDateString() === tm.toDateString() ? 'demain' : dl.toLocaleDateString('fr-FR', { weekday: 'long' });
+      var rv = reviewList();
+      html += '<div class="wotd-tip"><div class="wotd-h"><span>📅 Ton prochain cours : ' + when + ' à ' + dl.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+        (rv.length ? '<p>Prends 5 minutes pour revoir tes ' + rv.length + ' mot' + (rv.length > 1 ? 's' : '') + ' à revoir avant le cours.</p><div class="wotd-acts"><button type="button" class="ok" data-wrev>Réviser maintenant</button></div>'
+          : '<p>Tu es à jour dans tes révisions. Bravo !</p>') + '</div>';
+    }
     var w = storage.wotd && storage.wotd.date === today() && storage.wotd.hide ? null : word();
     if (w) {
       var res = storage.wotd.res, def = w[3] || '', ex = w[4] || '';
@@ -4285,12 +4345,21 @@ refreshGlobalStatsDisplay();
           : '<div class="wotd-acts"><button type="button" class="ok" data-wa="ok">Je sais ✓</button><button type="button" data-wa="ko">Je ne sais pas</button></div>') +
         '</div>';
     }
+    var wc = weekCount(), pct = Math.min(100, Math.round(100 * wc / WEEK_GOAL));
+    html += '<div class="wotd-tip"><div class="wotd-h"><span>🏆 Défi de la semaine</span><span>' + Math.min(wc, WEEK_GOAL) + ' / ' + WEEK_GOAL + '</span></div>' +
+      '<p>' + (wc >= WEEK_GOAL ? 'Défi réussi : ' + wc + ' réponses cette semaine ! 🎉' : WEEK_GOAL + ' réponses cette semaine (quiz, cartes, jeux) : encore ' + (WEEK_GOAL - wc) + '.') + '</p>' +
+      '<div class="wotd-bar"><i style="width:' + pct + '%"></i></div></div>';
+    var ex = EXPR[weekNumber() % EXPR.length];
+    html += '<div class="wotd-tip"><div class="wotd-h"><span>💬 L\'expression de la semaine</span></div>' +
+      '<div class="wotd-he" lang="he" dir="rtl" style="font-size:24px">' + esc(ex[0]) + (window.HPS ? HPS.btn(ex[0]) : '') + '</div>' +
+      '<p style="margin:0"><b>' + esc(ex[1]) + '</b>' + (ex[2] ? '<br><span style="color:var(--ink-soft);font-size:14.5px">' + esc(ex[2]) + '</span>' : '') + '</p></div>';
     [['me', '💡 Le conseil de Maayane pour toi'], ['all', '💡 Le conseil de Maayane']].forEach(function (t) {
       if (tip[t[0]]) html += '<div class="wotd-tip"><div class="wotd-h"><span>' + t[1] + '</span></div><p dir="auto">' + esc(tip[t[0]]) + '</p></div>';
     });
     box.innerHTML = html;
   }
   box.addEventListener('click', function (e) {
+    if (e.target.closest('[data-wrev]')) { var rows = reviewList(); if (rows.length && typeof window.openFlash === 'function') window.openFlash('À revoir', rows); return; }
     var a = e.target.closest('[data-wa]'), x = e.target.closest('[data-wx]');
     if (x) { storage.wotd.hide = true; saveData(); render(); return; }
     if (!a || !storage.wotd || storage.wotd.res) return;
@@ -4301,6 +4370,7 @@ refreshGlobalStatsDisplay();
     render();
   });
   render();
+  setInterval(function () { if (!document.hidden && !box.contains(document.activeElement)) render(); }, 30000);
 })();
 
 /* ================ COURS — lexique consultable ================ */

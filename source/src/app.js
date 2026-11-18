@@ -410,7 +410,6 @@ var HPApp = (function () {
         ';window.__HP_KEY__=' + JSON.stringify(preview ? 'hp_preview' : 'hp_cache_' + id) +
         ';window.__HP_RAW__=' + JSON.stringify(prog ? JSON.stringify(prog) : '{}').replace(/</g, '\\u003c') +
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
-        (HPB.tts ? 'window.__HP_TTS=1;' : '') +   /* prononciation par la voix de qualité (api/tts.js) */
         ';window.__HP_VOC=' + JSON.stringify(vocMap(content)).replace(/</g, '\\u003c') + ';' +   /* nikoud gardé pour la voix seulement */
         ';window.__HP_WINFO=' + JSON.stringify(winfoMap(content)).replace(/</g, '\\u003c') + ';' +   /* grand thème et nature de chaque mot (jeu « L'intrus ») */
         ';window.__HP_TIP=' + JSON.stringify({ me: (content && content.TIP) || '', all: (content && content.TIP_ALL) || '' }).replace(/</g, '\\u003c') + ';' +   /* conseils de Maayane */
@@ -442,6 +441,7 @@ var HPApp = (function () {
       root.appendChild(fr);
       frame = { el: fr, id: id, preview: !!preview };
       if (!preview) fr.addEventListener('load', function () { sendAgendaInfo(fr, id); sendMsgInfo(fr, id); sendAcctInfo(fr, id); });
+      fr.addEventListener('load', function () { ttsReady().then(function (ok) { if (ok && fr.isConnected && fr.contentWindow) fr.contentWindow.postMessage({ hp: 'tts-on' }, '*'); }); });
       fr.srcdoc = html;
       document.title = 'Hébreu · ' + st.first;
       });
@@ -529,7 +529,14 @@ var HPApp = (function () {
   function closePreview() { frame = null; location.hash = location.hash || '#/tableau'; loadAll().then(renderTeacher); }
 
   /* voix de qualité : un son par texte, gardé en mémoire ; si le service n'est pas réglé, on n'insiste plus (voix de l'appareil) */
-  var ttsCache = {}, ttsOff = false;
+  var ttsCache = {}, ttsOff = false, ttsProbe = null;
+  /* la voix de qualité est-elle réglée (clé Google dans Vercel) ? demandé une seule fois */
+  function ttsReady() {
+    if (!HPB.tts) return Promise.resolve(false);
+    if (!ttsProbe) ttsProbe = fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"probe":1}' })
+      .then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { return !!j.ok; }, function () { return false; });
+    return ttsProbe;
+  }
   function ttsAudio(text) {
     if (!text || ttsOff || !HPB.tts) return Promise.resolve(null);
     if (!ttsCache[text]) ttsCache[text] = HPB.tts(text).catch(function (e) {

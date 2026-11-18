@@ -4345,6 +4345,21 @@ refreshGlobalStatsDisplay();
           : '<div class="wotd-acts"><button type="button" class="ok" data-wa="ok">Je sais ✓</button><button type="button" data-wa="ko">Je ne sais pas</button></div>') +
         '</div>';
     }
+    var now = new Date();
+    if (now.getDate() <= 7) {
+      var pm = new Date(now.getFullYear(), now.getMonth() - 1, 1), pre = pm.getFullYear() + '-' + ('0' + (pm.getMonth() + 1)).slice(-2) + '-';
+      var dd = (storage.progress && storage.progress.days) || {}, act = 0, good = 0, bad = 0;
+      Object.keys(dd).forEach(function (k) {
+        if (k.indexOf(pre) !== 0) return;
+        var v = dd[k], g = (v.qOk || 0) + (v.fK || 0) + (v.cK || 0), b = (v.qKo || 0) + (v.fA || 0) + (v.fS || 0) + (v.cA || 0) + (v.cS || 0);
+        if (g + b) act++; good += g; bad += b;
+      });
+      if (good + bad) {
+        var mn = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][pm.getMonth()];
+        html += '<div class="wotd-tip"><div class="wotd-h"><span>📆 Ton bilan de ' + mn + '</span></div><p>' + act + ' jour' + (act > 1 ? 's' : '') + ' de révision, ' + (good + bad) + ' réponses, ' +
+          Math.round(100 * good / (good + bad)) + ' % de réussite. ' + (act >= 15 ? 'Quelle régularité, bravo ! 🎉' : act >= 6 ? 'Beau travail, continue !' : 'Ce mois-ci, essaie de réviser un peu plus souvent : 5 minutes suffisent.') + '</p></div>';
+      }
+    }
     var wc = weekCount(), pct = Math.min(100, Math.round(100 * wc / WEEK_GOAL));
     html += '<div class="wotd-tip"><div class="wotd-h"><span>🏆 Défi de la semaine</span><span>' + Math.min(wc, WEEK_GOAL) + ' / ' + WEEK_GOAL + '</span></div>' +
       '<p>' + (wc >= WEEK_GOAL ? 'Défi réussi : ' + wc + ' réponses cette semaine ! 🎉' : WEEK_GOAL + ' réponses cette semaine (quiz, cartes, jeux) : encore ' + (WEEK_GOAL - wc) + '.') + '</p>' +

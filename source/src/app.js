@@ -957,6 +957,46 @@ var HPApp = (function () {
       body;
   }
 
+  /* ---------- bilan du mois : révisions (résumé de l'élève) + cours passés de l'agenda ---------- */
+  var MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  function monthSum(days, y, mo) {
+    var pre = y + '-' + (mo < 9 ? '0' : '') + (mo + 1) + '-', tot = HP.emptyDay(), active = 0;
+    Object.keys(days || {}).forEach(function (k) {
+      if (k.indexOf(pre) !== 0) return;
+      var v = days[k]; if (HP.dayActive(v)) active++;
+      for (var f in tot) tot[f] += +v[f] || 0;
+    });
+    return { active: active, answers: HP.dayGood(tot) + HP.dayBad(tot), rate: HP.rate(tot), xp: tot.xp };
+  }
+  function monthCard(s, days, back) {
+    var now = new Date(), dt = new Date(now.getFullYear(), now.getMonth() - back, 1), y = dt.getFullYear(), mo = dt.getMonth();
+    var cur = monthSum(days, y, mo), prev = monthSum(days, mo ? y : y - 1, mo ? mo - 1 : 11);
+    function delta(a, b) { return b && back ? ' <small class="muted">(' + (a >= b ? '+' : '') + (a - b) + ' vs ' + MONTHS[mo ? mo - 1 : 11] + ')</small>' : ''; }
+    return '<div class="card" id="month-card" data-back="' + back + '"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 style="margin:0">📆 Bilan de ' + MONTHS[mo] + ' ' + y + (back ? '' : ' <small>(en cours)</small>') + '</h3>' +
+      '<div class="row" style="gap:6px"><button class="btn small" data-month="' + (back + 1) + '" aria-label="Mois précédent">←</button>' + (back ? '<button class="btn small" data-month="' + (back - 1) + '" aria-label="Mois suivant">→</button>' : '') + '</div></div>' +
+      '<div class="hp-kpis" style="margin-top:12px"><div class="hp-kpi"><b>' + cur.active + '</b><span>jours de révision' + delta(cur.active, prev.active) + '</span></div>' +
+      '<div class="hp-kpi green"><b>' + fmt(cur.answers) + '</b><span>réponses' + delta(cur.answers, prev.answers) + '</span></div>' +
+      '<div class="hp-kpi gold"><b>' + (cur.rate == null ? '—' : cur.rate + ' %') + '</b><span>de réussite</span></div>' +
+      '<div class="hp-kpi sky"><b id="month-lessons">…</b><span>cours</span></div></div>' +
+      '<p class="small muted" style="margin:10px 0 0" id="month-note"></p></div>';
+  }
+  function bindMonth(s) {
+    var card = $('#month-card'); if (!card) return;
+    var back = +card.dataset.back || 0, now = new Date(), from = new Date(now.getFullYear(), now.getMonth() - back, 1), to = new Date(now.getFullYear(), now.getMonth() - back + 1, 1);
+    HPB.listBookings(from.getTime(), Math.min(to.getTime(), Date.now())).then(function (l) {
+      var mine = l.filter(function (b) { return b.studentId === s.id && b.status !== 'cancelled' && b.end <= Date.now() && b.start >= from.getTime() && b.start < to.getTime(); });
+      var min = mine.reduce(function (t, b) { return t + Math.round((b.end - b.start) / 60000); }, 0);
+      var el = $('#month-lessons'); if (el) el.textContent = mine.length;
+      var nt = $('#month-note'); if (nt && mine.length) nt.textContent = 'Cours passés dans l\'agenda : ' + hoursTxt(min) + '.';
+    }, function () { var el = $('#month-lessons'); if (el) el.textContent = '—'; });
+    $$('[data-month]', card).forEach(function (b) {
+      b.onclick = function () {
+        var sum = cache.summaries[s.id] || {};
+        card.outerHTML = monthCard(s, sum.days || {}, +b.dataset.month);
+        bindMonth(s);
+      };
+    });
+  }
   function stProgress(s, m) {
     var sum = cache.summaries[s.id];
     if (!sum) return '<div class="card empty-state"><div class="big">📊</div><p class="muted">' + esc(s.first) + ' ne s\'est pas encore entraîné(e). Les statistiques apparaîtront ici dès ses premières réponses.</p></div>';
@@ -969,6 +1009,7 @@ var HPApp = (function () {
     var fl = (t.fK || 0) + (t.fA || 0) + (t.fS || 0);
     return '<div class="stack">' +
       '<div class="card">' + HP.levelCard({ xp: sum.xp, days: d, goal: sum.goal }) + '</div>' +
+      monthCard(s, d, 0) +
       '<div class="hp-kpis">' +
         '<div class="hp-kpi"><b>' + fmt(w0.xp) + deltaHtml(w0.xp, w1.xp) + '</b><span>XP sur 7 jours</span></div>' +
         '<div class="hp-kpi green"><b>' + (m.rate7 == null ? '—' : m.rate7 + ' %') + deltaHtml(m.rate7, m.rate7p) + '</b><span>réussite sur 7 jours</span></div>' +
@@ -1656,6 +1697,7 @@ var HPApp = (function () {
     bindCopy(document);
     if (page === 'agenda') AG.bind(h[1]);
     if (page === 'tableau' || (page === 'eleve' && h[2] === 'cours')) AG.bindStudentTab();
+    if (page === 'eleve' && (!h[2] || h[2] === 'progression')) { var ms = cache.students.filter(function (x) { return x.id === h[1]; })[0]; if (ms) bindMonth(ms); }
     if (page === 'eleve' && h[2] === 'contenu') { var ts = cache.students.filter(function (x) { return x.id === h[1]; })[0]; if (ts) bindTip(ts); }
     if (page === 'eleve' && h[2] === 'paiements') { var ps = cache.students.filter(function (x) { return x.id === h[1]; })[0]; if (ps) bindPayments(ps); }
 

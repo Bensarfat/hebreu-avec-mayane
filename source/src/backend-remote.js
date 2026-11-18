@@ -202,6 +202,9 @@
     myDocs: function () { return post('/api/documents', { action: 'list' }).then(function (r) { return r.docs || []; }); },
     myDocUrl: function (sid, id, view) { return post('/api/documents', { action: 'url', id: id, view: !!view }).then(function (r) { return r.url; }); },
 
+    /* ---------- conseil suggéré par Claude (api/conseil.js) ---------- */
+    suggestTip: function (first, words) { return post('/api/conseil', { first: first, words: words }).then(function (r) { return r.tip || ''; }); },
+
     /* ---------- prononciation (voix de qualité, api/tts.js) : renvoie le son MP3 ---------- */
     tts: function (text) {
       return token().then(function (t) {

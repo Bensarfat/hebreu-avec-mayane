@@ -489,7 +489,7 @@ var HPAgendaUI = function (X) {
   function barInfo(sid) {
     return state(sid).then(function (st) {
       var now = nowOf(st), up = st.mine.filter(function (b) { return b.status === 'booked' && b.end > now; });
-      return { show: st.cfg.open || up.length > 0, next: up.length ? 'Prochain cours : ' + fShort(up[0].start) + ' · ' + fTime(up[0].start) : '' };
+      return { show: st.cfg.open || up.length > 0, next: up.length ? 'Prochain cours : ' + fShort(up[0].start) + ' · ' + fTime(up[0].start) : '', start: up.length ? up[0].start : null };
     }, function () { return { show: false, next: '' }; });
   }
   function openPane(sid, onClose) {

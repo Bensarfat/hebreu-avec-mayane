@@ -412,6 +412,7 @@ var HPApp = (function () {
         ';window.__HP_STUDENT__=' + (preview ? 'null' : JSON.stringify(id)) + ';' +
         (HPB.tts ? 'window.__HP_TTS=1;' : '') +   /* prononciation par la voix de qualité (api/tts.js) */
         ';window.__HP_VOC=' + JSON.stringify(vocMap(content)).replace(/</g, '\\u003c') + ';' +   /* nikoud gardé pour la voix seulement */
+        ';window.__HP_TIP=' + JSON.stringify({ me: (content && content.TIP) || '', all: (content && content.TIP_ALL) || '' }).replace(/</g, '\\u003c') + ';' +   /* conseils de Maayane */
         /* la page d'accueil indique si l'agenda est ouvert et le prochain cours */
         'window.addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d)return;if(d.hp==="flush"){if(window.HPG&&HPG.flush)HPG.flush();return;}if(d.hp==="msg-info"){var q=document.getElementById("hp-q-dot");if(q)q.hidden=!d.n;return;}if(d.hp==="acct-info"){var a=document.getElementById("hp-ac-btn"),z=document.getElementById("hp-zm-btn"),ad=document.getElementById("hp-ac-dot");if(a)a.hidden=!d.pay;if(ad)ad.hidden=!d.due;if(z){z.hidden=!d.zoom;if(d.zoom)z.href=d.zoom;}return;}if(d.hp!=="agenda-info")return;var b=document.getElementById("hp-ag-btn"),n=document.getElementById("hp-ag-next");if(b)b.hidden=!d.show;if(n)n.textContent=String(d.next||"");});<\/script>' +
         '<style>' + SBAR_CSS + (content.tensesHtml ? '' : '.tab[data-tab="tenses"]{display:none!important}') + '</style>';   /* « Jeux de mots » : dans le code commun (source/exercices/app.html) */
@@ -1144,7 +1145,44 @@ var HPApp = (function () {
       return HPB.setContent(sid, c).then(function () { cache.contents[sid] = c; });
     });
   }
+  /* ---------- conseil de Maayane pour l'élève (affiché en haut de son espace, avec le mot du jour) ---------- */
   function stContent(s) {
+    var c = cache.contents[s.id] || {};
+    return '<div class="card" style="margin-bottom:18px"><h3>💡 Mon conseil pour ' + esc(s.first) + '</h3>' +
+      '<p class="small muted" style="margin:-6px 0 10px">Il s\'affiche en haut de son espace, sous le mot du jour, jusqu\'à ce que vous le changiez.' +
+      ((cache.settings || {}).tipAll ? ' Le conseil pour tous les élèves (Réglages) s\'affiche aussi.' : '') + '</p>' +
+      '<form id="tip-f" class="stack" style="gap:10px"><textarea class="in" name="tip" rows="3" maxlength="600" dir="auto" placeholder="Ex. : Attention au pluriel des noms féminins : -ות. Revois le thème « Famille » avant jeudi !">' + esc(c.TIP || '') + '</textarea>' +
+      '<div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn primary" type="submit">Enregistrer</button>' +
+      (HPB.suggestTip ? '<button class="btn" type="button" data-tipai>✨ Suggérer avec Claude</button>' : '') +
+      '<button class="btn ghost" type="button" data-tipclear>Effacer</button></div>' +
+      '<p class="small muted" style="margin:0" data-tipnote></p></form></div>' + stContentBody(s);
+  }
+  function bindTip(s) {
+    var f = $('#tip-f'); if (!f) return;
+    function save(text) {
+      return HPB.getContent(s.id).then(function (c) {
+        c = c || cache.contents[s.id] || HPA.emptyContent();
+        if (text) c.TIP = text; else delete c.TIP;
+        return HPB.setContent(s.id, c).then(function () { cache.contents[s.id] = c; });
+      });
+    }
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var t = f.tip.value.trim();
+      busy($('button[type=submit]', f), save(t), 'Enregistrement impossible').then(function () { toast(t ? 'Conseil enregistré : ' + s.first + ' le verra à sa prochaine visite' : 'Conseil effacé'); }).catch(function () {});
+    });
+    $('[data-tipclear]', f).onclick = function () { f.tip.value = ''; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit')); };
+    var ai = $('[data-tipai]', f);
+    if (ai) ai.onclick = function () {
+      var sum = cache.summaries[s.id] || {}, words = (sum.weak || []).slice(0, 25);
+      if (!words.length) { $('[data-tipnote]', f).textContent = s.first + ' n\'a pas encore de mots ratés : Claude n\'a rien sur quoi s\'appuyer.'; return; }
+      busy(ai, HPB.suggestTip(s.first, words), 'Suggestion impossible').then(function (t) {
+        if (!t) return;
+        f.tip.value = t; $('[data-tipnote]', f).textContent = 'Suggestion de Claude : relisez-la, modifiez-la si besoin, puis « Enregistrer ».';
+      }).catch(function () {});
+    };
+  }
+  function stContentBody(s) {
     var c = cache.contents[s.id], st = HPA.stats(c);
     var themes = c ? Object.keys(c.VOCAB || {}) : [];
     return '<div class="two"><div class="card"><h3>Ce que voit ' + esc(s.first) + '</h3>' +
@@ -1307,6 +1345,9 @@ var HPApp = (function () {
         '<label class="f">Monnaie<select class="in" name="currency">' + ['€', '₪', '$'].map(function (c) { return '<option' + (((st.billing || {}).currency || '€') === c ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></label>' +
         '<label class="f">Coordonnées pour le virement <span class="muted" style="font-weight:500">(montrées aux élèves dans « Mon compte »)</span><textarea class="in" name="bank" rows="4" placeholder="Banque, agence, numéro de compte, nom…">' + esc((st.billing || {}).bank || '') + '</textarea></label>' +
         '<label class="f">Lien Zoom commun <span class="muted" style="font-weight:500">(pour les élèves sans lien propre)</span><input class="in" name="zoom" type="url" placeholder="https://zoom.us/j/…" value="' + esc((st.billing || {}).zoom || '') + '"></label>' +
+        '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
+      '<div class="card"><h3>💡 Conseil pour tous les élèves</h3><p class="small muted" style="margin-top:-6px">S\'affiche en haut de l\'espace de chaque élève. Laissez vide pour l\'enlever.</p>' +
+        '<form id="tipall" class="stack" style="gap:12px"><textarea class="in" name="tip" rows="3" maxlength="600" dir="auto" placeholder="Ex. : Bonne fête de Hanouka ! Cette semaine, révisez les nombres.">' + esc(st.tipAll || '') + '</textarea>' +
         '<div><button class="btn" type="submit">Enregistrer</button></div></form></div>' +
       '<div class="card"><h3>✉️ Copie des mails aux élèves</h3><p class="small muted" style="margin-top:-6px">Quand un élève reçoit un mail « nouveau cours », vous recevez un petit mail récapitulatif à cette adresse. Laissez vide pour ne rien recevoir.</p>' +
         '<form id="copymail" class="stack" style="gap:12px"><input class="in" type="email" name="mail" placeholder="vous@exemple.com" value="' + esc(st.copyMail || '') + '" autocomplete="email">' +
@@ -1615,6 +1656,7 @@ var HPApp = (function () {
     bindCopy(document);
     if (page === 'agenda') AG.bind(h[1]);
     if (page === 'tableau' || (page === 'eleve' && h[2] === 'cours')) AG.bindStudentTab();
+    if (page === 'eleve' && h[2] === 'contenu') { var ts = cache.students.filter(function (x) { return x.id === h[1]; })[0]; if (ts) bindTip(ts); }
     if (page === 'eleve' && h[2] === 'paiements') { var ps = cache.students.filter(function (x) { return x.id === h[1]; })[0]; if (ps) bindPayments(ps); }
 
     /* dépôt */
@@ -1959,6 +2001,25 @@ var HPApp = (function () {
     }
     if (page === 'tests') bindTests();
     if (page === 'reglages') {
+      var taf = $('#tipall');
+      if (taf) taf.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var t = taf.tip.value.trim();
+        /* recopié dans le contenu de chaque élève (l'élève ne lit pas les réglages) */
+        var job = HPB.getSettings().then(function (st) { st.tipAll = t; return HPB.setSettings(st).then(function () { cache.settings = st; }); }).then(function () {
+          return cache.students.reduce(function (p, s) {
+            return p.then(function () {
+              return HPB.getContent(s.id).then(function (c) {
+                c = c || HPA.emptyContent();
+                if ((c.TIP_ALL || '') === t) return;
+                if (t) c.TIP_ALL = t; else delete c.TIP_ALL;
+                return HPB.setContent(s.id, c).then(function () { cache.contents[s.id] = c; });
+              });
+            });
+          }, Promise.resolve());
+        });
+        busy($('button', taf), job, 'Enregistrement impossible').then(function () { toast(t ? 'Conseil envoyé à tous les élèves' : 'Conseil enlevé'); }).catch(function () {});
+      });
       var blf = $('#billing');
       if (blf) blf.addEventListener('submit', function (e) {
         e.preventDefault();
